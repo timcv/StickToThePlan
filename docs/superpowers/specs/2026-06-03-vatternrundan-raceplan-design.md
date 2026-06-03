@@ -90,10 +90,12 @@ This replaces handover sections 2.2 specifics and 9.4. The timing table is a **v
 
 Sum of legs 315 km. Sum of stops 0:50.
 
-### 4.2 Stop plan (locked)
-The 50 minutes sit at four towns: **Gränna 10 min, Fagerhult 10 min, Boviken 15 min, Askersund 15 min.** All other depots (Hästholmen, Jönköping, Hjo, Karlsborg, Godegård) are pass-through, 0 min. The big food depots Jönköping and Hjo are passed without stopping, the stops sit instead around the heavy southern climbing and in the second half.
+### 4.2 Stop plan (configurable)
+The stop plan is defined entirely in the config file (section 5.1) as a list of `{ control, km, minutes }` entries and can be adjusted between runs without touching code.
 
-Represent as a list of `{ control, km, minutes }`. Map each stop to the route by its km marker (nearest microsegment boundary by cumulative distance).
+Current plan (initial values, will be refined): Gränna 10 min, Fagerhult 10 min, Boviken 15 min, Askersund 15 min = 50 min total. All other depots pass-through, 0 min.
+
+Map each stop to the route by its km marker (nearest microsegment boundary by cumulative distance). The solver uses whatever the config says; the section 4.5 validation reference stays unchanged as long as the stop total is 50 min.
 
 ### 4.3 Time parameters
 - Start time 04:22.
@@ -114,7 +116,50 @@ The base plan holds near-constant rolling speed about 28.6 to 29.0 km/h on every
 
 ## 5. Parameters and defaults
 
-All configurable. Defaults below.
+### 5.1 Config file
+
+All parameters live in a single JSON config file (`config.json` in the project root or passed via `--config`). The tool reads it on every run. Edit it between runs without recompiling.
+
+Mandatory fields: `gpx_path`, `fit_path`, `race_date`, `start_time`.
+Everything else falls back to the defaults in the table below.
+
+The stop plan is a top-level key `stops`, an array:
+```json
+{
+  "race_date": "2026-06-13",
+  "start_time": "04:22",
+  "gpx_path": "data/vatternrundan-315km.gpx",
+  "fit_path": "data/reference-pass.fit",
+  "ftp": 272,
+  "n_riders": 12,
+  "target_total_hm": "11:45",
+  "stops": [
+    { "control": "Gränna",    "km": 77,  "minutes": 10 },
+    { "control": "Fagerhult", "km": 134, "minutes": 10 },
+    { "control": "Boviken",   "km": 226, "minutes": 15 },
+    { "control": "Askersund", "km": 256, "minutes": 15 }
+  ]
+}
+```
+
+### 5.2 Run model
+
+The tool is designed to be run multiple times. The primary use case is **the evening before the race** to get fresh forecast data. Typical sessions:
+
+| When | What to run |
+|---|---|
+| Any time (testing) | `npm start` or `npx vattern plan` -- re-reads config, re-fetches if cache stale |
+| Evening before race | Same command. Fetches fresh forecast, caches it. Produces all outputs. |
+| Re-run same evening (tweak stops etc.) | Edit `config.json`, run again. Weather cache is reused (not stale). Instant. |
+| On race morning (offline) | Run again. Weather cache used. All outputs regenerated. |
+
+Cache behaviour: forecast data is cached to `.cache/weather-<race_date>.json`. On each run the tool checks if the cache is present and fresh (default TTL 3 h, configurable). If stale or missing, it re-fetches. Pass `--offline` to force cache use even if stale.
+
+All outputs are written to `output/` and overwritten on each run.
+
+### 5.3 Numeric parameters (all configurable)
+
+All numeric parameters below can also be added to `config.json` to override defaults.
 
 | Parameter | Symbol | Default | Comment |
 |---|---|---|---|
@@ -296,9 +341,15 @@ Goal: robust wind per place and time, with uncertainty.
 Aim each segment's wind lookup at the segment's ETA (from the solver) and the right geographic point. Wind rises through the day, so this matters.
 
 ### 10.4 Cache and offline
-Fetch and cache the whole forecast locally on run (the day before). The tool must re-run offline against the cached forecast. Handle dead sources: run on whoever answers and flag in the output that the ensemble was reduced.
+Forecast data is cached to `.cache/weather-<race_date>.json` on first fetch. On each run the tool checks the cache:
 
-If `race_date` is outside Open-Meteo's roughly 16-day horizon, fall back to climatology or cached data and flag it, until the date is inside the window.
+- Cache absent or older than `cache_ttl` (default 3 h): re-fetch all sources.
+- Cache present and fresh: use cache. No network needed.
+- `--offline` flag: always use cache regardless of age. Use on race morning or when network is unreliable.
+
+Handle dead sources: run on whoever answers, flag in output that the ensemble was reduced. The plan still runs with partial data.
+
+If `race_date` is outside Open-Meteo's roughly 16-day horizon, fall back to cached data and flag it. Do not block the run.
 
 ---
 
