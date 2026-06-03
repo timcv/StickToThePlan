@@ -395,8 +395,33 @@ Distance-based structured workout, one step per display segment. Verify field na
 
 Step target per `watch_target`: `pull` (default) uses the segment's pull-watt band, `avg` uses the rider mean. Band width configurable, default +/- 5% or fixed watts.
 
-### 12.3 Course (navigation and ClimbPro)
-Export the course as GPX (simplest, Garmin converts to a Course on import) or as FIT Course (`file_id type = course`, `course`, `lap`, `record` with position, altitude, distance, plus `course_point` for towns and depots). ClimbPro on the Fenix 7X detects climbs from the course elevation.
+### 12.3 Course (navigation, ClimbPro, and ETA waypoints)
+Export the course as GPX or as FIT Course (`file_id type = course`, `course`, `lap`, `record` with position, altitude, distance). ClimbPro on the Fenix 7X detects climbs from course elevation data.
+
+**ETA waypoints (course_point):** Add a `course_point` at every control-point km marker (section 4.1) with the plan ETA baked into the name, e.g. `Gränna 07:12` or `Boviken 12:47 (15 min)`. The watch pops the name when you pass. Glance at the clock, compare, done. No extra hardware or apps needed. All 11 control points get waypoints, stops annotated with stop duration.
+
+This is the low-friction timing check at control points. Within a segment the watt band is the only signal needed.
+
+### 12.5 Connect IQ data field (plan-delta)
+A sideloadable Garmin Connect IQ data field (Monkey C) that shows real-time ahead/behind vs plan and projected finish time on any Fenix 7X data screen. Built as `output/PlanDelta.prg` and loaded via USB alongside the workout and course.
+
+**What it displays (one data field, two lines):**
+```
++1:42 ↑          <- minutes ahead (+) or behind (-) vs plan
+Proj  16:09      <- projected finish = now + remaining plan time adjusted for delta
+```
+
+**How it works:**
+- The planner generates a lookup table: `{ distance_m: plan_elapsed_s }` for every display-segment boundary and control point. This table is compiled into the data field source at generation time (not a separate file the watch reads at runtime).
+- Every second the field reads `ActivityMonitor.getInfo().elapsedTime` and the current GPS distance from the active course.
+- Interpolate planned elapsed time at current distance from the table.
+- Delta = actual elapsed - planned elapsed. Positive = behind, negative = ahead.
+- Projected finish = start_clock + plan_total + delta.
+
+**Scope boundaries:**
+- One `.prg` file, one data field, no UI beyond the two lines.
+- The planner re-generates the source and recompiles on each run so the table always matches the current plan. Requires the Connect IQ SDK (`monkeyc` compiler) to be installed locally.
+- If the SDK is absent the tool skips CIQ compilation, logs a warning, and still produces all other outputs.
 
 ### 12.4 Plan-JSON
 Machine-readable file with the whole plan: segments, microsegment data, wind per segment, speeds, watts, NP contributions, ETA, stops and the three scenarios.
@@ -460,7 +485,8 @@ Each module has one clear purpose, a well-defined interface, and is unit-testabl
 4. **Weather layer:** Open-Meteo first (forecast plus ensemble), then SMHI and MET Norway, normalization and aggregation, cache. Wire wind into the solver, enable three scenarios.
 5. **Segmentation and tempokort:** micro to display segments aligned to control km markers, note keywords, md and print.
 6. **Garmin export:** FIT workout writer with correct 1000 offset, course export, FitCSVTool verification and test-load.
-7. **Polish:** error handling, cache and offline re-run, plan-JSON, docs.
+7. **Polish:** error handling, cache and offline re-run, plan-JSON, docs. Enforce no em-dash in code/comments/output.
+8. **Connect IQ data field:** Monkey C source template, planner injects the distance/time lookup table at generation time, `monkeyc` compile to `output/PlanDelta.prg`, graceful skip if SDK absent. Requires M6 (display segments and ETAs locked).
 
 Each milestone is gated by its tests before the next starts. Detailed bite-sized tasks are produced in the implementation plan (writing-plans step).
 
