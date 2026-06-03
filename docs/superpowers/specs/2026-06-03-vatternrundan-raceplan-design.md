@@ -418,6 +418,6 @@ Each milestone is gated by its tests before the next starts. Detailed bite-sized
 ## 18. Open items
 
 1. Resolved: race_date 2026-06-13, start 04:22. From about 2026-05-28 the date is inside Open-Meteo's forecast horizon, before that use cached or climatology.
-2. Confirm on decode that the historical FIT is a long representative chaingang ride (section 8), so the anchor comes from its NP rather than an FTP estimate.
+2. Resolved: historical FIT is a 3.98 h, 99.8 km steady group ride (8 in bunch, 2026-05-30). NP 165 W = 0.61 x FTP. Wind was light (2 to 3 m/s), so NP is not wind-inflated. `np_target` anchored from real data.
 3. Optional CdA fine-tune for wheels, helmet and clothing if Tim wants more than the 0.32 / 0.21 defaults.
 4. Optional `group_target_np` if the weakest of the 12 cannot hold Tim's NP.
