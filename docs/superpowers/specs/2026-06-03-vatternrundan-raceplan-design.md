@@ -142,13 +142,39 @@ The stop plan is a top-level key `stops`, an array:
 }
 ```
 
-### 5.2 Run model
+### 5.2 Solo mode
+
+Set `n_riders: 1` in config.json to run a solo plan, e.g. for a test ride on a custom GPX. In solo mode:
+
+- `f_front = 1.0` always, rider is always on the front, always `cda_pull`, no draft.
+- No chaingang square-wave. Rider NP = `P_pedal` directly for each segment (no rotation variability penalty). The NP formula still applies over the full ride.
+- All other physics identical: same gradient model, same wind decomposition, same solver, same output files.
+- `stops` can be empty (`[]`) or set to any checkpoints on the test route.
+- `fit_path` is optional in solo mode. If omitted, `np_target` falls back to `0.60 x ftp`.
+
+Solo config example (test ride, no stops, any GPX):
+```json
+{
+  "race_date": "2026-06-10",
+  "start_time": "09:00",
+  "gpx_path": "data/test-ride.gpx",
+  "ftp": 272,
+  "n_riders": 1,
+  "target_total_hm": "3:30",
+  "stops": []
+}
+```
+
+The tool accepts any GPX as input, not just the Vätternrundan course. Route length, distance, and segment count are derived from the GPX itself. Swap `gpx_path` and `target_total_hm` to plan any ride.
+
+### 5.3 Run model
 
 The tool is designed to be run multiple times. The primary use case is **the evening before the race** to get fresh forecast data. Typical sessions:
 
 | When | What to run |
 |---|---|
 | Any time (testing) | `npm start` or `npx vattern plan` -- re-reads config, re-fetches if cache stale |
+| Test ride with own GPX | Set `n_riders: 1`, `gpx_path` to your GPX, `target_total_hm` to your target |
 | Evening before race | Same command. Fetches fresh forecast, caches it. Produces all outputs. |
 | Re-run same evening (tweak stops etc.) | Edit `config.json`, run again. Weather cache is reused (not stale). Instant. |
 | On race morning (offline) | Run again. Weather cache used. All outputs regenerated. |
@@ -157,9 +183,9 @@ Cache behaviour: forecast data is cached to `.cache/weather-<race_date>.json`. O
 
 All outputs are written to `output/` and overwritten on each run.
 
-### 5.3 Numeric parameters (all configurable)
+### 5.4 Numeric parameters (all configurable)
 
-All numeric parameters below can also be added to `config.json` to override defaults.
+All numeric parameters below can also be added to `config.json` to override defaults. All apply in both solo and group mode unless noted.
 
 | Parameter | Symbol | Default | Comment |
 |---|---|---|---|
