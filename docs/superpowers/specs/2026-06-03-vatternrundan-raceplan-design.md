@@ -40,9 +40,23 @@ For an eleven-hour effort the anchor is not FTP but the rider's sustainable NP, 
 | Climb policy | `pull_cap_soft` 0.92 x FTP = 250 W, `climb_threshold` 3% for backrabatt. |
 | Group target | Rider-centric (Tim's numbers). `group_target_np` exposed but off by default. |
 | Pull length | `pull_seconds` 45 s default. |
-| n_riders (plan) | 12. Reference ride was 8 (see section 8). |
+| n_riders (plan) | 12. Reference ride was 8 (see section 8). Set to 1 for solo test rides (see section 2.1). |
 
 Race date locked to 2026-06-13 (Saturday), start time 04:22 confirmed by the timing table. Confirm the historical FIT is a long representative ride once decoded (section 8).
+
+### 2.1 Solo mode (n_riders = 1)
+The tool supports solo test rides on any GPX file. Set `n_riders: 1` in config.json and point `gpx_path` at any GPX track.
+
+In solo mode the chaingang model collapses:
+- `f_front = 1.0`, rider is always on the front.
+- `CdA = cda_pull` always (no drafting).
+- No square wave, no rotation. Rider NP = P_pedal NP directly.
+- `P_pull == P_mean == P_rider`. The solver targets rider NP = `np_target` throughout.
+- `watch_target` defaults to `avg` in solo mode (pull and avg are identical, but avg is more natural when riding alone).
+
+Everything else, the physics, solver, weather, segmentation, outputs, FIT workout, course, and CIQ field, works identically. The tool produces a full plan and workout for any route and any target time.
+
+Primary use case: Tim rides a test GPX solo, produces a workout to hold a target time with even effort, validates the model against reality before race day. The test GPX is provided by the user at runtime via config.json. It does not need to be available at build time.
 
 ---
 
