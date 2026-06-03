@@ -1,0 +1,15 @@
+# dependencies
+node_modules/
+# personal input data (GPX course, FIT rides) - not committed
+data/
+*.fit
+*.gpx
+# build / cache
+dist/
+.cache/
+weather-cache/
+# env
+.env
+.env.*
+# os
+.DS_Store
