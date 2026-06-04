@@ -1,17 +1,17 @@
 {
-  "name": "vatternrundan-raceplan",
+  "name": "sticktotheplan",
   "version": "0.1.0",
+  "private": true,
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
-    "start": "tsx src/cli.ts plan",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@garmin/fitsdk": "^21.205.0",
-    "fast-xml-parser": "^5.8.0"
+    "typecheck": "tsc --noEmit",
+    "build:web": "npm run build -w apps/web",
+    "start": "npm run start -w @stp/cli"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
