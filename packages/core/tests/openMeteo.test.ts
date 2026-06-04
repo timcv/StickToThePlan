@@ -6,7 +6,6 @@ import {
   fetchOpenMeteo,
   type GeoPoint,
 } from '../src/weather/openMeteo.js';
-import type { WindSample } from '../src/types.js';
 
 // ---------------------------------------------------------------------------
 // Fixture: two hours of Open-Meteo hourly data
@@ -171,9 +170,12 @@ describe('buildEnsembleUrl', () => {
 describe('fetchOpenMeteo', () => {
   beforeEach(() => {
     // Provide a global fetch mock returning the fixture for any call
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      json: async () => fixture,
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        json: async () => fixture,
+      }),
+    );
   });
 
   afterEach(() => {
@@ -188,13 +190,13 @@ describe('fetchOpenMeteo', () => {
 
   it('labels forecast samples with open-meteo-forecast', async () => {
     const samples = await fetchOpenMeteo([point], '2026-06-13');
-    const forecast = samples.filter(s => s.source === 'open-meteo-forecast');
+    const forecast = samples.filter((s) => s.source === 'open-meteo-forecast');
     expect(forecast.length).toBeGreaterThan(0);
   });
 
   it('labels ensemble samples with open-meteo-ensemble', async () => {
     const samples = await fetchOpenMeteo([point], '2026-06-13');
-    const ensemble = samples.filter(s => s.source === 'open-meteo-ensemble');
+    const ensemble = samples.filter((s) => s.source === 'open-meteo-ensemble');
     expect(ensemble.length).toBeGreaterThan(0);
   });
 
@@ -217,13 +219,16 @@ describe('fetchOpenMeteo', () => {
 
   it('still returns successful fetches when one of two rejects', async () => {
     // First call (forecast) resolves, second call (ensemble) rejects
-    vi.stubGlobal('fetch', vi.fn()
-      .mockResolvedValueOnce({ json: async () => fixture })
-      .mockRejectedValueOnce(new Error('ensemble unavailable'))
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce({ json: async () => fixture })
+        .mockRejectedValueOnce(new Error('ensemble unavailable')),
     );
     const samples = await fetchOpenMeteo([point], '2026-06-13');
     // Only forecast samples should come through
     expect(samples).toHaveLength(2);
-    expect(samples.every(s => s.source === 'open-meteo-forecast')).toBe(true);
+    expect(samples.every((s) => s.source === 'open-meteo-forecast')).toBe(true);
   });
 });

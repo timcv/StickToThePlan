@@ -30,14 +30,19 @@ import {
   renderHtml,
   sampleCellPoints,
   type MicroSegment,
-  type GeoPoint,
   type EnsembleField,
   type ThreeScenarios,
   type ControlPoint,
   type PlanJsonMeta,
 } from '@stp/core';
 import { loadConfig } from './loadConfig.js';
-import { ingestGpx, determineAnchor, writeWorkout, writeCourseGpx, writePlanJson } from './fileIo.js';
+import {
+  ingestGpx,
+  determineAnchor,
+  writeWorkout,
+  writeCourseGpx,
+  writePlanJson,
+} from './fileIo.js';
 import { gatherWindSamples } from './weatherFetch.js';
 import { readCache, writeCache } from './cache.js';
 import { generateCiq } from './ciqCompile.js';
@@ -73,7 +78,10 @@ export interface RunSummary {
  * expected / optimistic / pessimistic plans are identical, so we solve once
  * and reuse the result in all three slots.
  */
-function calmThreeScenarios(micro: MicroSegment[], cfg: ReturnType<typeof loadConfig>): ThreeScenarios {
+function calmThreeScenarios(
+  micro: MicroSegment[],
+  cfg: ReturnType<typeof loadConfig>,
+): ThreeScenarios {
   const plan = solveForTargetTime(micro, calmWeather, cfg);
   return { expected: plan, optimistic: plan, pessimistic: plan };
 }
@@ -140,7 +148,9 @@ export async function runPlan(opts: RunOptions = {}): Promise<RunSummary> {
 
   // 5. Solve the three scenarios.
   const scenarios: ThreeScenarios =
-    useCalm || field === null ? calmThreeScenarios(micro, cfg) : solveThreeScenarios(micro, field, cfg);
+    useCalm || field === null
+      ? calmThreeScenarios(micro, cfg)
+      : solveThreeScenarios(micro, field, cfg);
 
   // 6. Segment the expected plan into display segments.
   const controls = soloControls(cfg, micro);

@@ -1,0 +1,7 @@
+node_modules
+**/dist
+output
+coverage
+package-lock.json
+ciq
+*.min.*

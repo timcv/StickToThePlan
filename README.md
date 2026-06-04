@@ -13,13 +13,13 @@ This README is for developers who want to run the code locally, reuse the core, 
 
 This is an npm-workspaces monorepo. ESM throughout, TypeScript, no build step for the libraries (source is imported directly).
 
-| Path | What it is |
-|---|---|
+| Path            | What it is                                                                                                                                                                                                              |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `packages/core` | The pure calculation core and output builders: physics, chaingang model, planner, segmentation, GPX/FIT ingest, and the FIT/GPX/JSON/Connect IQ builders. Browser-safe, no Node-only IO. **This is the reusable part.** |
-| `packages/cli` | Node CLI that does file IO, weather fetch + cache, and the `monkeyc` compile, calling `@stp/core` for all math. |
-| `apps/web` | Vite + React single-page app. Runs `@stp/core` in a Web Worker; serves the form, split table, tempokort, and downloads. |
-| `api/` | Vercel serverless function for the server-side weather fetch. |
-| `ciq/` | Garmin Connect IQ data-field template compiled by the CLI. |
+| `packages/cli`  | Node CLI that does file IO, weather fetch + cache, and the `monkeyc` compile, calling `@stp/core` for all math.                                                                                                         |
+| `apps/web`      | Vite + React single-page app. Runs `@stp/core` in a Web Worker; serves the form, split table, tempokort, and downloads.                                                                                                 |
+| `api/`          | Vercel serverless function for the server-side weather fetch.                                                                                                                                                           |
+| `ciq/`          | Garmin Connect IQ data-field template compiled by the CLI.                                                                                                                                                              |
 
 ## Getting started
 
@@ -62,7 +62,11 @@ npm run build:web   # production build of apps/web
 
 ```ts
 import {
-  applyDefaults, ingestGpxString, solveThreeScenarios, segment, buildSplitTable,
+  applyDefaults,
+  ingestGpxString,
+  solveThreeScenarios,
+  segment,
+  buildSplitTable,
 } from '@stp/core';
 
 const cfg = applyDefaults({
@@ -74,8 +78,8 @@ const cfg = applyDefaults({
   stops: [{ control: 'Gränna', km: 77, minutes: 10 }],
 });
 
-const micro = ingestGpxString(gpxText, cfg);          // string in, no fs
-const scenarios = solveThreeScenarios(micro, field, cfg);  // field = EnsembleField, or calm
+const micro = ingestGpxString(gpxText, cfg); // string in, no fs
+const scenarios = solveThreeScenarios(micro, field, cfg); // field = EnsembleField, or calm
 const splits = buildSplitTable(scenarios.expected, cfg);
 const display = segment(scenarios.expected, cfg);
 ```

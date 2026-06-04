@@ -120,9 +120,7 @@ describe('A) synthetic flat route, three wind scenarios', () => {
 
   it('pessimistic NP exceeds optimistic NP by a clear margin (headwind matters)', () => {
     // optimistic ~81.5 W vs pessimistic ~192.5 W. Require a clear, not marginal, gap.
-    expect(three.pessimistic.np_target_used - three.optimistic.np_target_used).toBeGreaterThan(
-      20,
-    );
+    expect(three.pessimistic.np_target_used - three.optimistic.np_target_used).toBeGreaterThan(20);
   });
 });
 
@@ -184,7 +182,7 @@ describe('B) real GPX (Vatternrundan 315 km), three scenarios', () => {
         const hm = `${Math.floor(p.total_time_s / 3600)}:${String(
           Math.floor((p.total_time_s % 3600) / 60),
         ).padStart(2, '0')}`;
-        // eslint-disable-next-line no-console
+
         console.log(
           `[real scenarios] ${k.padEnd(12)} np=${p.np_target_used.toFixed(1)} W ` +
             `total=${p.total_time_s.toFixed(0)} s (${hm}) ` +

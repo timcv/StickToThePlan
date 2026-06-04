@@ -1,0 +1,14 @@
+# Git hooks. Install with `npm install` (runs the prepare script) or `npx lefthook install`.
+pre-commit:
+  parallel: true
+  jobs:
+    - name: format
+      glob: '*.{ts,tsx,js,jsx,json,css,md,yml,yaml}'
+      run: npx prettier --write {staged_files}
+      stage_fixed: true
+    - name: lint
+      glob: '*.{ts,tsx}'
+      run: npx eslint --fix {staged_files}
+      stage_fixed: true
+    - name: test
+      run: npm test
