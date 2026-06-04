@@ -67,6 +67,7 @@ export {
   type EnsembleCell,
   type EnsembleField,
 } from './weather/ensemble.js';
+export { sampleCellPoints } from './weather/sample.js';
 
 // Connect IQ data-field source generation (pure).
 export { buildLookupTable, generatePlanDeltaSource, type LookupEntry } from './ciq/generate.js';
