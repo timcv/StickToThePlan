@@ -4,7 +4,7 @@ StickToThePlan computes per-depot split times (mellantider) and downloadable wat
 
 ## Hosted app
 
-Live app: TBD (filled after the first Vercel deploy)
+Live app: https://sticktotheplan.vercel.app
 
 ## How it works
 

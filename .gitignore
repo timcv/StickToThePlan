@@ -25,3 +25,4 @@ ciq/developer_key.der
 # generated Monkey C source (regenerated per run; keep the directory)
 ciq/source/*.mc
 !ciq/source/.gitkeep
+.vercel

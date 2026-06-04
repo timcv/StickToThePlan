@@ -72,14 +72,12 @@ Branched feat/oss-web off main (no merge, see decision 2). Planning docs committ
 | Web smoke + component | pipeline smoke on the sample route yields a non-empty split table; SplitTable renders one row per leg |
 | No personal data | repo-wide grep for tim's email and /Users paths returns nothing |
 | CI | workflow authored; the four steps (npm ci, typecheck, test, build:web) all pass locally; the lockfile is in sync so npm ci will install cleanly. Actual green-on-GitHub requires a push (not done; push is not authorized without an explicit request). |
-| Vercel preview | vercel.json configured and the static build is verified locally; the in-browser sample run and the four downloads were confirmed via the local preview harness. An actual Vercel preview deploy requires the user's Vercel account, so the hosted preview itself is pending the user's deploy. |
+| Vercel deploy | DEPLOYED to team demo-team1 (project sticktotheplan). Live and public at https://sticktotheplan.vercel.app (HTTP 200, serves the app HTML + the 661 KB JS bundle + CSS). The build ran on Vercel from vercel.json (npm install workspaces, build:web, apps/web/dist). The first CLI deploy went to production, which gave the clean public alias; deployment-specific URLs are behind Vercel's standard SSO protection, the production alias is public. The identical build was verified end to end in a local browser (sample run, correct split table, four downloads). |
 | FIT round-trip with the 1000 offset | confirmed in the fitsdk spike (encode -> decode round-trips the +1000 watt target) under Vite/jsdom |
 
 ## Blockers
 
-None that stopped the build. Two items are inherently outside an autonomous local run and await the user:
-1. CI green on GitHub requires a push (push is gated on explicit user request per the project rules).
-2. A live Vercel preview deploy requires the user's Vercel account. All local prerequisites (build, config, in-browser sample run, downloads) are verified.
+None. The two items that originally awaited the user (push for CI, and the Vercel deploy) were authorized and are done: PR #1 is open and CI is running, and the app is live on demo-team1 at https://sticktotheplan.vercel.app. The only remaining steps are discretionary (merge the PR, make the repo public).
 
 ## Out of scope (as specified)
 
@@ -91,8 +89,8 @@ Phase 4 (serverless weather proxy for the full SMHI + MET Norway ensemble) was s
 - A redundant copy of PlanDelta.mc.tmpl remains in packages/core/src/ciq next to template.ts; template.ts (the embedded string) is the source of truth and the only one used.
 - The main web bundle is ~660 KB (gzip ~137 KB), dominated by @garmin/fitsdk on the main thread for the downloads. Acceptable for an SPA; could be lazy-loaded later if desired.
 
-## How to publish (user actions remaining)
+## Publish status
 
-1. Push `feat/oss-web` and open a PR, or merge to `main`, to trigger CI on GitHub.
-2. Import the repo into Vercel (it reads vercel.json), deploy, then fill the hosted-app link in README.md.
-3. Flip the GitHub repo from private to public.
+1. DONE: pushed `feat/oss-web` and opened PR #1 (https://github.com/timcv/StickToThePlan/pull/1). CI runs on the push.
+2. DONE: deployed to Vercel team demo-team1, live at https://sticktotheplan.vercel.app, and the README hosted-app link is filled.
+3. REMAINING (user's call): merge PR #1 to main, and flip the GitHub repo from private to public.
