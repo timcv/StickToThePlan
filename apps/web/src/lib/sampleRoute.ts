@@ -6,6 +6,10 @@
  * the cross-root read is permitted by `server.fs.allow` in vite.config.ts. The
  * route is deterministic synthetic data, not based on any real ride, so it is
  * safe to ship in the open-source build.
+ *
+ * The web form prefills the real Vätternrundan route instead (see
+ * src/lib/defaultRoute.ts); this synthetic route remains as a privacy-safe
+ * fixture for tests.
  */
 import sampleRouteGpx from '../../../../examples/sample-route.gpx?raw';
 

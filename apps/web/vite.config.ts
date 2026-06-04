@@ -8,8 +8,8 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   plugins: [react()],
   worker: { format: 'es' },
-  // The bundled synthetic sample route is committed at the repo root
-  // (examples/sample-route.gpx), one level above this workspace. Allow the dev
-  // server to read it so the `?raw` import in src/lib/sampleRoute.ts resolves.
+  // The bundled default route is committed at the repo root
+  // (examples/vattern-315.gpx), one level above this workspace. Allow the dev
+  // server to read it so the `?raw` import in src/lib/defaultRoute.ts resolves.
   server: { fs: { allow: ['../..'] } },
 });

@@ -6,6 +6,8 @@ data/
 *.gpx
 # synthetic example route is safe to commit despite the *.gpx rule
 !examples/sample-route.gpx
+# bundled default route prefilled into the web form
+!examples/vattern-315.gpx
 # build / cache
 dist/
 .cache/

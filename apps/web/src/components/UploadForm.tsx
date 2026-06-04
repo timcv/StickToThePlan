@@ -7,10 +7,10 @@
  * Files are read in the browser: GPX as text, FIT as bytes (Uint8Array). Nothing
  * is uploaded to a server (see the privacy note in App).
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { PipelineForm } from '../worker/solve.worker';
 import type { SolverStatus } from '../useSolver';
-import { sampleRouteGpx } from '../lib/sampleRoute';
+import { defaultRouteGpx, DEFAULT_ROUTE_NAME } from '../lib/defaultRoute';
 import { VATTERN_CONTROLS } from '@stp/core';
 
 interface StopRow {
@@ -86,9 +86,10 @@ function sortedByKm(stops: StopRow[]): StopRow[] {
 export function UploadForm({ onRun, status }: Props) {
   const saved = loadFromStorage();
 
-  // Files (not persisted, user must re-select after reload).
-  const [gpxText, setGpxText] = useState<string>('');
-  const [gpxName, setGpxName] = useState<string>('');
+  // Files. The GPX defaults to the bundled Vätternrundan route (prefilled on
+  // load); selecting a file overrides it. FIT is not persisted.
+  const [gpxText, setGpxText] = useState<string>(defaultRouteGpx);
+  const [gpxName, setGpxName] = useState<string>(DEFAULT_ROUTE_NAME);
   const [fitBytes, setFitBytes] = useState<Uint8Array | null>(null);
   const [fitName, setFitName] = useState<string>('');
 
@@ -120,10 +121,6 @@ export function UploadForm({ onRun, status }: Props) {
     });
   };
 
-  // Reset the GPX <input> after "Load sample route" so the same file can be
-  // re-selected later if the user wants to override the sample.
-  const gpxInputRef = useRef<HTMLInputElement>(null);
-
   const running = status === 'running';
   const canRun = !running && gpxText.trim().length > 0;
 
@@ -145,24 +142,6 @@ export function UploadForm({ onRun, status }: Props) {
     const buffer = await file.arrayBuffer();
     setFitBytes(new Uint8Array(buffer));
     setFitName(file.name);
-  };
-
-  const onLoadSample = () => {
-    setGpxText(sampleRouteGpx);
-    setGpxName('sample-route.gpx');
-    if (gpxInputRef.current) gpxInputRef.current.value = '';
-    const sampleStops = [
-      { control: 'Depå 1', km: 18, minutes: 5 },
-      { control: 'Krönet', km: 38, minutes: 0 },
-      { control: 'Depå 2', km: 58, minutes: 5 },
-    ];
-    setTargetTotalHm('2:30');
-    setFtp(250);
-    setNRiders(6);
-    setM(90);
-    setStartTime('06:00');
-    setStops(sampleStops);
-    persist({ targetTotalHm: '2:30', ftp: 250, nRiders: 6, m: 90, startTime: '06:00', stops: sampleStops, styrkortMaxRows: 20 });
   };
 
   const updateStop = (index: number, patch: Partial<StopRow>) => {
@@ -225,7 +204,6 @@ export function UploadForm({ onRun, status }: Props) {
         <label className="field">
           <span>GPX route (required)</span>
           <input
-            ref={gpxInputRef}
             type="file"
             accept=".gpx,application/gpx+xml,text/xml"
             onChange={onGpxChange}
@@ -376,11 +354,8 @@ export function UploadForm({ onRun, status }: Props) {
       </fieldset>
 
       <div className="actions">
-        <button type="button" className="ghost" onClick={onLoadSample}>
-          Load sample route
-        </button>
         <button type="submit" className="primary" disabled={!canRun}>
-          {running ? 'Solving...' : 'Använd inställningar'}
+          Använd inställningar
         </button>
         {running && <span className="spinner" aria-label="Solving" />}
       </div>
