@@ -65,21 +65,3 @@ export function parseSmhi(json: any, point: GeoPoint): WindSample[] {
 
   return samples;
 }
-
-/**
- * Fetch SMHI point forecast and parse to WindSample array.
- * Returns empty array on any network or parse error.
- */
-export async function fetchSmhi(point: GeoPoint): Promise<WindSample[]> {
-  try {
-    const url = buildSmhiUrl(point);
-    const response = await fetch(url);
-    if (!response.ok) {
-      return [];
-    }
-    const json = await response.json();
-    return parseSmhi(json, point);
-  } catch {
-    return [];
-  }
-}

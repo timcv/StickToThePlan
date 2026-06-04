@@ -1,4 +1,3 @@
-import * as fs from 'node:fs';
 import type { Config, Stop } from './types.js';
 
 /**
@@ -29,7 +28,7 @@ const DEFAULTS = {
  * The raw shape accepted from config.json before defaults are applied.
  * All fields except the mandatory three are optional.
  */
-type RawConfig = Partial<Config> & {
+export type RawConfig = Partial<Config> & {
   race_date?: string;
   start_time?: string;
   gpx_path?: string;
@@ -81,13 +80,4 @@ export function applyDefaults(raw: RawConfig): Config {
     pull_cap_soft,
     np_target,
   };
-}
-
-/**
- * Read a config JSON file from disk and return a fully populated Config.
- * Throws if the file is unreadable, unparseable, or missing mandatory fields.
- */
-export function loadConfig(filePath = 'config.json'): Config {
-  const raw = JSON.parse(fs.readFileSync(filePath, 'utf8')) as RawConfig;
-  return applyDefaults(raw);
 }

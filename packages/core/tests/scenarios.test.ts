@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import type { MicroSegment, Config } from '../src/types.js';
 import type { EnsembleField } from '../src/weather/ensemble.js';
 import { applyDefaults } from '../src/config.js';
-import { ingestGpx } from '../src/ingest/gpx.js';
+import { ingestGpxString } from '../src/ingest/gpx.js';
 import { hmToSeconds } from '../src/util/time.js';
 import { solveThreeScenarios } from '../src/planner.js';
 
@@ -151,7 +151,7 @@ describe('B) real GPX (Vatternrundan 315 km), three scenarios', () => {
         ],
       });
 
-      const micro = ingestGpx(REAL_GPX, cfg);
+      const micro = ingestGpxString(readFileSync(REAL_GPX, 'utf8'), cfg);
 
       // Simple single-cell field roughly centred on the course bounding box
       // (lat 57.78..58.89, lon 14.10..15.16). A single cell is acceptable for

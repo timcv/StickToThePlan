@@ -17,29 +17,29 @@
  * Date.now() / new Date() are allowed in app code.
  */
 
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { MicroSegment, WindSample } from './types.js';
-import { loadConfig } from './config.js';
-import { ingestGpx } from './ingest/gpx.js';
-import { determineAnchor } from './ingest/fit.js';
-import { fetchOpenMeteo, type GeoPoint } from './weather/openMeteo.js';
-import { fetchSmhi } from './weather/smhi.js';
-import { fetchMetNorway } from './weather/metNorway.js';
-import { buildEnsemble, type EnsembleField } from './weather/ensemble.js';
-import { readCache, writeCache } from './weather/cache.js';
 import {
   calmWeather,
   solveForTargetTime,
   solveThreeScenarios,
+  segment,
+  VATTERN_CONTROLS,
+  buildEnsemble,
+  renderMarkdown,
+  renderHtml,
+  type MicroSegment,
+  type GeoPoint,
+  type EnsembleField,
   type ThreeScenarios,
-} from './planner.js';
-import { segment, VATTERN_CONTROLS, type ControlPoint } from './segmentation.js';
-import { renderMarkdown, renderHtml } from './output/tempokort.js';
-import { writeWorkout } from './output/fitWorkout.js';
-import { writeCourseGpx } from './output/course.js';
-import { writePlanJson, type PlanJsonMeta } from './output/planJson.js';
-import { generateCiq } from './ciq/generate.js';
+  type ControlPoint,
+  type PlanJsonMeta,
+} from '@stp/core';
+import { loadConfig } from './loadConfig.js';
+import { ingestGpx, determineAnchor, writeWorkout, writeCourseGpx, writePlanJson } from './fileIo.js';
+import { gatherWindSamples } from './weatherFetch.js';
+import { readCache, writeCache } from './cache.js';
+import { generateCiq } from './ciqCompile.js';
 
 // ---------------------------------------------------------------------------
 // Public API types
@@ -86,41 +86,6 @@ export function sampleWeatherPoints(micro: MicroSegment[]): GeoPoint[] {
     points.push({ lat: last.lat, lon: last.lon });
   }
   return points;
-}
-
-/**
- * Gather wind samples from all three sources, isolating each source so a dead
- * one contributes nothing instead of failing the run.
- *
- * Open-Meteo is queried for all points at once (it batches internally). SMHI
- * and MET Norway are point endpoints, so they are queried per point. Every
- * call is wrapped so a rejection or partial failure never propagates.
- */
-async function gatherWindSamples(points: GeoPoint[], date: string): Promise<WindSample[]> {
-  const all: WindSample[] = [];
-
-  // Open-Meteo (forecast + ensemble) for all points.
-  try {
-    all.push(...(await fetchOpenMeteo(points, date)));
-  } catch {
-    // Dead source: contribute nothing.
-  }
-
-  // SMHI and MET Norway: per-point point forecasts.
-  for (const point of points) {
-    try {
-      all.push(...(await fetchSmhi(point)));
-    } catch {
-      // Dead source for this point: skip.
-    }
-    try {
-      all.push(...(await fetchMetNorway(point)));
-    } catch {
-      // Dead source for this point: skip.
-    }
-  }
-
-  return all;
 }
 
 // ---------------------------------------------------------------------------
@@ -295,7 +260,6 @@ function soloControls(cfg: ReturnType<typeof loadConfig>, micro: MicroSegment[])
 // Small IO helper (kept here so the writers above read cleanly)
 // ---------------------------------------------------------------------------
 
-import { writeFileSync } from 'node:fs';
 function writeFileUtf8(path: string, content: string): void {
   writeFileSync(path, content, 'utf-8');
 }

@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { applyDefaults, loadConfig } from '../src/config.js';
+import { applyDefaults } from '@stp/core';
+import { loadConfig } from '../src/loadConfig.js';
 
 describe('applyDefaults (unit, no disk IO)', () => {
   it('loading the committed config.json fields and defaults', () => {
@@ -146,8 +147,9 @@ describe('applyDefaults (unit, no disk IO)', () => {
 
 describe('loadConfig (disk IO)', () => {
   it('loads the committed config.json from project root', () => {
-    // Resolve relative to this test file's directory up two levels to project root
-    const projectRoot = path.resolve(new URL(import.meta.url).pathname, '../../');
+    // Resolve relative to this test file's directory up to the repo root
+    // (packages/cli/tests -> ../../../).
+    const projectRoot = path.resolve(new URL(import.meta.url).pathname, '../../../../');
     const cfg = loadConfig(path.join(projectRoot, 'config.json'));
     expect(cfg.ftp).toBe(272);
     expect(cfg.cda_pull).toBe(0.32);

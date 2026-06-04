@@ -3,13 +3,12 @@ import { existsSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-  parseGpx,
   dedupePoints,
   smoothElevation,
   buildMicroSegments,
-  ingestGpx,
-} from '../src/ingest/gpx.js';
-import { applyDefaults } from '../src/config.js';
+  applyDefaults,
+} from '@stp/core';
+import { parseGpx, ingestGpx } from '../src/fileIo.js';
 
 // -------------------------------------------------------------------------
 // Helpers

@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import type { MicroSegment, Config } from '../src/types.js';
 import { applyDefaults } from '../src/config.js';
-import { ingestGpx } from '../src/ingest/gpx.js';
+import { ingestGpxString } from '../src/ingest/gpx.js';
 import { hmToSeconds, secondsToClock } from '../src/util/time.js';
 import {
   calmWeather,
@@ -125,7 +125,7 @@ describe('B) real GPX (Vatternrundan 315 km)', () => {
         ],
       });
 
-      const micro = ingestGpx(REAL_GPX, cfg);
+      const micro = ingestGpxString(readFileSync(REAL_GPX, 'utf8'), cfg);
       const plan = solveForTargetTime(micro, calmWeather, cfg);
 
       // Mean rolling speed over non-neutral segments.

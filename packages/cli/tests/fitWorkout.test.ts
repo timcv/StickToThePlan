@@ -11,9 +11,8 @@ import { readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Decoder, Stream } from '@garmin/fitsdk';
-import { buildSteps, writeWorkout } from '../src/output/fitWorkout.js';
-import { applyDefaults } from '../src/config.js';
-import type { Config, DisplaySegment } from '../src/types.js';
+import { buildSteps, applyDefaults, type Config, type DisplaySegment } from '@stp/core';
+import { writeWorkout } from '../src/fileIo.js';
 
 // ---------------------------------------------------------------------------
 // Fixtures

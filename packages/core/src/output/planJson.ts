@@ -6,11 +6,8 @@
  * optimistic / pessimistic), the expected scenario's full per-segment data,
  * the stops, the display segments and a meta block (reduced ensemble, weather
  * sources, notes).
- *
- * writePlanJson serializes it with two-space indentation and writes UTF-8.
  */
 
-import { writeFileSync } from 'node:fs';
 import type { Config, FitPassMetrics, DisplaySegment, PlanResult } from '../types.js';
 import type { ThreeScenarios } from '../planner.js';
 
@@ -96,23 +93,4 @@ export function buildPlanJson(
     displaySegments,
     meta,
   };
-}
-
-// ---------------------------------------------------------------------------
-// writePlanJson
-// ---------------------------------------------------------------------------
-
-/**
- * Build the plan JSON and write it to outPath as pretty-printed UTF-8.
- */
-export function writePlanJson(
-  scenarios: ThreeScenarios,
-  displaySegments: DisplaySegment[],
-  anchor: FitPassMetrics,
-  cfg: Config,
-  meta: PlanJsonMeta,
-  outPath: string,
-): void {
-  const obj = buildPlanJson(scenarios, displaySegments, anchor, cfg, meta);
-  writeFileSync(outPath, JSON.stringify(obj, null, 2), 'utf-8');
 }

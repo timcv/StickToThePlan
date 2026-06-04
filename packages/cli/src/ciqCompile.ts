@@ -1,31 +1,26 @@
 /**
- * Connect IQ plan-delta data field generation (spec section 12.5).
+ * Connect IQ data-field writing and best-effort compilation (Node IO).
  *
- * The planner re-generates a Monkey C data field on every run, embedding a
- * distance/elapsed lookup table for the current plan, then best-effort compiles
- * it to a sideloadable .prg with the Connect IQ SDK (monkeyc).
+ * The pure source generation (generatePlanDeltaSource / buildLookupTable) lives
+ * in @stp/core. This module writes the generated .mc source to disk and runs the
+ * Connect IQ SDK (monkeyc) to produce a sideloadable .prg.
  *
  * Per spec 12.5 the compile is BEST-EFFORT: if the SDK is absent or the compile
- * fails, we log nothing here (the caller logs), still write the generated .mc
- * source for inspection, and never fail the run. The hard, tested gate is source
- * generation plus a monotonic lookup table (compilePlanDelta is not exercised in
- * the unit tests).
+ * fails, we still write the generated .mc source for inspection and never fail
+ * the run.
  *
  * Exports:
- *   buildLookupTable        - pure: display-segment boundaries -> lookup entries
- *   generatePlanDeltaSource - fill the .mc template placeholders
  *   writePlanDeltaSource    - write the .mc source (outDir + ciq source dir)
  *   compilePlanDelta        - ensure dev key, run monkeyc, never throw
  *   generateCiq             - generate + write + (optional) compile
  */
 
-import { existsSync, mkdirSync, writeFileSync, readFileSync, mkdtempSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
-import type { DisplaySegment, PlanResult, Config } from '../types.js';
-import { clockToSeconds } from '../util/time.js';
+import { generatePlanDeltaSource, type DisplaySegment, type PlanResult, type Config } from '@stp/core';
 
 // ---------------------------------------------------------------------------
 // Path resolution (works under tsx and compiled dist, ESM)
@@ -36,109 +31,16 @@ function thisDir(): string {
 }
 
 function projectRoot(): string {
-  // src/ciq/generate.ts -> ../.. is the repo root.
-  return resolve(thisDir(), '..', '..');
+  // packages/cli/src/ciqCompile.ts -> ../../.. is the repo root.
+  return resolve(thisDir(), '..', '..', '..');
 }
 
-const TEMPLATE_PATH = join(thisDir(), 'PlanDelta.mc.tmpl');
 const CIQ_DIR = join(projectRoot(), 'ciq');
 const CIQ_SOURCE_DIR = join(CIQ_DIR, 'source');
 const CIQ_SOURCE_FILE = join(CIQ_SOURCE_DIR, 'PlanDelta.mc');
 const CIQ_JUNGLE = join(CIQ_DIR, 'monkey.jungle');
 const CIQ_DEV_KEY = join(CIQ_DIR, 'developer_key.der');
 const FENIX_DEVICE = 'fenix7x';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export interface LookupEntry {
-  distance_m: number;
-  elapsed_s: number;
-}
-
-// ---------------------------------------------------------------------------
-// Lookup table
-// ---------------------------------------------------------------------------
-
-/**
- * Build the distance/elapsed lookup table from the display-segment boundaries.
- *
- * Each display segment contributes one boundary: the cumulative distance at its
- * end (to_km * 1000 metres) paired with the planned elapsed seconds at that
- * point (eta_s, which includes stop time, the correct basis for a vs-plan
- * comparison). The table starts at the {0, 0} origin and is made monotonic
- * non-decreasing in distance by dropping out-of-order points and deduping equal
- * distances (keeping the larger elapsed). The result includes the final
- * boundary.
- */
-export function buildLookupTable(displaySegments: DisplaySegment[], _plan: PlanResult): LookupEntry[] {
-  const raw: LookupEntry[] = [{ distance_m: 0, elapsed_s: 0 }];
-  for (const seg of displaySegments) {
-    raw.push({ distance_m: Math.round(seg.to_km * 1000), elapsed_s: Math.round(seg.eta_s) });
-  }
-
-  // Sort by distance, then by elapsed, so equal distances are adjacent with the
-  // larger elapsed last (it wins on dedupe).
-  raw.sort((a, b) => (a.distance_m - b.distance_m) || (a.elapsed_s - b.elapsed_s));
-
-  const out: LookupEntry[] = [];
-  for (const e of raw) {
-    const prev = out[out.length - 1];
-    if (prev === undefined) {
-      out.push(e);
-      continue;
-    }
-    if (e.distance_m === prev.distance_m) {
-      // Same distance: keep the larger elapsed (raw is sorted so e wins).
-      if (e.elapsed_s > prev.elapsed_s) {
-        prev.elapsed_s = e.elapsed_s;
-      }
-      continue;
-    }
-    // Distance increases. Keep elapsed non-decreasing too.
-    if (e.elapsed_s < prev.elapsed_s) {
-      out.push({ distance_m: e.distance_m, elapsed_s: prev.elapsed_s });
-    } else {
-      out.push(e);
-    }
-  }
-
-  return out;
-}
-
-// ---------------------------------------------------------------------------
-// Source generation
-// ---------------------------------------------------------------------------
-
-/**
- * Render the lookup table as a Monkey C array literal of [distance, elapsed]
- * pairs, e.g. [[0,0],[76900,9300],[134000,17880]].
- */
-function lookupLiteral(table: LookupEntry[]): string {
-  const pairs = table.map((e) => `[${e.distance_m},${e.elapsed_s}]`);
-  return `[${pairs.join(',')}]`;
-}
-
-/**
- * Generate the PlanDelta.mc source by filling the template placeholders with
- * the lookup table, total planned time, and start clock for this plan.
- */
-export function generatePlanDeltaSource(
-  displaySegments: DisplaySegment[],
-  plan: PlanResult,
-  cfg: Config,
-): string {
-  const template = readFileSync(TEMPLATE_PATH, 'utf-8');
-  const table = buildLookupTable(displaySegments, plan);
-
-  const source = template
-    .replace('/*__LOOKUP__*/', lookupLiteral(table))
-    .replace('/*__PLAN_TOTAL_S__*/', String(Math.round(plan.total_time_s)))
-    .replace('/*__START_CLOCK_S__*/', String(clockToSeconds(cfg.start_time)));
-
-  return source;
-}
 
 // ---------------------------------------------------------------------------
 // Source writing

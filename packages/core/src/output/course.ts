@@ -4,10 +4,8 @@
  *
  * Exports:
  *   buildCourseGpx  - pure function, returns GPX XML string
- *   writeCourseGpx  - writes the string to a file path (UTF-8)
  */
 
-import { writeFileSync } from 'node:fs';
 import type { MicroSegment, PlanResult, Config } from '../types.js';
 import type { ControlPoint } from '../segmentation.js';
 import { secondsToClock } from '../util/time.js';
@@ -147,22 +145,4 @@ export function buildCourseGpx(
   lines.push('</gpx>');
 
   return lines.join('\n');
-}
-
-// ---------------------------------------------------------------------------
-// writeCourseGpx
-// ---------------------------------------------------------------------------
-
-/**
- * Build the course GPX string and write it to outPath using UTF-8 encoding.
- */
-export function writeCourseGpx(
-  microsegments: MicroSegment[],
-  plan: PlanResult,
-  cfg: Config,
-  controls: ControlPoint[],
-  outPath: string,
-): void {
-  const gpx = buildCourseGpx(microsegments, plan, cfg, controls);
-  writeFileSync(outPath, gpx, 'utf-8');
 }

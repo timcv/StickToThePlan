@@ -1,18 +1,16 @@
-import { readFileSync } from 'node:fs';
 import { XMLParser } from 'fast-xml-parser';
 import type { RoutePoint, MicroSegment, Config } from '../types.js';
 import { haversine, bearing } from '../util/geo.js';
 
 // -------------------------------------------------------------------------
-// parseGpx
+// parseGpxString
 // -------------------------------------------------------------------------
 
 /**
- * Parse a GPX file and return an array of RoutePoints.
+ * Parse a GPX XML string and return an array of RoutePoints.
  * Handles trk and trkseg as either arrays or single objects.
  */
-export function parseGpx(path: string): RoutePoint[] {
-  const xml = readFileSync(path, 'utf8');
+export function parseGpxString(xml: string): RoutePoint[] {
   const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
@@ -162,14 +160,15 @@ export function buildMicroSegments(
 }
 
 // -------------------------------------------------------------------------
-// ingestGpx
+// ingestGpxString
 // -------------------------------------------------------------------------
 
 /**
- * Full pipeline: parse -> dedup -> smooth -> build microsegments.
+ * Full pipeline from a GPX XML string: parse -> dedup -> smooth -> build
+ * microsegments.
  */
-export function ingestGpx(path: string, cfg: Config): MicroSegment[] {
-  const pts = parseGpx(path);
+export function ingestGpxString(xml: string, cfg: Config): MicroSegment[] {
+  const pts = parseGpxString(xml);
   const deduped = dedupePoints(pts);
   const smoothedEle = smoothElevation(
     deduped.map((p) => p.ele),

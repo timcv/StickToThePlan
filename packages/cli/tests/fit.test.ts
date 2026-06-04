@@ -3,9 +3,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { existsSync } from 'node:fs';
-import { analyzePass, determineAnchor, readFitPower } from '../src/ingest/fit.js';
-import { applyDefaults } from '../src/config.js';
-import type { Config } from '../src/types.js';
+import { analyzePass, applyDefaults, type Config } from '@stp/core';
+import { determineAnchor, readFitPower } from '../src/fileIo.js';
 
 // Minimal config used for synthetic tests.
 function makeConfig(overrides: Partial<Config> = {}): Config {

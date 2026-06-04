@@ -3,17 +3,15 @@
 // Spec sections 8, 8.1, 18.2.
 
 import { Decoder, Stream } from '@garmin/fitsdk';
-import { readFileSync, existsSync } from 'node:fs';
 import type { FitPassMetrics, Config } from '../types.js';
 import { normalizedPower } from '../physics.js';
 
 /**
- * Read raw power values (watts) from a FIT activity file.
+ * Read raw power values (watts) from the bytes of a FIT activity file.
  * Returns one value per record message that carries a numeric power field.
  * Null/undefined power records are filtered out.
  */
-export function readFitPower(path: string): number[] {
-  const bytes = readFileSync(path);
+export function readFitPowerBytes(bytes: Uint8Array | number[]): number[] {
   const stream = Stream.fromByteArray(Array.from(bytes));
   const decoder = new Decoder(stream);
   const { messages } = decoder.read();
@@ -74,14 +72,16 @@ export function analyzePass(powerStream: number[], cfg: Config): FitPassMetrics 
 }
 
 /**
- * Determine the np_target anchor from cfg.
+ * Determine the np_target anchor from an already-loaded power stream.
  *
- * If cfg.fit_path is set and the file exists, reads and analyzes the FIT.
- * Otherwise returns a synthetic FitPassMetrics with a 0.60 x ftp fallback.
+ * If a non-null power stream is given, analyzes it. Otherwise (no FIT
+ * available) returns a synthetic FitPassMetrics with a 0.60 x ftp fallback.
  */
-export function determineAnchor(cfg: Config): FitPassMetrics {
-  if (cfg.fit_path && existsSync(cfg.fit_path)) {
-    const powerStream = readFitPower(cfg.fit_path);
+export function determineAnchorFromPower(
+  powerStream: number[] | null,
+  cfg: Config,
+): FitPassMetrics {
+  if (powerStream !== null) {
     return analyzePass(powerStream, cfg);
   }
 

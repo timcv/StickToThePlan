@@ -22,7 +22,6 @@
 //   - `customTargetValueLow` / `High` use scale 1 on both write and read, so the
 //     +1000 watt value round-trips byte-for-byte.
 
-import { writeFileSync } from 'node:fs';
 import { Encoder, Profile } from '@garmin/fitsdk';
 import type { DisplaySegment, Config } from '../types.js';
 
@@ -104,7 +103,8 @@ export function buildSteps(displaySegments: DisplaySegment[], cfg: Config): Work
 }
 
 /**
- * Build the workout steps and write a distance-based FIT workout file to outPath.
+ * Build the workout steps and encode a distance-based FIT workout, returning
+ * the encoded bytes.
  *
  * Messages written:
  *   file_id      type=workout, manufacturer=development, time_created, serial_number.
@@ -112,14 +112,11 @@ export function buildSteps(displaySegments: DisplaySegment[], cfg: Config): Work
  *   workout_step one per step: message_index, optional wkt_step_name,
  *                duration_type=distance + duration_value (metres * 100),
  *                target_type=power + custom_target_value_low/high (watts + 1000).
- *
- * Returns the step count and the size of the encoded file in bytes.
  */
-export function writeWorkout(
+export function encodeWorkout(
   displaySegments: DisplaySegment[],
   cfg: Config,
-  outPath: string,
-): { numSteps: number; bytes: number } {
+): Uint8Array {
   const steps = buildSteps(displaySegments, cfg);
 
   const encoder = new Encoder();
@@ -155,8 +152,5 @@ export function writeWorkout(
     });
   }
 
-  const bytes = encoder.close();
-  writeFileSync(outPath, Buffer.from(bytes));
-
-  return { numSteps: steps.length, bytes: bytes.length };
+  return encoder.close();
 }

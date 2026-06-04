@@ -14,7 +14,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { EnsembleField } from './ensemble.js';
+import type { EnsembleField } from '@stp/core';
 
 // ---------------------------------------------------------------------------
 // Project root resolution (works whether called as CJS or ESM)
@@ -23,8 +23,8 @@ import type { EnsembleField } from './ensemble.js';
 function projectRoot(): string {
   // __filename is not available in ESM; derive it from import.meta.url
   const thisFile = fileURLToPath(import.meta.url);
-  // src/weather/cache.ts -> ../../..
-  return path.resolve(path.dirname(thisFile), '..', '..');
+  // packages/cli/src/cache.ts -> ../../.. is the repo root.
+  return path.resolve(path.dirname(thisFile), '..', '..', '..');
 }
 
 // ---------------------------------------------------------------------------

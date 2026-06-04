@@ -1,8 +1,8 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { cachePath, readCache, writeCache } from '../src/weather/cache.js';
-import type { EnsembleField } from '../src/weather/ensemble.js';
+import { cachePath, readCache, writeCache } from '../src/cache.js';
+import type { EnsembleField } from '@stp/core';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -31,8 +31,9 @@ function makeField(): EnsembleField {
   };
 }
 
-// Resolve the .cache directory relative to project root (two levels up from tests/)
-const CACHE_DIR = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '.cache');
+// Resolve the .cache directory relative to the repo root
+// (packages/cli/tests -> ../../.. -> repo root, then .cache).
+const CACHE_DIR = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..', '..', '.cache');
 
 afterEach(() => {
   // Clean up any files written by the test date

@@ -184,7 +184,8 @@ describe.skipIf(!existsSync('data/vatternrundan-315km.gpx'))(
   () => {
     it('smoke: builds GPX without throwing for real data', async () => {
       // Dynamic import to avoid parsing the GPX unless the file exists
-      const { ingestGpx } = await import('../src/ingest/gpx.js');
+      const { ingestGpxString } = await import('../src/ingest/gpx.js');
+      const { readFileSync } = await import('node:fs');
       const { applyDefaults: ad } = await import('../src/config.js');
       const realCfg = ad({
         race_date: '2026-06-13',
@@ -195,7 +196,7 @@ describe.skipIf(!existsSync('data/vatternrundan-315km.gpx'))(
         target_total_hm: '11:45',
         stops: [],
       });
-      const micros = ingestGpx('data/vatternrundan-315km.gpx', realCfg);
+      const micros = ingestGpxString(readFileSync('data/vatternrundan-315km.gpx', 'utf8'), realCfg);
 
       // Build a minimal plan with one segment per micro (eta_s = index * 10)
       const segs: SegmentPlan[] = micros.map((m, i) => makeSegmentPlan(m, (i + 1) * 10));

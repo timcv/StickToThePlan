@@ -14,5 +14,5 @@
       "@stp/core/*": ["./packages/core/src/*"]
     }
   },
-  "include": ["packages/*/src", "packages/*/tests", "src", "tests"]
+  "include": ["packages/*/src", "packages/*/tests"]
 }

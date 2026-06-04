@@ -73,21 +73,3 @@ export function parseMetNorway(json: any, point: GeoPoint): WindSample[] {
 
   return samples;
 }
-
-/**
- * Fetch MET Norway point forecast and parse to WindSample array.
- * Passes the required User-Agent header. Returns empty array on any error.
- */
-export async function fetchMetNorway(point: GeoPoint): Promise<WindSample[]> {
-  try {
-    const url = buildMetNorwayUrl(point);
-    const response = await fetch(url, { headers: metNorwayHeaders() });
-    if (!response.ok) {
-      return [];
-    }
-    const json = await response.json();
-    return parseMetNorway(json, point);
-  } catch {
-    return [];
-  }
-}

@@ -18,10 +18,10 @@ import type {
   FitPassMetrics,
   DisplaySegment,
   StopPlan,
-} from '../src/types.js';
-import type { ThreeScenarios } from '../src/planner.js';
-import { applyDefaults } from '../src/config.js';
-import { buildPlanJson, writePlanJson } from '../src/output/planJson.js';
+  ThreeScenarios,
+} from '@stp/core';
+import { applyDefaults, buildPlanJson } from '@stp/core';
+import { writePlanJson } from '../src/fileIo.js';
 
 // ---------------------------------------------------------------------------
 // Hand-built fixtures
