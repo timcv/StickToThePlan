@@ -1,5 +1,8 @@
 # dependencies
 node_modules/
+# this repo uses npm (package-lock.json); ignore stray pnpm lockfiles
+pnpm-lock.yaml
+pnpm-workspace.yaml
 # personal input data (GPX course, FIT rides) - not committed
 data/
 *.fit
