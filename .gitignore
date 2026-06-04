@@ -4,6 +4,8 @@ node_modules/
 data/
 *.fit
 *.gpx
+# synthetic example route is safe to commit despite the *.gpx rule
+!examples/sample-route.gpx
 # build / cache
 dist/
 .cache/
