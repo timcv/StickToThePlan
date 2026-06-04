@@ -33,8 +33,10 @@ interface Props {
 type WatchTarget = 'pull' | 'avg';
 
 const DEPOT_MINUTES: Record<string, number> = {
-  Hästholmen: 5,
-  Jönköping: 10,
+  Gränna: 10,
+  Fagerhult: 10,
+  Boviken: 15,
+  Askersund: 15,
 };
 
 const DEFAULT_STOPS: StopRow[] = VATTERN_CONTROLS.filter(
