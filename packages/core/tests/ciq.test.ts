@@ -95,6 +95,7 @@ function makeConfig(): Config {
     ele_smooth_window: 5,
     max_grade: 0.18,
     min_segment_km: 2,
+    grade_merge_pct: 0.003,
     styrkort_max_rows: 20,
     solo: false,
   };

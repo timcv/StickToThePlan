@@ -448,6 +448,40 @@ export function segment(
     }
   }
 
+  // Merge adjacent segments whose gradient is near-identical. This collapses
+  // cosmetic splits (e.g. a wind-sign flip that still reads as the same effort)
+  // where the rows differ only by a fraction of a percent in grade. It runs
+  // AFTER the minSegmentKm merge so it operates on already-coarsened rows: at
+  // raw resolution neighbouring grades are noisy and rarely match, but the
+  // consolidated rows expose the genuine same-gradient stretches.
+  // Rules: same note (never blend a climb / headwind row into flat), never
+  // cross a depot stop, and never cross a control town (a ends on a control)
+  // so town markers stay visible. Comparing against the *merged* grade each
+  // pass lets a long gentle stretch chain together and stop on its own.
+  const gradeThr = cfg.grade_merge_pct;
+  if (gradeThr > 0) {
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (let i = 0; i < displaySegs.length - 1; i++) {
+        const a = displaySegs[i];
+        const b = displaySegs[i + 1];
+        if (a.stop_minutes !== undefined || b.stop_minutes !== undefined) continue;
+        if (a.town !== undefined) continue; // a ends at a control: keep town visible
+        if (a.note !== b.note) continue;
+        if (Math.abs(a.avg_grade - b.avg_grade) >= gradeThr) continue;
+        const merged = mergeDisplaySegs(a, b);
+        displaySegs = [
+          ...displaySegs.slice(0, i),
+          merged,
+          ...displaySegs.slice(i + 2),
+        ];
+        changed = true;
+        break; // restart scan after any merge
+      }
+    }
+  }
+
   // Merge down to <= maxSegments display segments.
   // Strategy: find the pair of adjacent segments with the most similar avg_w
   // that does not cross a depot boundary (neither a nor b is a depot, and

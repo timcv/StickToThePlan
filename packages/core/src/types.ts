@@ -31,6 +31,7 @@ export interface Config {
   ele_smooth_window: number;  // 5 (microsegment moving-average window for elevation)
   max_grade: number;          // 0.18 clip implausible gradients
   min_segment_km: number;     // 2 merge display segments shorter than this
+  grade_merge_pct: number;    // 0.003 merge adjacent segments whose grade differs by less (0 disables)
   styrkort_max_rows: number;  // 20 max rows in the compact handlebar card
   solo: boolean;              // derived: n_riders === 1
 }

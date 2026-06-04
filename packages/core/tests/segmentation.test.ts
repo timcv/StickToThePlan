@@ -409,3 +409,96 @@ describe('segment() wind labels', () => {
     expect(segs.every(s => s.wind_label === 'Lugnt')).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// SUITE: gradient merge. Adjacent segments with near-identical gradient
+// (split only by a cosmetic boundary like a wind flip) collapse into one row.
+// ---------------------------------------------------------------------------
+describe('segment() gradient merge', () => {
+  // Build a 12 km route with explicit per-segment grade and headwind.
+  function gentleRoute(grades: number[], winds: number[]): PlanResult {
+    let cum = 0;
+    let ele = 100;
+    const plans = grades.map((g, i) => {
+      const distance_m = 1000;
+      cum += distance_m;
+      const ele_end = ele + g * distance_m;
+      const micro: MicroSegment = {
+        index: i,
+        distance_m,
+        cum_distance_m: cum,
+        grade: g,
+        bearing_deg: 90,
+        lat: 58.0 + i * 0.01,
+        lon: 14.5,
+        ele_start_m: ele,
+        ele_end_m: ele_end,
+        neutral: false,
+      };
+      ele = ele_end;
+      return makeSeg(micro, { headwind_ms: winds[i] });
+    });
+    return buildPlanResult(plans, 0);
+  }
+
+  // Controls only at the route ends (no mid-route town).
+  const ENDS: ControlPoint[] = [
+    { name: 'Start', km: 0 },
+    { name: 'End', km: 12 },
+  ];
+
+  // First half grade 0.1%, second half 0.2%; wind flips sign at the midpoint
+  // (forces a boundary), so without gradient merge there are two groups.
+  const SIMILAR = gentleRoute(
+    [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.002, 0.002, 0.002, 0.002, 0.002, 0.002],
+    [2, 2, 2, 2, 2, 2, -2, -2, -2, -2, -2, -2],
+  );
+
+  const cfg = (gradeMergePct: number): Config =>
+    applyDefaults({
+      race_date: '2026-06-13',
+      start_time: '04:22',
+      gpx_path: 'x',
+      ftp: 272,
+      n_riders: 12,
+      target_total_hm: '11:45',
+      stops: [],
+      grade_merge_pct: gradeMergePct,
+    });
+
+  it('merges adjacent segments whose grade differs by < grade_merge_pct', () => {
+    const segs = segment(SIMILAR, cfg(0.003), ENDS);
+    expect(segs.length).toBe(1);
+    expect(segs[0].from_km).toBeCloseTo(0, 0);
+    expect(segs[0].to_km).toBeCloseTo(12, 0);
+  });
+
+  it('does NOT merge when grade difference >= grade_merge_pct', () => {
+    // Second half 0.6% vs first half 0.1% -> 0.5% diff, above the 0.3% threshold.
+    const route = gentleRoute(
+      [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.006, 0.006, 0.006, 0.006, 0.006, 0.006],
+      [2, 2, 2, 2, 2, 2, -2, -2, -2, -2, -2, -2],
+    );
+    const segs = segment(route, cfg(0.003), ENDS);
+    expect(segs.length).toBe(2);
+  });
+
+  it('grade_merge_pct = 0 disables the merge', () => {
+    const segs = segment(SIMILAR, cfg(0), ENDS);
+    expect(segs.length).toBe(2);
+  });
+
+  it('never merges across a control town', () => {
+    // Uniform gentle grade, no wind flip, but a control at km 6 splits the
+    // route. The split must survive so the town stays visible.
+    const route = gentleRoute(Array(12).fill(0.001), Array(12).fill(0));
+    const withMid: ControlPoint[] = [
+      { name: 'Start', km: 0 },
+      { name: 'Mid', km: 6 },
+      { name: 'End', km: 12 },
+    ];
+    const segs = segment(route, cfg(0.003), withMid);
+    expect(segs.length).toBe(2);
+    expect(segs[0].town).toBe('Mid');
+  });
+});
