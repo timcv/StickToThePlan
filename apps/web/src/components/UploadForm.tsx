@@ -12,6 +12,17 @@ import type { PipelineForm } from '../worker/solve.worker';
 import type { SolverStatus } from '../useSolver';
 import { defaultRouteGpx, DEFAULT_ROUTE_NAME } from '../lib/defaultRoute';
 import { VATTERN_CONTROLS } from '@stp/core';
+import { InfoTip } from './InfoTip';
+import { FIELD_HELP } from '../lib/strings';
+
+/** Label text + ⓘ tooltip for a field, using the shared help copy. */
+function FieldLabel({ text, helpKey }: { text: string; helpKey: keyof typeof FIELD_HELP }) {
+  return (
+    <span>
+      {text} <InfoTip text={FIELD_HELP[helpKey].tip} label={text} />
+    </span>
+  );
+}
 
 interface StopRow {
   control: string;
@@ -106,6 +117,9 @@ export function UploadForm({ onRun, status }: Props) {
   // Stops.
   const [stops, setStops] = useState<StopRow[]>(saved.stops ?? DEFAULT_STOPS);
 
+  // Progressive disclosure: advanced parameters stay hidden until requested.
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
   const persist = (patch: Partial<PersistedForm>) => {
     saveToStorage({
       targetTotalHm,
@@ -198,118 +212,146 @@ export function UploadForm({ onRun, status }: Props) {
 
   return (
     <form className="card" onSubmit={onSubmit}>
-      <h2>Route and parameters</h2>
+      <h2>Rutt och parametrar</h2>
 
-      <div className="field-grid">
-        <label className="field">
-          <span>GPX route (required)</span>
-          <input
-            type="file"
-            accept=".gpx,application/gpx+xml,text/xml"
-            onChange={onGpxChange}
-          />
-          {gpxName && <small className="hint">Loaded: {gpxName}</small>}
-        </label>
+      <fieldset className="form-section">
+        <legend>Mål &amp; rutt</legend>
+        <div className="field-grid">
+          <label className="field">
+            <FieldLabel text="Måltid (h:mm)" helpKey="target" />
+            <input
+              type="text"
+              value={targetTotalHm}
+              onChange={(e) => { setTargetTotalHm(e.target.value); persist({ targetTotalHm: e.target.value }); }}
+              placeholder="11:45"
+            />
+            <small className="hint">{FIELD_HELP.target.help}</small>
+          </label>
 
-        <label className="field">
-          <span>FIT power file (optional)</span>
-          <input type="file" accept=".fit,application/octet-stream" onChange={onFitChange} />
-          {fitName && <small className="hint">Loaded: {fitName}</small>}
-        </label>
-      </div>
+          <label className="field">
+            <FieldLabel text="Starttid (HH:MM)" helpKey="startTime" />
+            <input
+              type="text"
+              value={startTime}
+              onChange={(e) => { setStartTime(e.target.value); persist({ startTime: e.target.value }); }}
+              placeholder="04:22"
+            />
+            <small className="hint">{FIELD_HELP.startTime.help}</small>
+          </label>
 
-      <div className="field-grid">
-        <label className="field">
-          <span>Target total time (h:mm)</span>
-          <input
-            type="text"
-            value={targetTotalHm}
-            onChange={(e) => { setTargetTotalHm(e.target.value); persist({ targetTotalHm: e.target.value }); }}
-            placeholder="2:30"
-          />
-        </label>
+          <label className="field">
+            <FieldLabel text="GPX-rutt" helpKey="gpx" />
+            <input
+              type="file"
+              accept=".gpx,application/gpx+xml,text/xml"
+              onChange={onGpxChange}
+            />
+            {gpxName && <small className="hint">Inläst: {gpxName}</small>}
+          </label>
+        </div>
+      </fieldset>
 
-        <label className="field">
-          <span>FTP (W)</span>
-          <input
-            type="number"
-            value={ftp}
-            min={1}
-            onChange={(e) => { const v = Number(e.target.value); setFtp(v); persist({ ftp: v }); }}
-          />
-        </label>
+      <button
+        type="button"
+        className="link advanced-toggle"
+        aria-expanded={showAdvanced}
+        onClick={() => setShowAdvanced((v) => !v)}
+      >
+        {showAdvanced ? 'Dölj avancerade inställningar' : 'Visa avancerade inställningar'}
+      </button>
 
-        <label className="field">
-          <span>Riders in group</span>
-          <input
-            type="number"
-            value={nRiders}
-            min={1}
-            onChange={(e) => { const v = Number(e.target.value); setNRiders(v); persist({ nRiders: v }); }}
-          />
-        </label>
+      {showAdvanced && (
+        <>
+          <fieldset className="form-section">
+            <legend>Kraft &amp; grupp</legend>
+            <div className="field-grid">
+              <label className="field">
+                <FieldLabel text="FTP (W)" helpKey="ftp" />
+                <input
+                  type="number"
+                  value={ftp}
+                  min={1}
+                  onChange={(e) => { const v = Number(e.target.value); setFtp(v); persist({ ftp: v }); }}
+                />
+                <small className="hint">{FIELD_HELP.ftp.help}</small>
+              </label>
 
-        <label className="field">
-          <span>Rider + bike mass (kg)</span>
-          <input
-            type="number"
-            value={m}
-            min={1}
-            onChange={(e) => { const v = Number(e.target.value); setM(v); persist({ m: v }); }}
-          />
-        </label>
+              <label className="field">
+                <FieldLabel text="Cyklister i gruppen" helpKey="riders" />
+                <input
+                  type="number"
+                  value={nRiders}
+                  min={1}
+                  onChange={(e) => { const v = Number(e.target.value); setNRiders(v); persist({ nRiders: v }); }}
+                />
+              </label>
 
-        <label className="field">
-          <span>Watch target</span>
-          <select
-            value={watchTarget}
-            onChange={(e) => { const v = e.target.value as WatchTarget; setWatchTarget(v); persist({ watchTarget: v }); }}
-          >
-            <option value="pull">pull</option>
-            <option value="avg">avg</option>
-          </select>
-        </label>
+              <label className="field">
+                <FieldLabel text="Cyklist + cykel (kg)" helpKey="mass" />
+                <input
+                  type="number"
+                  value={m}
+                  min={1}
+                  onChange={(e) => { const v = Number(e.target.value); setM(v); persist({ m: v }); }}
+                />
+              </label>
 
-        <label className="field">
-          <span>Race date</span>
-          <input
-            type="date"
-            value={raceDate}
-            required
-            onChange={(e) => { setRaceDate(e.target.value); persist({ raceDate: e.target.value }); }}
-          />
-        </label>
+              <label className="field">
+                <FieldLabel text="Klockmål" helpKey="watchTarget" />
+                <select
+                  value={watchTarget}
+                  onChange={(e) => { const v = e.target.value as WatchTarget; setWatchTarget(v); persist({ watchTarget: v }); }}
+                >
+                  <option value="pull">Dragläge</option>
+                  <option value="avg">Gruppsnitt</option>
+                </select>
+              </label>
+            </div>
+          </fieldset>
 
-        <label className="field">
-          <span>Start time (HH:MM)</span>
-          <input
-            type="text"
-            value={startTime}
-            onChange={(e) => { setStartTime(e.target.value); persist({ startTime: e.target.value }); }}
-            placeholder="06:00"
-          />
-        </label>
+          <fieldset className="form-section">
+            <legend>Övrigt</legend>
+            <div className="field-grid">
+              <label className="field">
+                <FieldLabel text="Tävlingsdatum" helpKey="raceDate" />
+                <input
+                  type="date"
+                  value={raceDate}
+                  required
+                  onChange={(e) => { setRaceDate(e.target.value); persist({ raceDate: e.target.value }); }}
+                />
+              </label>
 
-        <label className="field">
-          <span>Styrkortet max rows</span>
-          <input
-            type="number"
-            value={styrkortMaxRows}
-            min={5}
-            max={50}
-            onChange={(e) => { const v = Number(e.target.value); setStyrkortMaxRows(v); persist({ styrkortMaxRows: v }); }}
-          />
-        </label>
-      </div>
+              <label className="field">
+                <FieldLabel text="Max rader i styrkortet" helpKey="maxRows" />
+                <input
+                  type="number"
+                  value={styrkortMaxRows}
+                  min={5}
+                  max={50}
+                  onChange={(e) => { const v = Number(e.target.value); setStyrkortMaxRows(v); persist({ styrkortMaxRows: v }); }}
+                />
+                <small className="hint">{FIELD_HELP.maxRows.help}</small>
+              </label>
 
-      <fieldset className="stops">
-        <legend>Stops</legend>
+              <label className="field">
+                <FieldLabel text="FIT-effektfil (valfri)" helpKey="fit" />
+                <input type="file" accept=".fit,application/octet-stream" onChange={onFitChange} />
+                {fitName && <small className="hint">Inläst: {fitName}</small>}
+              </label>
+            </div>
+          </fieldset>
+        </>
+      )}
+
+      <fieldset className="form-section stops">
+        <legend>Stopp</legend>
         <table className="data-table stops-table">
           <thead>
             <tr>
-              <th>Control</th>
+              <th>Kontroll</th>
               <th className="num">km</th>
-              <th className="num">Minutes</th>
+              <th className="num">Minuter</th>
               <th />
             </tr>
           </thead>
@@ -341,7 +383,7 @@ export function UploadForm({ onRun, status }: Props) {
                 </td>
                 <td>
                   <button type="button" className="ghost" onClick={() => removeStop(i)}>
-                    Remove
+                    Ta bort
                   </button>
                 </td>
               </tr>
@@ -349,7 +391,7 @@ export function UploadForm({ onRun, status }: Props) {
           </tbody>
         </table>
         <button type="button" className="ghost" onClick={addStop}>
-          Add stop
+          Lägg till stopp
         </button>
       </fieldset>
 
@@ -357,7 +399,7 @@ export function UploadForm({ onRun, status }: Props) {
         <button type="submit" className="primary" disabled={!canRun}>
           Använd inställningar
         </button>
-        {running && <span className="spinner" aria-label="Solving" />}
+        {running && <span className="spinner" aria-label="Beräknar" />}
       </div>
     </form>
   );
