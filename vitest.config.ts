@@ -19,7 +19,7 @@ export default defineConfig({
         test: {
           name: 'unit',
           environment: 'node',
-          include: ['packages/*/tests/**/*.test.ts'],
+          include: ['packages/*/tests/**/*.test.ts', 'api/tests/**/*.test.ts'],
         },
       },
       {
