@@ -306,6 +306,35 @@ button.ghost:hover {
 .badge { margin-left: 6px; padding: 1px 6px; background: #ffd; border: 1px solid #cc0; border-radius: 4px; font-size: 11px; }
 .link { background: none; border: none; color: #1f6feb; cursor: pointer; padding: 0; }
 
+/* ---- Fork-me-on-GitHub corner link ---- */
+
+.github-ribbon {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #1c2430;
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-bottom-left-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.github-ribbon:hover { background: #000; }
+.github-ribbon svg { display: block; }
+
+@media (max-width: 640px) {
+  /* Drop the label on small screens, keep the icon tappable. */
+  .github-ribbon span { display: none; }
+  .github-ribbon { padding: 8px 10px; }
+}
+
 /* ---- Intro ---- */
 
 .intro {
