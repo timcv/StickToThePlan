@@ -43,6 +43,7 @@ function makeSegments(): DisplaySegment[] {
   const base = {
     net_height_m: 0,
     avg_grade: 0,
+    avg_speed_kmh: 0,
     eta_s: 0,
     wind_label: '',
     micro_indices: [] as number[],

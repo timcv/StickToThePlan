@@ -213,6 +213,102 @@ const HTML_STYLE = `
   }
 `.trim();
 
+const STYRKORT_STYLE = `
+  * { box-sizing: border-box; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 7.5pt;
+    margin: 4mm;
+    color: #111;
+  }
+  h1 { font-size: 9pt; margin: 0 0 2px; }
+  p { margin: 1px 0; font-size: 7pt; color: #444; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 7pt;
+  }
+  thead tr { background: #2a5095; color: #fff; }
+  thead th {
+    padding: 3px 4px;
+    text-align: left;
+    font-weight: bold;
+    border: 1px solid #1a3a75;
+    white-space: nowrap;
+  }
+  tbody tr:nth-child(even) { background: #f0f4ff; }
+  tbody tr:nth-child(odd) { background: #fff; }
+  tbody tr.stop-row { background: #fff3cd; font-weight: bold; }
+  tbody td {
+    padding: 2px 4px;
+    border: 1px solid #ccc;
+  }
+  td.num { text-align: right; }
+  tr { page-break-inside: avoid; }
+  @media print {
+    body { margin: 3mm; }
+    thead { display: table-header-group; }
+  }
+  @page {
+    size: A6;
+    margin: 4mm;
+  }
+`.trim();
+
+/**
+ * Render a compact A6-sized handlebar card as a standalone HTML document.
+ * Columns: Sträcka, Ort, km/h, Ankomst, Avgång, W.
+ */
+export function buildStyrkortHtml(
+  displaySegments: DisplaySegment[],
+  cfg: Config,
+): string {
+  const title = escHtml(`Vätternrundan ${cfg.race_date} – Start ${cfg.start_time} – Mål ${cfg.target_total_hm}`);
+
+  const rows = displaySegments.map(seg => {
+    const stracka = escHtml(`${seg.from_km}-${seg.to_km}`);
+    const ort = escHtml(seg.town ?? '');
+    const kmh = seg.avg_speed_kmh > 0 ? String(Math.round(seg.avg_speed_kmh)) : '';
+    const ankomst = escHtml(secondsToClock(seg.eta_s, cfg.start_time));
+    const avgang = seg.depart_s !== undefined
+      ? escHtml(secondsToClock(seg.depart_s, cfg.start_time))
+      : '';
+    const w = seg.avg_w > 0 ? String(seg.avg_w) : '';
+    const rowClass = seg.stop_minutes !== undefined && seg.stop_minutes > 0 ? ' class="stop-row"' : '';
+    return `    <tr${rowClass}>\n      <td>${stracka}</td><td>${ort}</td><td class="num">${kmh}</td><td class="num">${ankomst}</td><td class="num">${avgang}</td><td class="num">${w}</td>\n    </tr>`;
+  }).join('\n');
+
+  return `<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <title>Styrkortet ${escHtml(cfg.race_date)}</title>
+  <style>
+    ${STYRKORT_STYLE}
+  </style>
+</head>
+<body>
+  <h1>Styrkortet</h1>
+  <p>${title}</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Km</th>
+        <th>Ort</th>
+        <th>km/h</th>
+        <th>Ankomst</th>
+        <th>Avg&aring;ng</th>
+        <th>W</th>
+      </tr>
+    </thead>
+    <tbody>
+${rows}
+    </tbody>
+  </table>
+</body>
+</html>`;
+}
+
 /**
  * Render the tempokort as a complete standalone HTML document
  * suitable for A4 printing.

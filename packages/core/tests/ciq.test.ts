@@ -37,6 +37,7 @@ function makeDisplaySegments(): DisplaySegment[] {
       distance_m: Math.round((b.to_km - fromKm) * 1000),
       net_height_m: 0,
       avg_grade: 0,
+      avg_speed_kmh: 0,
       eta_s: b.eta_s,
       wind_label: 'Med 0 m/s',
       pull_w_low: 200,
@@ -93,6 +94,8 @@ function makeConfig(): Config {
     cache_ttl_h: 3,
     ele_smooth_window: 5,
     max_grade: 0.18,
+    min_segment_km: 2,
+    styrkort_max_rows: 20,
     solo: false,
   };
 }

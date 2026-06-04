@@ -51,6 +51,7 @@ interface PersistedForm {
   raceDate: string;
   startTime: string;
   stops: StopRow[];
+  styrkortMaxRows: number;
 }
 
 function loadFromStorage(): Partial<PersistedForm> {
@@ -93,6 +94,7 @@ export function UploadForm({ onRun, status }: Props) {
   const [weatherMode, setWeatherMode] = useState<WeatherMode>(saved.weatherMode ?? 'calm');
   const [raceDate, setRaceDate] = useState(saved.raceDate ?? '2026-06-13');
   const [startTime, setStartTime] = useState(saved.startTime ?? '04:22');
+  const [styrkortMaxRows, setStyrkortMaxRows] = useState(saved.styrkortMaxRows ?? 20);
 
   // Stops.
   const [stops, setStops] = useState<StopRow[]>(saved.stops ?? DEFAULT_STOPS);
@@ -108,6 +110,7 @@ export function UploadForm({ onRun, status }: Props) {
       raceDate,
       startTime,
       stops,
+      styrkortMaxRows,
       ...patch,
     });
   };
@@ -155,7 +158,7 @@ export function UploadForm({ onRun, status }: Props) {
     setStartTime('06:00');
     setWeatherMode('calm');
     setStops(sampleStops);
-    persist({ targetTotalHm: '2:30', ftp: 250, nRiders: 6, m: 90, startTime: '06:00', weatherMode: 'calm', stops: sampleStops });
+    persist({ targetTotalHm: '2:30', ftp: 250, nRiders: 6, m: 90, startTime: '06:00', weatherMode: 'calm', stops: sampleStops, styrkortMaxRows: 20 });
   };
 
   const updateStop = (index: number, patch: Partial<StopRow>) => {
@@ -198,6 +201,7 @@ export function UploadForm({ onRun, status }: Props) {
         watch_target: watchTarget,
         race_date: raceDate,
         start_time: startTime,
+        styrkort_max_rows: styrkortMaxRows,
       },
     };
     onRun(input);
@@ -308,6 +312,17 @@ export function UploadForm({ onRun, status }: Props) {
             value={startTime}
             onChange={(e) => { setStartTime(e.target.value); persist({ startTime: e.target.value }); }}
             placeholder="06:00"
+          />
+        </label>
+
+        <label className="field">
+          <span>Styrkortet max rows</span>
+          <input
+            type="number"
+            value={styrkortMaxRows}
+            min={5}
+            max={50}
+            onChange={(e) => { const v = Number(e.target.value); setStyrkortMaxRows(v); persist({ styrkortMaxRows: v }); }}
           />
         </label>
       </div>

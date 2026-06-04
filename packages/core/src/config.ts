@@ -22,6 +22,8 @@ const DEFAULTS = {
   cache_ttl_h: 3,
   ele_smooth_window: 5,
   max_grade: 0.18,
+  min_segment_km: 2,
+  styrkort_max_rows: 20,
 } as const;
 
 /**

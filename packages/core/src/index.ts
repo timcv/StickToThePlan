@@ -26,7 +26,7 @@ export type {
 export * from './physics.js';
 export * from './chaingang.js';
 export * from './planner.js';
-export { segment, VATTERN_CONTROLS, type ControlPoint } from './segmentation.js';
+export { segment, VATTERN_CONTROLS, type ControlPoint, type SegmentOptions } from './segmentation.js';
 
 // Config: pure defaults.
 export { applyDefaults, type RawConfig } from './config.js';
@@ -46,7 +46,7 @@ export {
 export { analyzePass, readFitPowerBytes, determineAnchorFromPower } from './ingest/fit.js';
 
 // Output builders.
-export { renderMarkdown, renderHtml } from './output/tempokort.js';
+export { renderMarkdown, renderHtml, buildStyrkortHtml } from './output/tempokort.js';
 export { buildCourseGpx } from './output/course.js';
 export {
   buildSteps,

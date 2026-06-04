@@ -107,6 +107,9 @@ function aggregateGroup(
 
   const eta_s = lastSeg.eta_s;
 
+  const total_time_s = segs.reduce((s, p) => s + p.time_s, 0);
+  const avg_speed_kmh = total_time_s > 0 ? (distance_m / total_time_s) * 3.6 : 0;
+
   // Power: only non-neutral segments contribute.
   const effortSegs = segs.filter(s => !s.micro.neutral);
   let pull_w_mean = 0;
@@ -159,6 +162,7 @@ function aggregateGroup(
     distance_m,
     net_height_m,
     avg_grade,
+    avg_speed_kmh: Math.round(avg_speed_kmh * 10) / 10,
     eta_s,
     wind_label: wind,
     pull_w_low,
@@ -211,6 +215,14 @@ function mergeDisplaySegs(a: DisplaySegment, b: DisplaySegment): DisplaySegment 
   // Wind label: pick from whichever half has larger distance.
   const wind_label = a.distance_m >= b.distance_m ? a.wind_label : b.wind_label;
 
+  // avg_speed_kmh: time-weighted harmonic mean (total_dist / total_time).
+  const time_a = a.avg_speed_kmh > 0 ? a.distance_m / (a.avg_speed_kmh / 3.6) : 0;
+  const time_b = b.avg_speed_kmh > 0 ? b.distance_m / (b.avg_speed_kmh / 3.6) : 0;
+  const total_time = time_a + time_b;
+  const avg_speed_kmh = total_time > 0
+    ? Math.round(((a.distance_m + b.distance_m) / total_time) * 3.6 * 10) / 10
+    : 0;
+
   // town / stop_minutes / depart_s: preserve b (the end boundary matters).
   return {
     from_km: a.from_km,
@@ -219,6 +231,7 @@ function mergeDisplaySegs(a: DisplaySegment, b: DisplaySegment): DisplaySegment 
     distance_m,
     net_height_m,
     avg_grade,
+    avg_speed_kmh,
     eta_s: b.eta_s,
     wind_label,
     pull_w_low,
@@ -235,18 +248,29 @@ function mergeDisplaySegs(a: DisplaySegment, b: DisplaySegment): DisplaySegment 
 // Main export
 // ---------------------------------------------------------------------------
 
+export interface SegmentOptions {
+  /** Merge any display segment shorter than this into its nearest-avg_w neighbour.
+   *  Defaults to cfg.min_segment_km. Set to 0 to disable. */
+  minSegmentKm?: number;
+  /** Merge down to at most this many display segments. Defaults to 50. */
+  maxSegments?: number;
+  /** Skip grade-transition and wind-flip boundaries; only use controls + stops.
+   *  Produces smoother segments suited for a compact handlebar card. */
+  compactMode?: boolean;
+}
+
 /**
  * Aggregate plan.segments (SegmentPlan[]) into DisplaySegment[] for the
  * tempokort and FIT workout. See spec section 11 and 12.1.
  *
- * Boundary types:
+ * Boundary types (unless compactMode):
  *  - control point km markers (snapped to nearest segment boundary)
  *  - stop km markers from cfg.stops
  *  - grade-state transitions (flat <-> climb where grade crosses climb_threshold)
  *  - headwind-sign flips (headwind_ms sign changes with magnitude > 1 m/s)
  *  - route start and end (always)
  *
- * After boundary-based splitting the list is merged down to <= 50 segments
+ * After boundary-based splitting the list is merged down to <= maxSegments
  * by repeatedly combining the most similar-avg_w pair that does not cross a
  * depot boundary.
  */
@@ -254,7 +278,9 @@ export function segment(
   plan: PlanResult,
   cfg: Config,
   controls: ControlPoint[] = VATTERN_CONTROLS,
+  opts: SegmentOptions = {},
 ): DisplaySegment[] {
+  const { compactMode = false } = opts;
   const segments = plan.segments;
   if (segments.length === 0) return [];
 
@@ -283,24 +309,25 @@ export function segment(
     boundarySet.add(snapped);
   }
 
-  // Grade-state transitions (flat <-> climb).
-  const thr = cfg.climb_threshold;
-  let prevAboveThreshold = segments[0].micro.grade > thr;
-  for (let i = 1; i < segments.length; i++) {
-    const above = segments[i].micro.grade > thr;
-    if (above !== prevAboveThreshold) {
-      // Transition: insert boundary at the END of the PREVIOUS segment.
-      boundarySet.add(segments[i - 1].micro.cum_distance_m);
-      prevAboveThreshold = above;
+  if (!compactMode) {
+    // Grade-state transitions (flat <-> climb).
+    const thr = cfg.climb_threshold;
+    let prevAboveThreshold = segments[0].micro.grade > thr;
+    for (let i = 1; i < segments.length; i++) {
+      const above = segments[i].micro.grade > thr;
+      if (above !== prevAboveThreshold) {
+        boundarySet.add(segments[i - 1].micro.cum_distance_m);
+        prevAboveThreshold = above;
+      }
     }
-  }
 
-  // Head<->tail wind sign transitions (magnitude > 1 m/s).
-  for (let i = 1; i < segments.length; i++) {
-    const prev = segments[i - 1].headwind_ms;
-    const curr = segments[i].headwind_ms;
-    if (Math.abs(prev) > 1 && Math.abs(curr) > 1 && Math.sign(prev) !== Math.sign(curr)) {
-      boundarySet.add(segments[i - 1].micro.cum_distance_m);
+    // Head<->tail wind sign transitions (magnitude > 1 m/s).
+    for (let i = 1; i < segments.length; i++) {
+      const prev = segments[i - 1].headwind_ms;
+      const curr = segments[i].headwind_ms;
+      if (Math.abs(prev) > 1 && Math.abs(curr) > 1 && Math.sign(prev) !== Math.sign(curr)) {
+        boundarySet.add(segments[i - 1].micro.cum_distance_m);
+      }
     }
   }
 
@@ -384,11 +411,49 @@ export function segment(
     }
   }
 
-  // Merge down to <= 50 display segments.
+  // Merge segments shorter than minSegmentKm into their nearest-avg_w neighbour.
+  // Hard boundaries (depot stops) are never merged across.
+  const minM = (opts.minSegmentKm ?? cfg.min_segment_km) * 1000;
+  if (minM > 0) {
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (let i = 0; i < displaySegs.length; i++) {
+        const seg = displaySegs[i];
+        if (seg.distance_m >= minM) continue;
+        if (seg.stop_minutes !== undefined) continue; // hard boundary, skip
+        // Find best neighbour (closest avg_w, not a depot boundary between them).
+        let bestIdx = -1;
+        let bestDiff = Infinity;
+        if (i > 0 && displaySegs[i - 1].stop_minutes === undefined) {
+          const diff = Math.abs(displaySegs[i - 1].avg_w - seg.avg_w);
+          if (diff < bestDiff) { bestDiff = diff; bestIdx = i - 1; }
+        }
+        if (i < displaySegs.length - 1 && displaySegs[i + 1].stop_minutes === undefined) {
+          const diff = Math.abs(displaySegs[i + 1].avg_w - seg.avg_w);
+          if (diff < bestDiff) { bestIdx = i + 1; }
+        }
+        if (bestIdx === -1) continue;
+        const lo = Math.min(i, bestIdx);
+        const hi = Math.max(i, bestIdx);
+        const merged = mergeDisplaySegs(displaySegs[lo], displaySegs[hi]);
+        displaySegs = [
+          ...displaySegs.slice(0, lo),
+          merged,
+          ...displaySegs.slice(hi + 1),
+        ];
+        changed = true;
+        break; // restart scan after any merge
+      }
+    }
+  }
+
+  // Merge down to <= maxSegments display segments.
   // Strategy: find the pair of adjacent segments with the most similar avg_w
   // that does not cross a depot boundary (neither a nor b is a depot, and
   // neither has stop_minutes set).
-  while (displaySegs.length > 50) {
+  const maxSegs = opts.maxSegments ?? 50;
+  while (displaySegs.length > maxSegs) {
     let bestDiff = Infinity;
     let bestIdx = -1;
 

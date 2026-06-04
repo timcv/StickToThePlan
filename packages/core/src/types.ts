@@ -30,6 +30,8 @@ export interface Config {
   cache_ttl_h: number;        // 3
   ele_smooth_window: number;  // 5 (microsegment moving-average window for elevation)
   max_grade: number;          // 0.18 clip implausible gradients
+  min_segment_km: number;     // 2 merge display segments shorter than this
+  styrkort_max_rows: number;  // 20 max rows in the compact handlebar card
   solo: boolean;              // derived: n_riders === 1
 }
 
@@ -93,6 +95,7 @@ export type WeatherFn = (lat: number, lon: number, timeS: number) => WindCond;
 export interface DisplaySegment {
   from_km: number; to_km: number; town?: string;
   distance_m: number; net_height_m: number; avg_grade: number;
+  avg_speed_kmh: number;          // average riding speed for this segment
   eta_s: number;                  // at segment end
   wind_label: string;             // e.g. "Mot 6 m/s", "Med 4 m/s", "Sido 5 m/s"
   pull_w_low: number; pull_w_high: number;

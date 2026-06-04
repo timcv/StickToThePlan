@@ -42,7 +42,7 @@ const seg1: DisplaySegment = {
   pull_w_high: 155,
   avg_w: 130,
   note: 'JÄMN FART',
-  micro_indices: [0, 1, 2],
+  avg_speed_kmh: 0, micro_indices: [0, 1, 2],
 };
 
 const seg2: DisplaySegment = {
@@ -58,6 +58,7 @@ const seg2: DisplaySegment = {
   pull_w_high: 150,
   avg_w: 125,
   note: 'TA DET LUGNT',
+  avg_speed_kmh: 0,
   micro_indices: [3, 4, 5],
 };
 
@@ -75,6 +76,7 @@ const segDepot: DisplaySegment = {
   pull_w_high: 158,
   avg_w: 133,
   note: 'DEPA',
+  avg_speed_kmh: 0,
   stop_minutes: 15,
   depart_s: 11700, // 3h 15m in: 04:22 + 3:15 = 07:37
   micro_indices: [6, 7, 8],
@@ -111,6 +113,8 @@ const cfg: Config = {
   cache_ttl_h: 3,
   ele_smooth_window: 5,
   max_grade: 0.18,
+  min_segment_km: 2,
+  styrkort_max_rows: 20,
   solo: false,
 };
 

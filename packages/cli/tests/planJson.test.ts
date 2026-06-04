@@ -111,7 +111,7 @@ const displaySegments: DisplaySegment[] = [
     note: 'JÄMN FART',
     stop_minutes: 10,
     depart_s: 1140,
-    micro_indices: [0, 1, 2],
+    avg_speed_kmh: 0, micro_indices: [0, 1, 2],
   },
 ];
 

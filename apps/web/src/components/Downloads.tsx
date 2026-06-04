@@ -15,6 +15,7 @@
 import {
   buildCourseGpx,
   buildPlanJson,
+  buildStyrkortHtml,
   encodeWorkout,
   generatePlanDeltaSource,
   type PlanJsonMeta,
@@ -28,7 +29,7 @@ interface Props {
 }
 
 export function Downloads({ result, weatherMode }: Props) {
-  const { cfg, micro, scenarios, displaySegments, anchor, controls } = result;
+  const { cfg, micro, scenarios, displaySegments, styrkortSegments, anchor, controls } = result;
 
   const onWorkout = () => {
     const bytes = encodeWorkout(displaySegments, cfg);
@@ -55,6 +56,11 @@ export function Downloads({ result, weatherMode }: Props) {
     downloadBlob('PlanDelta.mc', source, 'text/plain');
   };
 
+  const onStyrkort = () => {
+    const html = buildStyrkortHtml(styrkortSegments, cfg);
+    downloadBlob('styrkortet.html', html, 'text/html');
+  };
+
   return (
     <section className="card">
       <h2>Downloads</h2>
@@ -70,6 +76,9 @@ export function Downloads({ result, weatherMode }: Props) {
         </button>
         <button type="button" onClick={onPlanDelta}>
           PlanDelta.mc
+        </button>
+        <button type="button" onClick={onStyrkort}>
+          styrkortet.html
         </button>
       </div>
       <p className="note">

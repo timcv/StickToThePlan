@@ -43,6 +43,7 @@ export interface PipelineForm {
   watch_target: 'pull' | 'avg';
   race_date: string;
   start_time: string;
+  styrkort_max_rows?: number;
 }
 
 export interface PipelineInput {
@@ -55,6 +56,7 @@ export interface PipelineInput {
 export interface PipelineResult {
   scenarios: ThreeScenarios;
   displaySegments: DisplaySegment[];
+  styrkortSegments: DisplaySegment[];
   splits: SplitRow[];
   anchor: FitPassMetrics;
   npTargetUsed: number;
@@ -142,6 +144,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
     stops: form.stops,
     m: form.m,
     watch_target: form.watch_target,
+    styrkort_max_rows: form.styrkort_max_rows,
   };
   const cfg = applyDefaults(raw);
 
@@ -173,7 +176,11 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
   // from the user's stops so the depot legs match the uploaded route.
   const controls = controlsFromStops(cfg, micro);
   const displaySegments = segment(scenarios.expected, cfg, controls);
+  const styrkortSegments = segment(scenarios.expected, cfg, controls, {
+    compactMode: true,
+    maxSegments: cfg.styrkort_max_rows,
+  });
   const splits = buildSplitTable(scenarios.expected, cfg, controls);
 
-  return { scenarios, displaySegments, splits, anchor, npTargetUsed, cfg, micro, controls };
+  return { scenarios, displaySegments, styrkortSegments, splits, anchor, npTargetUsed, cfg, micro, controls };
 }

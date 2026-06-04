@@ -60,7 +60,11 @@ export function App() {
           ) : null}
           <SplitTable splits={result.splits} startTime={startTime} />
           <Downloads result={result} weatherMode={weatherMode} />
-          <TempokortTable segments={result.displaySegments} startTime={startTime} />
+          <TempokortTable
+            segments={result.displaySegments}
+            compactSegments={result.styrkortSegments}
+            startTime={startTime}
+          />
         </>
       )}
     </main>
