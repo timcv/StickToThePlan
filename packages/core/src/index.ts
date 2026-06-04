@@ -68,6 +68,12 @@ export {
   type EnsembleField,
 } from './weather/ensemble.js';
 export { sampleCellPoints } from './weather/sample.js';
+export {
+  summarizeHourly,
+  applyHourlyOverrides,
+  buildManualField,
+  type HourlyWind,
+} from './weather/hourly.js';
 
 // Connect IQ data-field source generation (pure).
 export { buildLookupTable, generatePlanDeltaSource, type LookupEntry } from './ciq/generate.js';
