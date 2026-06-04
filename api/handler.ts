@@ -2,7 +2,14 @@
  * Pure-ish weather request handler, decoupled from the Vercel runtime so it can
  * be unit-tested with a mocked global fetch. api/weather.ts is the thin adapter.
  */
-import { gatherWindSamples, buildEnsemble, type GeoPoint, type EnsembleField } from '@stp/core';
+// Import the pure weather subgraph directly, NOT the @stp/core barrel. The
+// barrel re-exports the FIT/GPX ingest, which pulls in @garmin/fitsdk and
+// fast-xml-parser, npm deps the weather path never needs. Pulling them into the
+// serverless bundle caused ERR_MODULE_NOT_FOUND at runtime. These deep paths
+// reach only pure modules (fetch + parse + ensemble math) with zero npm deps.
+import { gatherWindSamples } from '../packages/core/src/weather/fetchAll.js';
+import { buildEnsemble, type EnsembleField } from '../packages/core/src/weather/ensemble.js';
+import type { GeoPoint } from '../packages/core/src/weather/openMeteo.js';
 
 export interface WeatherQuery {
   date?: string | string[];
