@@ -50,15 +50,29 @@ const DEPOT_MINUTES: Record<string, number> = {
   Askersund: 15,
 };
 
-const DEFAULT_STOPS: StopRow[] = VATTERN_CONTROLS.filter(
-  (c) => c.km > 0 && c.km < 315,
-).map((c) => ({
-  control: c.name,
-  km: c.km,
-  minutes: DEPOT_MINUTES[c.name] ?? 0,
-}));
+const DEFAULT_STOPS: StopRow[] = VATTERN_CONTROLS.filter((c) => c.km > 0 && c.km < 315).map(
+  (c) => ({
+    control: c.name,
+    km: c.km,
+    minutes: DEPOT_MINUTES[c.name] ?? 0,
+  }),
+);
 
 const LS_KEY = 'stp_form_v1';
+
+// Single source of truth for the persisted form's defaults: used both to seed
+// the initial state (when nothing is saved) and to restore on reset.
+const FORM_DEFAULTS: PersistedForm = {
+  targetTotalHm: '11:45',
+  ftp: 272,
+  nRiders: 12,
+  m: 96,
+  watchTarget: 'pull',
+  raceDate: '2026-06-13',
+  startTime: '04:22',
+  stops: DEFAULT_STOPS,
+  styrkortMaxRows: 20,
+};
 
 interface PersistedForm {
   targetTotalHm: string;
@@ -105,17 +119,23 @@ export function UploadForm({ onRun, status }: Props) {
   const [fitName, setFitName] = useState<string>('');
 
   // Parameters.
-  const [targetTotalHm, setTargetTotalHm] = useState(saved.targetTotalHm ?? '11:45');
-  const [ftp, setFtp] = useState(saved.ftp ?? 272);
-  const [nRiders, setNRiders] = useState(saved.nRiders ?? 12);
-  const [m, setM] = useState(saved.m ?? 96);
-  const [watchTarget, setWatchTarget] = useState<WatchTarget>(saved.watchTarget ?? 'pull');
-  const [raceDate, setRaceDate] = useState(saved.raceDate ?? '2026-06-13');
-  const [startTime, setStartTime] = useState(saved.startTime ?? '04:22');
-  const [styrkortMaxRows, setStyrkortMaxRows] = useState(saved.styrkortMaxRows ?? 20);
+  const [targetTotalHm, setTargetTotalHm] = useState(
+    saved.targetTotalHm ?? FORM_DEFAULTS.targetTotalHm,
+  );
+  const [ftp, setFtp] = useState(saved.ftp ?? FORM_DEFAULTS.ftp);
+  const [nRiders, setNRiders] = useState(saved.nRiders ?? FORM_DEFAULTS.nRiders);
+  const [m, setM] = useState(saved.m ?? FORM_DEFAULTS.m);
+  const [watchTarget, setWatchTarget] = useState<WatchTarget>(
+    saved.watchTarget ?? FORM_DEFAULTS.watchTarget,
+  );
+  const [raceDate, setRaceDate] = useState(saved.raceDate ?? FORM_DEFAULTS.raceDate);
+  const [startTime, setStartTime] = useState(saved.startTime ?? FORM_DEFAULTS.startTime);
+  const [styrkortMaxRows, setStyrkortMaxRows] = useState(
+    saved.styrkortMaxRows ?? FORM_DEFAULTS.styrkortMaxRows,
+  );
 
   // Stops.
-  const [stops, setStops] = useState<StopRow[]>(saved.stops ?? DEFAULT_STOPS);
+  const [stops, setStops] = useState<StopRow[]>(saved.stops ?? FORM_DEFAULTS.stops);
 
   // Progressive disclosure: advanced parameters stay hidden until requested.
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -182,27 +202,72 @@ export function UploadForm({ onRun, status }: Props) {
     });
   };
 
-  const buildSubmit = (): FormSubmit => ({
-    gpxText,
-    fitBytes,
-    form: {
-      target_total_hm: targetTotalHm,
+  // Build a FormSubmit. Pass an explicit snapshot to build from values other
+  // than the current state (used by reset, where setState has not flushed yet);
+  // otherwise it reads the live state.
+  const buildSubmit = (snapshot?: {
+    gpxText: string;
+    fitBytes: Uint8Array | null;
+    values: PersistedForm;
+  }): FormSubmit => {
+    const v: PersistedForm = snapshot?.values ?? {
+      targetTotalHm,
       ftp,
-      n_riders: nRiders,
+      nRiders,
       m,
+      watchTarget,
+      raceDate,
+      startTime,
       stops,
-      watch_target: watchTarget,
-      race_date: raceDate,
-      start_time: startTime,
-      styrkort_max_rows: styrkortMaxRows,
-    },
-  });
+      styrkortMaxRows,
+    };
+    return {
+      gpxText: snapshot?.gpxText ?? gpxText,
+      fitBytes: snapshot ? snapshot.fitBytes : fitBytes,
+      form: {
+        target_total_hm: v.targetTotalHm,
+        ftp: v.ftp,
+        n_riders: v.nRiders,
+        m: v.m,
+        stops: v.stops,
+        watch_target: v.watchTarget,
+        race_date: v.raceDate,
+        start_time: v.startTime,
+        styrkort_max_rows: v.styrkortMaxRows,
+      },
+    };
+  };
+
+  // Wipe the saved settings and restore every field to its default, including
+  // the bundled GPX and a cleared FIT. Re-seeds the parent's weather hours from
+  // the defaults (built explicitly, since the setState calls above have not yet
+  // flushed when onRun runs).
+  const handleReset = () => {
+    if (!window.confirm('Återställ alla inställningar till standard?')) return;
+    localStorage.removeItem(LS_KEY);
+    setTargetTotalHm(FORM_DEFAULTS.targetTotalHm);
+    setFtp(FORM_DEFAULTS.ftp);
+    setNRiders(FORM_DEFAULTS.nRiders);
+    setM(FORM_DEFAULTS.m);
+    setWatchTarget(FORM_DEFAULTS.watchTarget);
+    setRaceDate(FORM_DEFAULTS.raceDate);
+    setStartTime(FORM_DEFAULTS.startTime);
+    setStyrkortMaxRows(FORM_DEFAULTS.styrkortMaxRows);
+    setStops(FORM_DEFAULTS.stops);
+    setGpxText(defaultRouteGpx);
+    setGpxName(DEFAULT_ROUTE_NAME);
+    setFitBytes(null);
+    setFitName('');
+    onRun(buildSubmit({ gpxText: defaultRouteGpx, fitBytes: null, values: FORM_DEFAULTS }));
+  };
 
   // Seed the parent with the initial/persisted values on mount so the weather
   // panel has a sensible hour range (from start_time + target) before the user
   // clicks the submit button. Edits are pushed up again on submit.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { onRun(buildSubmit()); }, []);
+
+  useEffect(() => {
+    onRun(buildSubmit());
+  }, []);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -222,7 +287,10 @@ export function UploadForm({ onRun, status }: Props) {
             <input
               type="text"
               value={targetTotalHm}
-              onChange={(e) => { setTargetTotalHm(e.target.value); persist({ targetTotalHm: e.target.value }); }}
+              onChange={(e) => {
+                setTargetTotalHm(e.target.value);
+                persist({ targetTotalHm: e.target.value });
+              }}
               placeholder="11:45"
             />
             <small className="hint">{FIELD_HELP.target.help}</small>
@@ -233,7 +301,10 @@ export function UploadForm({ onRun, status }: Props) {
             <input
               type="text"
               value={startTime}
-              onChange={(e) => { setStartTime(e.target.value); persist({ startTime: e.target.value }); }}
+              onChange={(e) => {
+                setStartTime(e.target.value);
+                persist({ startTime: e.target.value });
+              }}
               placeholder="04:22"
             />
             <small className="hint">{FIELD_HELP.startTime.help}</small>
@@ -241,11 +312,7 @@ export function UploadForm({ onRun, status }: Props) {
 
           <label className="field">
             <FieldLabel text="GPX-rutt" helpKey="gpx" />
-            <input
-              type="file"
-              accept=".gpx,application/gpx+xml,text/xml"
-              onChange={onGpxChange}
-            />
+            <input type="file" accept=".gpx,application/gpx+xml,text/xml" onChange={onGpxChange} />
             {gpxName && <small className="hint">Inläst: {gpxName}</small>}
           </label>
         </div>
@@ -271,7 +338,11 @@ export function UploadForm({ onRun, status }: Props) {
                   type="number"
                   value={ftp}
                   min={1}
-                  onChange={(e) => { const v = Number(e.target.value); setFtp(v); persist({ ftp: v }); }}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setFtp(v);
+                    persist({ ftp: v });
+                  }}
                 />
                 <small className="hint">{FIELD_HELP.ftp.help}</small>
               </label>
@@ -282,7 +353,11 @@ export function UploadForm({ onRun, status }: Props) {
                   type="number"
                   value={nRiders}
                   min={1}
-                  onChange={(e) => { const v = Number(e.target.value); setNRiders(v); persist({ nRiders: v }); }}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setNRiders(v);
+                    persist({ nRiders: v });
+                  }}
                 />
               </label>
 
@@ -292,7 +367,11 @@ export function UploadForm({ onRun, status }: Props) {
                   type="number"
                   value={m}
                   min={1}
-                  onChange={(e) => { const v = Number(e.target.value); setM(v); persist({ m: v }); }}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setM(v);
+                    persist({ m: v });
+                  }}
                 />
               </label>
 
@@ -300,7 +379,11 @@ export function UploadForm({ onRun, status }: Props) {
                 <FieldLabel text="Klockmål" helpKey="watchTarget" />
                 <select
                   value={watchTarget}
-                  onChange={(e) => { const v = e.target.value as WatchTarget; setWatchTarget(v); persist({ watchTarget: v }); }}
+                  onChange={(e) => {
+                    const v = e.target.value as WatchTarget;
+                    setWatchTarget(v);
+                    persist({ watchTarget: v });
+                  }}
                 >
                   <option value="pull">Dragläge</option>
                   <option value="avg">Gruppsnitt</option>
@@ -318,7 +401,10 @@ export function UploadForm({ onRun, status }: Props) {
                   type="date"
                   value={raceDate}
                   required
-                  onChange={(e) => { setRaceDate(e.target.value); persist({ raceDate: e.target.value }); }}
+                  onChange={(e) => {
+                    setRaceDate(e.target.value);
+                    persist({ raceDate: e.target.value });
+                  }}
                 />
               </label>
 
@@ -329,7 +415,11 @@ export function UploadForm({ onRun, status }: Props) {
                   value={styrkortMaxRows}
                   min={5}
                   max={50}
-                  onChange={(e) => { const v = Number(e.target.value); setStyrkortMaxRows(v); persist({ styrkortMaxRows: v }); }}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setStyrkortMaxRows(v);
+                    persist({ styrkortMaxRows: v });
+                  }}
                 />
                 <small className="hint">{FIELD_HELP.maxRows.help}</small>
               </label>
@@ -398,6 +488,9 @@ export function UploadForm({ onRun, status }: Props) {
       <div className="actions">
         <button type="submit" className="primary" disabled={!canRun}>
           Använd inställningar
+        </button>
+        <button type="button" className="ghost" onClick={handleReset} disabled={running}>
+          Återställ till standard
         </button>
         {running && <span className="spinner" aria-label="Beräknar" />}
       </div>
