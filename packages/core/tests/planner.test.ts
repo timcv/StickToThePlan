@@ -4,11 +4,7 @@ import type { MicroSegment, Config } from '../src/types.js';
 import { applyDefaults } from '../src/config.js';
 import { ingestGpxString } from '../src/ingest/gpx.js';
 import { hmToSeconds, secondsToClock } from '../src/util/time.js';
-import {
-  calmWeather,
-  runInnerSolve,
-  solveForTargetTime,
-} from '../src/planner.js';
+import { calmWeather, solveForTargetTime } from '../src/planner.js';
 
 // ---------------------------------------------------------------------------
 // Helper: build a synthetic flat route.
@@ -137,13 +133,13 @@ describe('B) real GPX (Vatternrundan 315 km)', () => {
           nonNeutralTime += s.time_s;
         }
       }
-      const meanRollingKmh = nonNeutralDist / nonNeutralTime * 3.6;
+      const meanRollingKmh = (nonNeutralDist / nonNeutralTime) * 3.6;
 
       // ---- Diagnostic output (always printed) ----
       const totalHm = `${Math.floor(plan.total_time_s / 3600)}:${String(
         Math.floor((plan.total_time_s % 3600) / 60),
       ).padStart(2, '0')}`;
-      // eslint-disable-next-line no-console
+
       console.log(
         `[real gpx] np_target_used=${plan.np_target_used.toFixed(1)} W, ` +
           `total_time_s=${plan.total_time_s.toFixed(0)} (${totalHm}), ` +
@@ -179,7 +175,7 @@ describe('B) real GPX (Vatternrundan 315 km)', () => {
         // Table clock as elapsed seconds from start (all controls are same-day, after start).
         const tableS = clockSeconds(row.clock) - startS;
         const deltaMin = (etaS - tableS) / 60;
-        // eslint-disable-next-line no-console
+
         console.log(
           `[control] km ${String(row.km).padStart(3)} plan ${clock} vs table ${row.clock} delta ${deltaMin >= 0 ? '+' : ''}${deltaMin.toFixed(1)} min`,
         );

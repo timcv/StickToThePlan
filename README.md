@@ -1,70 +1,114 @@
 # StickToThePlan
 
-StickToThePlan computes per-depot split times (mellantider) and downloadable watch files for a long road cycling event (the Vätternrundan 315 km is the bundled example) from a route GPX, a stop schedule, and a target finish time. The plan holds an even rider effort (constant normalized power) and lets speed vary with gradient and wind, with caps so front pulls never become unsustainable. The same pure calculation core runs in the browser app and the Node CLI, so the web result and the local result are identical.
+Computes per-control split times and downloadable bike-computer / watch files for a long road cycling event (Vätternrundan 315 km is the bundled route) from a route GPX, a stop schedule, and a target finish time. The plan holds an even rider effort (constant normalized power) and lets speed vary with gradient and wind, capped so front pulls stay sustainable.
 
-## Hosted app
+The same pure calculation core (`@stp/core`) runs in the browser app and the Node CLI, so the web result and the local result are identical.
 
-Live app: https://sticktotheplan.vercel.app
+- Live app: https://sticktotheplan.vercel.app
+- Model and validation numbers: [MODELL.md](MODELL.md)
 
-## How it works
+This README is for developers who want to run the code locally, reuse the core, or open a pull request. If you just want to plan a ride, use the live app.
 
-In short:
+## Repo layout
 
-1. An NP anchor (`np_target`) is read from an optional representative FIT ride (its rolling normalized power), or falls back to `0.60 x FTP` when no FIT is given.
-2. Each microsegment gets a per-segment physics estimate (gravity, rolling resistance, yaw-adjusted aero, drivetrain efficiency, air density) wrapped in a chaingang model (front pull vs draft, duty cycle `1/n_riders`).
-3. The route is time-marched at that fixed rider NP, with a neutral start block and hard and soft pull caps, and an outer bisection adjusts the NP until the total time hits the target.
-4. From the time march, the tool derives depot ETAs and the per-depot split table.
+This is an npm-workspaces monorepo. ESM throughout, TypeScript, no build step for the libraries (source is imported directly).
 
-See [MODELL.md](MODELL.md) for the full model and the validation numbers.
+| Path            | What it is                                                                                                                                                                                                              |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/core` | The pure calculation core and output builders: physics, chaingang model, planner, segmentation, GPX/FIT ingest, and the FIT/GPX/JSON/Connect IQ builders. Browser-safe, no Node-only IO. **This is the reusable part.** |
+| `packages/cli`  | Node CLI that does file IO, weather fetch + cache, and the `monkeyc` compile, calling `@stp/core` for all math.                                                                                                         |
+| `apps/web`      | Vite + React single-page app. Runs `@stp/core` in a Web Worker; serves the form, split table, tempokort, and downloads.                                                                                                 |
+| `api/`          | Vercel serverless function for the server-side weather fetch.                                                                                                                                                           |
+| `ciq/`          | Garmin Connect IQ data-field template compiled by the CLI.                                                                                                                                                              |
 
-## Web quick start
+## Getting started
 
-1. Open the app URL.
-2. Upload a route GPX (and optionally a representative FIT ride for the NP anchor).
-3. Set your stops, target finish time, and parameters (FTP, number of riders, start time).
-4. Read the depot split table.
-5. Download `workout.fit` (distance-based structured workout), `course.gpx` (route plus ETA waypoints), `plan.json` (full machine-readable plan), and `PlanDelta.mc` (Connect IQ data-field source).
-
-The Connect IQ `.prg` watch app cannot be produced in the browser. The web download gives you the `.mc` source. The compiled `.prg` must be built locally with the CLI and the Garmin SDK (see below).
-
-## Local CLI quick start
+Requires Node 18+ (Vite 6 / React 19).
 
 ```bash
-npm install            # at the repo root, installs all workspaces
-npm start -w @stp/cli  # run the planner (equivalently: npm start)
+git clone git@github.com:timcv/StickToThePlan.git
+cd StickToThePlan
+npm install            # installs all workspaces
 ```
 
-By default the CLI fetches a live weather forecast. Pass `--offline` to use the cached forecast or, if there is no cache, calm wind, with no network access:
+Run the web app:
 
 ```bash
-npm start -w @stp/cli -- --offline
+npm run dev -w apps/web   # Vite dev server, default http://localhost:5173
 ```
 
-You bring your own inputs. The CLI reads `config.json` at the repo root for the GPX path, the optional FIT path, FTP, rider count, target time, and stops. The repo's `data/` directory (course GPX and FIT rides) is gitignored, so point `config.json` at your own files. You can also pass `--config path/to/other.json`.
-
-The Connect IQ `.prg` is compiled locally by the CLI via the Garmin Connect IQ SDK (`monkeyc`). If the SDK and a device package are installed, the CLI compiles the generated `.mc` source to a `.prg`. If not, it writes the `.mc` source and skips compilation gracefully.
-
-## Monorepo layout
-
-- `packages/core`: the pure calculation core and output builders (physics, chaingang, planner, segmentation, GPX/FIT ingest, FIT/GPX/JSON/Connect IQ builders), browser-safe and with no Node-only IO.
-- `packages/cli`: the Node command-line tool that does file IO, weather fetching and caching, and the `monkeyc` compile, calling `@stp/core` for all of the math.
-- `apps/web`: the Vite + React single-page app that runs the same `@stp/core` in the browser (in a Web Worker) and serves the upload, form, split table, and downloads.
-
-## Development
+Run the CLI planner:
 
 ```bash
-npm test          # Vitest across all workspaces
-npm run typecheck # tsc --noEmit
-npm run build:web # production build of apps/web
+npm start -w @stp/cli          # uses config.json at the repo root
+npm start -w @stp/cli -- --offline   # no network: cached forecast, else calm wind
 ```
 
-## Deployment
+The CLI reads `config.json` at the repo root (GPX path, optional FIT path, FTP, rider count, target time, stops). The `data/` directory is gitignored, so point `config.json` at your own files, or pass `--config path/to/other.json`.
 
-The web app deploys to Vercel as a static SPA built from the monorepo: install at the repo root, build `apps/web`, and serve the static output from `apps/web/dist`. The exact `vercel.json` lives in the repo (added by a separate task).
+## Checks
+
+All three must pass before a PR is merged. CI and reviewers run them.
+
+```bash
+npm test            # Vitest across all workspaces
+npm run typecheck   # tsc --noEmit (root, api, web)
+npm run build:web   # production build of apps/web
+```
+
+## Reusing the core
+
+`@stp/core` is the calculation engine with no UI and no Node-only IO, so it runs anywhere an ES module bundler does (browser, worker, Node, Bun). It is published only inside this repo and ships TypeScript source, so consume it through a bundler/runtime that handles `.ts` (Vite, tsx, Bun), or compile it first.
+
+```ts
+import {
+  applyDefaults,
+  ingestGpxString,
+  solveThreeScenarios,
+  segment,
+  buildSplitTable,
+} from '@stp/core';
+
+const cfg = applyDefaults({
+  gpx_path: 'route.gpx',
+  ftp: 272,
+  n_riders: 12,
+  target_total_hm: '11:45',
+  start_time: '04:22',
+  stops: [{ control: 'Gränna', km: 77, minutes: 10 }],
+});
+
+const micro = ingestGpxString(gpxText, cfg); // string in, no fs
+const scenarios = solveThreeScenarios(micro, field, cfg); // field = EnsembleField, or calm
+const splits = buildSplitTable(scenarios.expected, cfg);
+const display = segment(scenarios.expected, cfg);
+```
+
+`field` is the weather (an `EnsembleField`); for no wind, pass a calm field. The full wiring, including how the web app builds the calm and fetched fields, is in the two worked examples: the web worker pipeline ([`apps/web/src/lib/pipeline.ts`](apps/web/src/lib/pipeline.ts)) and the CLI. The public surface is the re-exports in [`packages/core/src/index.ts`](packages/core/src/index.ts).
+
+## How the planner works
+
+1. An NP anchor (`np_target`) is read from an optional representative FIT ride (its rolling normalized power), or falls back to `0.60 × FTP`.
+2. Each microsegment gets a physics estimate (gravity, rolling resistance, yaw-adjusted aero, drivetrain efficiency, air density) wrapped in a chaingang model (front pull vs draft, duty cycle `1/n_riders`).
+3. The route is time-marched at fixed rider NP, with a neutral start block and hard/soft pull caps. An outer bisection adjusts the NP until total time hits the target.
+4. Control ETAs and the split table fall out of the time march.
+
+Full detail and validation in [MODELL.md](MODELL.md).
+
+## Contributing
+
+1. Branch off `main`.
+2. Keep `packages/core` browser-safe: no `fs`, `path`, or other Node-only APIs. IO belongs in `packages/cli` or `api/`.
+3. Add or update tests next to what you change. The core has good coverage; keep it that way.
+4. Make `npm test`, `npm run typecheck`, and `npm run build:web` pass.
+5. Use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`).
+6. Open a PR against `main` with a short description of the change and why.
+
+The math is intentionally pure and deterministic. If you change a number that affects output, say which validation case in MODELL.md still holds.
 
 ## Privacy
 
-Uploaded GPX and FIT files are processed entirely in the browser and are never sent to a server. In Open-Meteo weather mode the only data sent to the network is the route coordinates and the date, which go to the Open-Meteo API to fetch the forecast.
+Uploaded GPX and FIT files are processed entirely in the browser, never sent to a server. In server weather mode only the route's rounded sample coordinates and the date are sent to the weather function (SMHI, MET Norway, Open-Meteo). Calm and manual modes send nothing.
 
 ## License
 

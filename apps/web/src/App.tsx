@@ -17,6 +17,7 @@ import { useSolver } from './useSolver';
 import { UploadForm, type FormSubmit } from './components/UploadForm';
 import { WeatherPanel, type WeatherMode } from './components/WeatherPanel';
 import { ScenarioSummary } from './components/ScenarioSummary';
+import { SummaryCard } from './components/SummaryCard';
 import { SplitTable } from './components/SplitTable';
 import { Downloads } from './components/Downloads';
 import { TempokortTable } from './components/TempokortTable';
@@ -127,16 +128,44 @@ export function App() {
 
   return (
     <main className="app">
+      <a
+        className="github-ribbon"
+        href="https://github.com/timcv/StickToThePlan"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Forka projektet på GitHub"
+      >
+        <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false">
+          <path
+            fill="currentColor"
+            d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+            0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01
+            1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95
+            0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18
+            1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16
+            1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54
+            1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"
+          />
+        </svg>
+        <span>Forka på GitHub</span>
+      </a>
+
       <header className="app-header">
         <h1>StickToThePlan</h1>
-        <p className="tagline">Vatternrundan race-plan calculator</p>
+        <p className="tagline">Körschema för Vätternrundan</p>
       </header>
 
+      <p className="intro">
+        Ställ in ditt mål och få ett detaljerat körschema för Vätternrundan. Rutten är redan
+        inläst, så du kan börja direkt: justera måltid och starttid, kör planen och ladda ner
+        ditt styrkort.
+      </p>
+
       <p className="privacy">
-        Uploaded GPX and FIT files are processed entirely in your browser and never uploaded.
-        In <strong>Hämta</strong> (server) mode, only the route's rounded sample coordinates and the
-        date are sent to our weather function, which queries SMHI, MET Norway and Open-Meteo.
-        Calm and manual modes send nothing.
+        Uppladdade GPX- och FIT-filer behandlas helt i din webbläsare och laddas aldrig upp.
+        I läget <strong>Hämta</strong> skickas endast ruttens avrundade punkter och datumet till
+        vår väderfunktion, som frågar SMHI, MET Norway och Open-Meteo. Lugnt och manuellt läge
+        skickar ingenting.
       </p>
 
       <UploadForm onRun={(f) => { setLastForm(f); }} status={status} />
@@ -168,24 +197,26 @@ export function App() {
 
       {status === 'error' && (
         <section className="card error-card">
-          <h2>Something went wrong</h2>
+          <h2>Något gick fel</h2>
           <p>{error}</p>
         </section>
       )}
 
       {status === 'done' && result && (
         <>
-          {result.scenarios.optimistic !== result.scenarios.expected ||
-          result.scenarios.pessimistic !== result.scenarios.expected ? (
-            <ScenarioSummary scenarios={result.scenarios} />
-          ) : null}
+          <p className="done-banner">Planen är klar! Se sammanfattningen nedan.</p>
+          <SummaryCard scenarios={result.scenarios} splits={result.splits} cfg={result.cfg} />
           <SplitTable splits={result.splits} startTime={startTime} />
-          <Downloads result={result} sources={ranSources} reduced={ranReduced} />
           <TempokortTable
             segments={result.displaySegments}
             compactSegments={result.styrkortSegments}
             startTime={startTime}
           />
+          {result.scenarios.optimistic !== result.scenarios.expected ||
+          result.scenarios.pessimistic !== result.scenarios.expected ? (
+            <ScenarioSummary scenarios={result.scenarios} />
+          ) : null}
+          <Downloads result={result} sources={ranSources} reduced={ranReduced} />
         </>
       )}
     </main>
