@@ -15,8 +15,6 @@ import {
   solveThreeScenarios,
   segment,
   buildSplitTable,
-  buildEnsemble,
-  fetchOpenMeteo,
   type Config,
   type ControlPoint,
   type RawConfig,
@@ -25,9 +23,8 @@ import {
   type SplitRow,
   type FitPassMetrics,
   type PlanResult,
-  type GeoPoint,
+  type EnsembleField,
   type MicroSegment,
-  type WindSample,
 } from '@stp/core';
 
 // ---------------------------------------------------------------------------
@@ -50,7 +47,8 @@ export interface PipelineInput {
   gpxText: string;
   fitBytes?: Uint8Array | null;
   form: PipelineForm;
-  weatherMode: 'calm' | 'open-meteo';
+  weatherMode: 'calm' | 'fetched' | 'manual';
+  field: EnsembleField | null;
 }
 
 export interface PipelineResult {
@@ -68,30 +66,6 @@ export interface PipelineResult {
   cfg: Config;
   micro: MicroSegment[];
   controls: ControlPoint[];
-}
-
-// ---------------------------------------------------------------------------
-// Weather sampling (mirrors packages/cli/src/cli.ts sampleWeatherPoints)
-// ---------------------------------------------------------------------------
-
-/**
- * Reduce the microsegments to ~10 representative sample points (every
- * ceil(n/10) segments, plus the final segment) to bound the number of weather
- * API calls. Each point is the segment START coordinate.
- */
-function sampleWeatherPoints(micro: MicroSegment[]): GeoPoint[] {
-  if (micro.length === 0) return [];
-  const step = Math.max(1, Math.ceil(micro.length / 10));
-  const points: GeoPoint[] = [];
-  for (let i = 0; i < micro.length; i += step) {
-    points.push({ lat: micro[i].lat, lon: micro[i].lon });
-  }
-  const last = micro[micro.length - 1];
-  const lastPoint = points[points.length - 1];
-  if (!lastPoint || lastPoint.lat !== last.lat || lastPoint.lon !== last.lon) {
-    points.push({ lat: last.lat, lon: last.lon });
-  }
-  return points;
 }
 
 /**
@@ -126,11 +100,11 @@ function controlsFromStops(cfg: Config, micro: MicroSegment[]): ControlPoint[] {
 // ---------------------------------------------------------------------------
 
 /**
- * Run the full race-plan pipeline. Pure for weatherMode 'calm'; performs network
- * fetches only for 'open-meteo'.
+ * Run the full race-plan pipeline. The worker performs zero network I/O: the
+ * weather field (if any) is built on the main thread and injected via input.field.
  */
 export async function runPipeline(input: PipelineInput): Promise<PipelineResult> {
-  const { gpxText, fitBytes, form, weatherMode } = input;
+  const { gpxText, fitBytes, form } = input;
 
   // 1. Config. gpx_path is a dummy because the GPX XML is fed directly as a
   // string; applyDefaults still requires the mandatory fields.
@@ -160,16 +134,15 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
   cfg.np_target = anchor.np_target_candidate;
   const npTargetUsed = anchor.np_target_candidate;
 
-  // 4. Weather + scenarios.
+  // 4. Weather + scenarios. The field is built on the main thread (fetched from
+  // /api/weather and/or edited, or synthesised for manual mode). A null field
+  // means calm wind. The worker performs zero network I/O.
   let scenarios: ThreeScenarios;
-  if (weatherMode === 'calm') {
+  if (input.field && input.field.cells.length > 0) {
+    scenarios = solveThreeScenarios(micro, input.field, cfg);
+  } else {
     const plan = solveForTargetTime(micro, calmWeather, cfg);
     scenarios = calmThreeScenarios(plan);
-  } else {
-    const points = sampleWeatherPoints(micro);
-    const samples: WindSample[] = await fetchOpenMeteo(points, form.race_date);
-    const field = buildEnsemble(samples);
-    scenarios = solveThreeScenarios(micro, field, cfg);
   }
 
   // 5. Segment + split table off the expected plan, using controls derived

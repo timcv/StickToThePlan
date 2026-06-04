@@ -25,10 +25,13 @@ import { downloadBlob } from '../lib/download';
 
 interface Props {
   result: PipelineResult;
-  weatherMode: 'calm' | 'open-meteo';
+  /** Weather sources that produced the solved field (e.g. SMHI, MET Norway, Open-Meteo), or ['calm']/['manual']. */
+  sources: string[];
+  /** True when fewer than 3 sources answered (ensemble reduced). */
+  reduced: boolean;
 }
 
-export function Downloads({ result, weatherMode }: Props) {
+export function Downloads({ result, sources, reduced }: Props) {
   const { cfg, micro, scenarios, displaySegments, styrkortSegments, anchor, controls } = result;
 
   const onWorkout = () => {
@@ -43,8 +46,8 @@ export function Downloads({ result, weatherMode }: Props) {
 
   const onPlanJson = () => {
     const meta: PlanJsonMeta = {
-      reducedEnsemble: false,
-      weatherSources: weatherMode === 'open-meteo' ? ['open-meteo'] : ['calm'],
+      reducedEnsemble: reduced,
+      weatherSources: sources,
       notes: scenarios.expected.notes,
     };
     const plan = buildPlanJson(scenarios, displaySegments, anchor, cfg, meta);

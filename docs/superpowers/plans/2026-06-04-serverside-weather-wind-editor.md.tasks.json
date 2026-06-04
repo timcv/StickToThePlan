@@ -1,0 +1,59 @@
+{
+  "planPath": "docs/superpowers/plans/2026-06-04-serverside-weather-wind-editor.md",
+  "tasks": [
+    {
+      "id": 1,
+      "subject": "Task 1: Relocate + parallelize multi-source fetch into core",
+      "status": "completed",
+      "description": "**Goal:** Move gatherWindSamples/fetchSmhi/fetchMetNorway into @stp/core, add bounded-concurrency parallelism and a batched Open-Meteo forecast fetch; the CLI re-exports from core.\n\n**Files:** Create packages/core/src/weather/fetchAll.ts; Modify packages/core/src/weather/openMeteo.ts, packages/core/src/index.ts, packages/cli/src/weatherFetch.ts; Test packages/core/tests/fetchAll.test.ts\n\n**Verify:** npx vitest run packages/core/tests/fetchAll.test.ts && npm run typecheck\n\n```json:metadata\n{\"files\": [\"packages/core/src/weather/fetchAll.ts\", \"packages/core/src/weather/openMeteo.ts\", \"packages/core/src/index.ts\", \"packages/cli/src/weatherFetch.ts\", \"packages/core/tests/fetchAll.test.ts\"], \"verifyCommand\": \"npx vitest run packages/core/tests/fetchAll.test.ts && npm run typecheck\", \"acceptanceCriteria\": [\"core exports gatherWindSamples/fetchSmhi/fetchMetNorway/mapLimit\", \"Open-Meteo forecast batched to one request\", \"dead source isolated\", \"bounded concurrency <=10\", \"CLI shim re-exports from core\"]}\n```"
+    },
+    {
+      "id": 2,
+      "subject": "Task 2: sampleCellPoints — one point per 0.1deg cell",
+      "status": "completed",
+      "description": "**Goal:** Replace fixed ~10-point sampling with one point per distinct 0.1deg cell the route crosses (~44 for Vattern), route order.\n\n**Files:** Create packages/core/src/weather/sample.ts; Modify packages/core/src/index.ts, packages/cli/src/cli.ts; Test packages/core/tests/sample.test.ts\n\n**Verify:** npx vitest run packages/core/tests/sample.test.ts && npm run typecheck\n\n```json:metadata\n{\"files\": [\"packages/core/src/weather/sample.ts\", \"packages/core/src/index.ts\", \"packages/cli/src/cli.ts\", \"packages/core/tests/sample.test.ts\"], \"verifyCommand\": \"npx vitest run packages/core/tests/sample.test.ts && npm run typecheck\", \"acceptanceCriteria\": [\"one point per 0.1deg bin first-seen\", \"deduped, first-appearance order\", \"empty -> []\", \"CLI uses sampleCellPoints\"]}\n```"
+    },
+    {
+      "id": 3,
+      "subject": "Task 3: Hourly summarize / override / manual field helpers",
+      "status": "completed",
+      "description": "**Goal:** Pure helpers: summarizeHourly (field -> per-clock-hour wind), applyHourlyOverrides (fold edits onto field), buildManualField (synthetic field from manual entries).\n\n**Files:** Create packages/core/src/weather/hourly.ts; Modify packages/core/src/index.ts; Test packages/core/tests/hourly.test.ts\n\n**Verify:** npx vitest run packages/core/tests/hourly.test.ts && npm run typecheck\n\n```json:metadata\n{\"files\": [\"packages/core/src/weather/hourly.ts\", \"packages/core/src/index.ts\", \"packages/core/tests/hourly.test.ts\"], \"verifyCommand\": \"npx vitest run packages/core/tests/hourly.test.ts && npm run typecheck\", \"acceptanceCriteria\": [\"summarizeHourly vector-mean per hour + nearest fallback\", \"applyHourlyOverrides collapses spread, immutable\", \"buildManualField centroid cells, sources=['manual']\"]}\n```"
+    },
+    {
+      "id": 4,
+      "subject": "Task 4: Vercel /api/weather endpoint + cache header",
+      "status": "completed",
+      "blockedBy": [1],
+      "description": "**Goal:** Cached serverless function fetching all sources for points+date, returning EnsembleField. Testable handleWeather + thin Vercel adapter.\n\n**Files:** Create api/handler.ts, api/weather.ts, api/tsconfig.json, api/tests/handler.test.ts; Modify vitest.config.ts, package.json\n\n**Verify:** npx vitest run api/tests/handler.test.ts && npm run typecheck\n\n```json:metadata\n{\"files\": [\"api/handler.ts\", \"api/weather.ts\", \"api/tsconfig.json\", \"api/tests/handler.test.ts\", \"vitest.config.ts\", \"package.json\"], \"verifyCommand\": \"npx vitest run api/tests/handler.test.ts && npm run typecheck\", \"acceptanceCriteria\": [\"parseWeatherQuery validates date+pts\", \"handleWeather returns field + s-maxage cache header\", \"all-fail -> 200 empty field\", \"bad query -> 400 no cache\", \"typecheck+vitest cover api/\"]}\n```"
+    },
+    {
+      "id": 5,
+      "subject": "Task 5: Web — inject field into a network-free worker",
+      "status": "completed",
+      "blockedBy": [3],
+      "description": "**Goal:** Worker no longer fetches; accepts a prebuilt EnsembleField. Add /api/weather client helper + race-hours/centroid utils.\n\n**Files:** Modify apps/web/src/lib/pipeline.ts; Create apps/web/src/lib/hours.ts, apps/web/src/lib/weatherClient.ts; Test apps/web/tests/pipeline.weather.test.ts, apps/web/tests/hours.test.ts\n\n**Verify:** npx vitest run apps/web/tests/pipeline.weather.test.ts apps/web/tests/hours.test.ts && npm run typecheck\n\n```json:metadata\n{\"files\": [\"apps/web/src/lib/pipeline.ts\", \"apps/web/src/lib/hours.ts\", \"apps/web/src/lib/weatherClient.ts\", \"apps/web/tests/pipeline.weather.test.ts\", \"apps/web/tests/hours.test.ts\", \"apps/web/tests/solve.smoke.test.ts\"], \"verifyCommand\": \"npx vitest run apps/web/tests/pipeline.weather.test.ts apps/web/tests/hours.test.ts && npm run typecheck\", \"acceptanceCriteria\": [\"PipelineInput.field + weatherMode union\", \"runPipeline injects field or calm, no network\", \"raceHours correct incl midnight wrap\", \"centroidOf mean\", \"fetchEnsemble GETs /api/weather\"]}\n```"
+    },
+    {
+      "id": 6,
+      "subject": "Task 6: Web — WindHourTable + WeatherPanel components",
+      "status": "completed",
+      "blockedBy": [3],
+      "description": "**Goal:** Editable hour-by-hour wind table + the panel hosting mode selection, fetch, manual entry, and the table.\n\n**Files:** Create apps/web/src/components/WindHourTable.tsx, apps/web/src/components/WeatherPanel.tsx; Modify apps/web/src/styles.css; Test apps/web/tests/WindHourTable.test.tsx\n\n**Verify:** npx vitest run apps/web/tests/WindHourTable.test.tsx && npm run typecheck\n\n```json:metadata\n{\"files\": [\"apps/web/src/components/WindHourTable.tsx\", \"apps/web/src/components/WeatherPanel.tsx\", \"apps/web/src/styles.css\", \"apps/web/tests/WindHourTable.test.tsx\"], \"verifyCommand\": \"npx vitest run apps/web/tests/WindHourTable.test.tsx && npm run typecheck\", \"acceptanceCriteria\": [\"WindHourTable row per hour, editable dir+speed, arrow\", \"onChange(hour, patch) parsed\", \"edited rows marked + reset\", \"WeatherPanel mode toggle/fetch/manual/sources+badge\"]}\n```"
+    },
+    {
+      "id": 7,
+      "subject": "Task 7: Web — wire WeatherPanel into App, build final field",
+      "status": "completed",
+      "blockedBy": [2, 3, 4, 5, 6],
+      "description": "**Goal:** App hosts WeatherPanel, fetches/edits/manual-builds the field on the main thread, passes it to the solver; UploadForm drops its weather-mode select; privacy note updated.\n\n**Files:** Modify apps/web/src/App.tsx, apps/web/src/components/UploadForm.tsx, apps/web/src/components/Downloads.tsx; Test apps/web/tests/App.weather.test.tsx\n\n**Verify:** npx vitest run apps/web/tests/App.weather.test.tsx && npm test && npm run typecheck\n\n```json:metadata\n{\"files\": [\"apps/web/src/App.tsx\", \"apps/web/src/components/UploadForm.tsx\", \"apps/web/src/components/Downloads.tsx\", \"apps/web/tests/App.weather.test.tsx\"], \"verifyCommand\": \"npx vitest run apps/web/tests/App.weather.test.tsx && npm test && npm run typecheck\", \"acceptanceCriteria\": [\"App owns weather state + fetch/edit/manual\", \"fetch ingests+samples+summarizes rows\", \"edit records override, reset clears\", \"final field fetched/manual/calm posted to solver\", \"UploadForm weather select removed\", \"privacy note updated\"]}\n```"
+    },
+    {
+      "id": 8,
+      "subject": "Task 8: Full verification, dev-server check, push + preview deploy",
+      "status": "completed",
+      "blockedBy": [7],
+      "description": "**Goal:** Whole suite green, dev-server verified, push branch so Vercel preview proves the /api function bundles and serves the cache header.\n\n**Files:** none (verification + git).\n\n**Verify:** npm test && npm run typecheck && npm run build:web; preview URL responds with ensemble + s-maxage, repeat call x-vercel-cache HIT.\n\n```json:metadata\n{\"files\": [], \"verifyCommand\": \"npm test && npm run typecheck && npm run build:web\", \"acceptanceCriteria\": [\"test+typecheck+build:web succeed\", \"dev server modes/manual/edit verified\", \"branch pushed, Vercel preview builds (api bundles core)\", \"preview /api/weather returns field + s-maxage; repeat call x-vercel-cache HIT\"]}\n```"
+    }
+  ],
+  "lastUpdated": "2026-06-04T20:40:00Z"
+}

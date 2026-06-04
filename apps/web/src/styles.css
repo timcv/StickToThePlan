@@ -279,3 +279,29 @@ button.ghost:hover {
 .error-card h2 {
   color: var(--error-text);
 }
+
+.run-row { display: flex; justify-content: flex-end; margin: 16px 0; }
+.run-button {
+  background: var(--accent);
+  color: var(--accent-text);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 11px 28px;
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+.run-button:disabled { opacity: 0.5; cursor: not-allowed; }
+.weather-fetch { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+.weather-manual { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+.weather-manual label { display: flex; flex-direction: column; gap: 4px; }
+.weather-manual input { width: 80px; }
+.weather-panel .seg-toggle { display: flex; gap: 4px; margin-bottom: 12px; }
+.weather-panel .seg-toggle button { padding: 6px 14px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
+.weather-panel .seg-toggle button.active { background: #1f6feb; color: #fff; border-color: #1f6feb; }
+.wind-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+.wind-table th, .wind-table td { padding: 4px 8px; text-align: left; border-bottom: 1px solid #eee; }
+.wind-table input { width: 64px; }
+.wind-row.edited { background: #fff7e0; }
+.wind-arrow { display: inline-block; }
+.badge { margin-left: 6px; padding: 1px 6px; background: #ffd; border: 1px solid #cc0; border-radius: 4px; font-size: 11px; }
+.link { background: none; border: none; color: #1f6feb; cursor: pointer; padding: 0; }

@@ -99,6 +99,65 @@ export function parseOpenMeteo(
 }
 
 // ---------------------------------------------------------------------------
+// Batched multi-point forecast
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a single forecast URL covering many points via comma-separated
+ * latitude/longitude lists. Open-Meteo returns an array of location objects in
+ * the same order. Bounds the forecast endpoint to ONE request for the route.
+ */
+export function buildForecastUrlMulti(points: GeoPoint[], date: string): string {
+  const q = buildQuery({
+    latitude: points.map((p) => p.lat).join(','),
+    longitude: points.map((p) => p.lon).join(','),
+    hourly: HOURLY_PARAMS,
+    windspeed_unit: 'ms',
+    start_date: date,
+    end_date: date,
+    timezone: 'UTC',
+  });
+  return `https://api.open-meteo.com/v1/forecast?${q}`;
+}
+
+/**
+ * Parse a batched Open-Meteo response. When multiple coordinates are requested
+ * the API returns an array (one element per point); a single coordinate returns
+ * one object. Each element maps to points[i].
+ */
+export function parseOpenMeteoBatch(
+  json: any,
+  points: GeoPoint[],
+  source = 'open-meteo-forecast',
+): WindSample[] {
+  const arr = Array.isArray(json) ? json : [json];
+  const out: WindSample[] = [];
+  for (let i = 0; i < arr.length && i < points.length; i++) {
+    out.push(...parseOpenMeteo(arr[i], points[i], source));
+  }
+  return out;
+}
+
+/**
+ * Fetch the batched forecast for all points in one request. Returns [] on error
+ * so a dead source never blocks the rest of the pipeline.
+ */
+export async function fetchOpenMeteoForecastBatched(
+  points: GeoPoint[],
+  date: string,
+): Promise<WindSample[]> {
+  if (points.length === 0) return [];
+  try {
+    const res = await fetch(buildForecastUrlMulti(points, date));
+    if (!res.ok) return [];
+    const json = await res.json();
+    return parseOpenMeteoBatch(json, points, 'open-meteo-forecast');
+  } catch {
+    return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Fetching
 // ---------------------------------------------------------------------------
 

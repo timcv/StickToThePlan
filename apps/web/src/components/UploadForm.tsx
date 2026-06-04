@@ -1,13 +1,14 @@
 /**
  * Upload + parameter form. Collects a GPX (required) and optional FIT, the
- * target, rider and chaingang parameters, the weather mode, and an editable
- * stops list, then assembles a PipelineInput and hands it to the solver.
+ * target, rider and chaingang parameters, and an editable stops list, then
+ * assembles a FormSubmit and hands it to App. App owns the weather mode and
+ * builds the final field before solving.
  *
  * Files are read in the browser: GPX as text, FIT as bytes (Uint8Array). Nothing
  * is uploaded to a server (see the privacy note in App).
  */
-import { useRef, useState } from 'react';
-import type { PipelineInput } from '../worker/solve.worker';
+import { useEffect, useRef, useState } from 'react';
+import type { PipelineForm } from '../worker/solve.worker';
 import type { SolverStatus } from '../useSolver';
 import { sampleRouteGpx } from '../lib/sampleRoute';
 import { VATTERN_CONTROLS } from '@stp/core';
@@ -18,13 +19,18 @@ interface StopRow {
   minutes: number;
 }
 
+export interface FormSubmit {
+  gpxText: string;
+  fitBytes: Uint8Array | null;
+  form: PipelineForm;
+}
+
 interface Props {
-  onRun: (input: PipelineInput) => void;
+  onRun: (input: FormSubmit) => void;
   status: SolverStatus;
 }
 
 type WatchTarget = 'pull' | 'avg';
-type WeatherMode = 'calm' | 'open-meteo';
 
 const DEPOT_MINUTES: Record<string, number> = {
   Hästholmen: 5,
@@ -47,7 +53,6 @@ interface PersistedForm {
   nRiders: number;
   m: number;
   watchTarget: WatchTarget;
-  weatherMode: WeatherMode;
   raceDate: string;
   startTime: string;
   stops: StopRow[];
@@ -79,7 +84,7 @@ function sortedByKm(stops: StopRow[]): StopRow[] {
 export function UploadForm({ onRun, status }: Props) {
   const saved = loadFromStorage();
 
-  // Files (not persisted — user must re-select after reload).
+  // Files (not persisted, user must re-select after reload).
   const [gpxText, setGpxText] = useState<string>('');
   const [gpxName, setGpxName] = useState<string>('');
   const [fitBytes, setFitBytes] = useState<Uint8Array | null>(null);
@@ -91,7 +96,6 @@ export function UploadForm({ onRun, status }: Props) {
   const [nRiders, setNRiders] = useState(saved.nRiders ?? 12);
   const [m, setM] = useState(saved.m ?? 96);
   const [watchTarget, setWatchTarget] = useState<WatchTarget>(saved.watchTarget ?? 'pull');
-  const [weatherMode, setWeatherMode] = useState<WeatherMode>(saved.weatherMode ?? 'calm');
   const [raceDate, setRaceDate] = useState(saved.raceDate ?? '2026-06-13');
   const [startTime, setStartTime] = useState(saved.startTime ?? '04:22');
   const [styrkortMaxRows, setStyrkortMaxRows] = useState(saved.styrkortMaxRows ?? 20);
@@ -106,7 +110,6 @@ export function UploadForm({ onRun, status }: Props) {
       nRiders,
       m,
       watchTarget,
-      weatherMode,
       raceDate,
       startTime,
       stops,
@@ -156,9 +159,8 @@ export function UploadForm({ onRun, status }: Props) {
     setNRiders(6);
     setM(90);
     setStartTime('06:00');
-    setWeatherMode('calm');
     setStops(sampleStops);
-    persist({ targetTotalHm: '2:30', ftp: 250, nRiders: 6, m: 90, startTime: '06:00', weatherMode: 'calm', stops: sampleStops, styrkortMaxRows: 20 });
+    persist({ targetTotalHm: '2:30', ftp: 250, nRiders: 6, m: 90, startTime: '06:00', stops: sampleStops, styrkortMaxRows: 20 });
   };
 
   const updateStop = (index: number, patch: Partial<StopRow>) => {
@@ -185,26 +187,32 @@ export function UploadForm({ onRun, status }: Props) {
     });
   };
 
+  const buildSubmit = (): FormSubmit => ({
+    gpxText,
+    fitBytes,
+    form: {
+      target_total_hm: targetTotalHm,
+      ftp,
+      n_riders: nRiders,
+      m,
+      stops,
+      watch_target: watchTarget,
+      race_date: raceDate,
+      start_time: startTime,
+      styrkort_max_rows: styrkortMaxRows,
+    },
+  });
+
+  // Seed the parent with the initial/persisted values on mount so the weather
+  // panel has a sensible hour range (from start_time + target) before the user
+  // clicks the submit button. Edits are pushed up again on submit.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { onRun(buildSubmit()); }, []);
+
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canRun) return;
-    const input: PipelineInput = {
-      gpxText,
-      fitBytes,
-      weatherMode,
-      form: {
-        target_total_hm: targetTotalHm,
-        ftp,
-        n_riders: nRiders,
-        m,
-        stops,
-        watch_target: watchTarget,
-        race_date: raceDate,
-        start_time: startTime,
-        styrkort_max_rows: styrkortMaxRows,
-      },
-    };
-    onRun(input);
+    onRun(buildSubmit());
   };
 
   return (
@@ -283,27 +291,14 @@ export function UploadForm({ onRun, status }: Props) {
         </label>
 
         <label className="field">
-          <span>Weather mode</span>
-          <select
-            value={weatherMode}
-            onChange={(e) => { const v = e.target.value as WeatherMode; setWeatherMode(v); persist({ weatherMode: v }); }}
-          >
-            <option value="calm">calm</option>
-            <option value="open-meteo">open-meteo</option>
-          </select>
+          <span>Race date</span>
+          <input
+            type="date"
+            value={raceDate}
+            required
+            onChange={(e) => { setRaceDate(e.target.value); persist({ raceDate: e.target.value }); }}
+          />
         </label>
-
-        {weatherMode === 'open-meteo' && (
-          <label className="field">
-            <span>Race date</span>
-            <input
-              type="date"
-              value={raceDate}
-              required
-              onChange={(e) => { setRaceDate(e.target.value); persist({ raceDate: e.target.value }); }}
-            />
-          </label>
-        )}
 
         <label className="field">
           <span>Start time (HH:MM)</span>
@@ -383,7 +378,7 @@ export function UploadForm({ onRun, status }: Props) {
           Load sample route
         </button>
         <button type="submit" className="primary" disabled={!canRun}>
-          {running ? 'Solving...' : 'Run'}
+          {running ? 'Solving...' : 'Använd inställningar'}
         </button>
         {running && <span className="spinner" aria-label="Solving" />}
       </div>

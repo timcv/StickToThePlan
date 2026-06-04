@@ -7,8 +7,9 @@
  * import runPipeline directly without spinning up a real Worker or triggering
  * worker-only globals.
  *
- * Determinism: calm mode does zero network I/O, so it is fully reproducible.
- * Network access happens only in open-meteo mode (fetchOpenMeteo).
+ * Determinism: the worker performs zero network I/O. Any weather field is
+ * fetched and built on the main thread and injected via PipelineInput.field,
+ * so the worker is fully reproducible.
  */
 import { runPipeline, type PipelineInput } from '../lib/pipeline';
 

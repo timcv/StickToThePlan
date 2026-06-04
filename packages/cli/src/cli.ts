@@ -28,6 +28,7 @@ import {
   buildEnsemble,
   renderMarkdown,
   renderHtml,
+  sampleCellPoints,
   type MicroSegment,
   type GeoPoint,
   type EnsembleField,
@@ -61,31 +62,6 @@ export interface RunSummary {
   expectedTotalS: number;
   /** Connect IQ data field generation result (spec 12.5). */
   ciq: { compiled: boolean; message: string };
-}
-
-// ---------------------------------------------------------------------------
-// Weather sampling
-// ---------------------------------------------------------------------------
-
-/**
- * Reduce the microsegments to ~10 representative sample points (every
- * ceil(n/10) segments, plus the final segment) to bound the number of weather
- * API calls. Each point is the segment START coordinate.
- */
-export function sampleWeatherPoints(micro: MicroSegment[]): GeoPoint[] {
-  if (micro.length === 0) return [];
-  const step = Math.max(1, Math.ceil(micro.length / 10));
-  const points: GeoPoint[] = [];
-  for (let i = 0; i < micro.length; i += step) {
-    points.push({ lat: micro[i].lat, lon: micro[i].lon });
-  }
-  // Always include the last segment so the far end of the route is covered.
-  const last = micro[micro.length - 1];
-  const lastPoint = points[points.length - 1];
-  if (!lastPoint || lastPoint.lat !== last.lat || lastPoint.lon !== last.lon) {
-    points.push({ lat: last.lat, lon: last.lon });
-  }
-  return points;
 }
 
 // ---------------------------------------------------------------------------
@@ -137,7 +113,7 @@ export async function runPlan(opts: RunOptions = {}): Promise<RunSummary> {
 
   if (field === null && !opts.offline) {
     // Cache miss/stale and online: fetch fresh from all sources.
-    const points = sampleWeatherPoints(micro);
+    const points = sampleCellPoints(micro);
     const samples = await gatherWindSamples(points, cfg.race_date);
     field = buildEnsemble(samples);
     if (samples.length > 0) {
