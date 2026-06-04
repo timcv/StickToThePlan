@@ -1,0 +1,11 @@
+{
+  "race_date": "2026-06-13",
+  "start_time": "06:00",
+  "gpx_path": "examples/sample-route.gpx",
+  "ftp": 250,
+  "n_riders": 6,
+  "target_total_hm": "2:30",
+  "stops": [
+    { "control": "Midpoint control", "km": 38, "minutes": 5 }
+  ]
+}

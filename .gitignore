@@ -4,6 +4,8 @@ node_modules/
 data/
 *.fit
 *.gpx
+# synthetic example route is safe to commit despite the *.gpx rule
+!examples/sample-route.gpx
 # build / cache
 dist/
 .cache/
@@ -23,3 +25,4 @@ ciq/developer_key.der
 # generated Monkey C source (regenerated per run; keep the directory)
 ciq/source/*.mc
 !ciq/source/.gitkeep
+.vercel

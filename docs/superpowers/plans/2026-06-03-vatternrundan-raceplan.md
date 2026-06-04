@@ -342,7 +342,7 @@ export function solveSpeedForPower(target: number, grade: number, headwind: numb
 - [ ] Smoothed cumulative gain < raw gain (smoothing lowers GPS noise; raw ~1597 m)
 - [ ] Falls back gracefully: a tiny synthetic 3-point GPX yields 2 microsegments with correct distances
 
-**Verify:** `npx vitest run tests/gpx.test.ts` → all pass. (Test reads the real GPX from `/Users/tim/Downloads/Vätternrundan 315 km (1).gpx`; guard with `it.skipIf(!existsSync(path))` so CI without the file still passes the synthetic case.)
+**Verify:** `npx vitest run tests/gpx.test.ts` → all pass. (Test reads the real GPX from `data/vatternrundan-315km.gpx`; guard with `it.skipIf(!existsSync(path))` so CI without the file still passes the synthetic case.)
 
 **Steps:**
 - [ ] **Step 1 (RED):** `tests/gpx.test.ts`: synthetic GPX string with 3 trkpts (known coords) → 2 microsegments, distances via haversine. Real-file block under `it.skipIf`: 4820 points, distance in band, dedup count.
@@ -450,7 +450,7 @@ export function solveSpeedForPower(target: number, grade: number, headwind: numb
 
 **Steps:**
 - [ ] **Step 1 (RED):** Fixtures for SMHI `point/lon/{lon}/lat/{lat}/data.json` and MET `locationforecast/2.0/compact?lat=..&lon=..`. Test parsers.
-- [ ] **Step 2 (GREEN):** Implement both. SMHI endpoint `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/{lon}/lat/{lat}/data.json` (round lon/lat to 6 decimals). MET endpoint `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=..&lon=..` with header `User-Agent: StickToThePlan/1.0 vatternrundan-raceplan (tim@haus.se)`.
+- [ ] **Step 2 (GREEN):** Implement both. SMHI endpoint `https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/{lon}/lat/{lat}/data.json` (round lon/lat to 6 decimals). MET endpoint `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=..&lon=..` with header `User-Agent: StickToThePlan/1.0 vatternrundan-raceplan (https://github.com/timcv/StickToThePlan)`.
 - [ ] **Step 3:** Verify, commit: `feat(weather): SMHI and MET Norway clients`
 
 ---

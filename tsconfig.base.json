@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "paths": {
+      "@stp/core": ["./packages/core/src/index.ts"],
+      "@stp/core/*": ["./packages/core/src/*"]
+    }
+  },
+  "include": ["packages/*/src", "packages/*/tests"]
+}

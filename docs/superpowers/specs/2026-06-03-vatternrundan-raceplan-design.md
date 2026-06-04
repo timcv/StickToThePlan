@@ -63,7 +63,7 @@ Primary use case: Tim rides a test GPX solo, produces a workout to hold a target
 ## 3. Input files (verified)
 
 ### Course GPX
-`/Users/tim/Downloads/Vätternrundan 315 km (1).gpx`
+`data/vatternrundan-315km.gpx`
 
 - 4820 track points, single `<trkseg>`, creator `togpx`, GPX 1.1.
 - Total distance 314.89 km (haversine over raw points). Matches the 315 km target and Tim's 315 km sum.
@@ -74,7 +74,7 @@ Primary use case: Tim rides a test GPX solo, produces a workout to hold a target
 - Start point near Motala, start-to-end gap 292 m, so the loop closes within GPS tolerance.
 
 ### Historical FIT power ride
-`/Users/tim/Downloads/Referens pass med gruppen - 8 personer i klungan.zip` containing `23066238193_ACTIVITY.fit` (1.3 MB).
+A local reference-ride FIT in data/ (gitignored).
 
 - Reference ride with the group, 8 riders in the bunch. Decode at implementation to read the power stream, duration, NP, mean power and (if present) GPS terrain.
 - Anchor consequence: the reference rotation duty cycle was 1/8, the plan is 1/12. The rider's NP is the group-size-independent physiological anchor. See section 8.

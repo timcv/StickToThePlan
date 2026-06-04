@@ -1,0 +1,281 @@
+/* StickToThePlan web app: minimal, legible styling. No UI framework. */
+
+:root {
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --border: #d8dce3;
+  --text: #1c2430;
+  --muted: #5b6675;
+  --accent: #1f6feb;
+  --accent-text: #ffffff;
+  --hero-border: #1f6feb;
+  --zebra: #f2f5f9;
+  --warn-bg: #fff4e5;
+  --warn-text: #8a5300;
+  --error-bg: #fdecea;
+  --error-text: #a11b13;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.app {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 24px 20px 64px;
+}
+
+.app-header h1 {
+  margin: 0 0 4px;
+  font-size: 1.8rem;
+}
+
+.tagline {
+  margin: 0;
+  color: var(--muted);
+}
+
+.privacy {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 20px 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 16px 0;
+}
+
+.card h2 {
+  margin: 0 0 16px;
+  font-size: 1.2rem;
+}
+
+/* The split table is the hero: a thicker accent border draws the eye. */
+.card.hero {
+  border: 2px solid var(--hero-border);
+  box-shadow: 0 2px 10px rgba(31, 111, 235, 0.08);
+}
+
+/* ---- Forms ---- */
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field > span {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.field input,
+.field select {
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font: inherit;
+  background: #fff;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+fieldset.stops {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 16px 16px;
+  margin: 0 0 16px;
+}
+
+fieldset.stops legend {
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 0 6px;
+}
+
+.stops-table input {
+  width: 100%;
+  padding: 5px 7px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font: inherit;
+}
+
+.stops-table td.num input {
+  max-width: 110px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+button {
+  cursor: pointer;
+  font: inherit;
+}
+
+button.primary {
+  background: var(--accent);
+  color: var(--accent-text);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 9px 20px;
+  font-weight: 600;
+}
+
+button.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 14px;
+}
+
+button.ghost:hover {
+  border-color: var(--accent);
+}
+
+.download-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.download-row button {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 9px 16px;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+}
+
+.download-row button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.note {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 4px 0 0;
+}
+
+/* ---- Tables ---- */
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.data-table th,
+.data-table td {
+  border: 1px solid var(--border);
+  padding: 7px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.data-table th {
+  background: var(--zebra);
+  font-weight: 600;
+}
+
+.data-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table tbody tr:nth-child(even) {
+  background: var(--zebra);
+}
+
+/* The hero split table reads a touch larger. */
+.split-table {
+  font-size: 0.95rem;
+}
+
+.split-table th {
+  background: #e7f0ff;
+}
+
+/* ---- Status ---- */
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.warn {
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 12px 0 0;
+  font-size: 0.9rem;
+}
+
+.error-card {
+  border-color: var(--error-text);
+  background: var(--error-bg);
+}
+
+.error-card h2 {
+  color: var(--error-text);
+}

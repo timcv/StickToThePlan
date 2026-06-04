@@ -1,0 +1,15 @@
+{
+  "name": "@stp/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/cli.ts plan",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@stp/core": "*"
+  },
+  "devDependencies": {
+    "tsx": "^4.22.4"
+  }
+}
