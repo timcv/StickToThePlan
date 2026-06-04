@@ -56,10 +56,11 @@ export {
 export { buildPlanJson, type PlanJsonMeta } from './output/planJson.js';
 export { buildSplitTable, type SplitRow } from './output/splits.js';
 
-// Weather: url builders + parsers (pure) and the browser-safe Open-Meteo fetch.
+// Weather: url builders + parsers (pure), batched fetch, and multi-source orchestration.
 export * from './weather/openMeteo.js';
 export { buildSmhiUrl, parseSmhi } from './weather/smhi.js';
 export { buildMetNorwayUrl, metNorwayHeaders, parseMetNorway } from './weather/metNorway.js';
+export { gatherWindSamples, fetchSmhi, fetchMetNorway, mapLimit } from './weather/fetchAll.js';
 export {
   buildEnsemble,
   makeWeatherFn,
