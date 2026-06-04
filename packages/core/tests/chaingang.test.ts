@@ -5,6 +5,8 @@ import {
   draftPower,
   meanPower,
   riderNpAtSpeed,
+  riderNpSquareWaveReference,
+  npFromMoments,
   solveSpeedForRiderNp,
 } from '../src/chaingang.js';
 import { applyDefaults } from '../src/config.js';
@@ -109,5 +111,45 @@ describe('solveSpeedForRiderNp', () => {
     const v = solveSpeedForRiderNp(163, GRADE, HW, CW, RHO, groupCfg);
     expect(v).toBeGreaterThan(0.5);
     expect(v).toBeLessThan(25);
+  });
+});
+
+// Local square-wave reference computed directly from (Pp, Pd) so the
+// comparison is at the NP level, independent of speed / physics.
+function refNpFromPowers(Pp: number, Pd: number, n: number, pull: number): number {
+  const cycle = n * pull;
+  const arr = Array.from({ length: cycle }, (_, t) => (t < pull ? Pp : Pd));
+  const w = 30;
+  const roll = arr.map((_, i) => {
+    let s = 0;
+    for (let j = 0; j < w; j++) s += arr[((i - j) % cycle + cycle) % cycle];
+    return s / w;
+  });
+  return (roll.reduce((a, r) => a + r ** 4, 0) / roll.length) ** 0.25;
+}
+
+describe('NP moments equivalence', () => {
+  it('matches the square-wave reference within 1e-6 across a grid', () => {
+    for (const [n, pull] of [[12, 45], [8, 30]] as const) {
+      for (let Pp = 100; Pp <= 400; Pp += 20) {
+        for (let Pd = 50; Pd <= 300; Pd += 20) {
+          expect(Math.abs(npFromMoments(Pp, Pd, n, pull) - refNpFromPowers(Pp, Pd, n, pull))).toBeLessThan(1e-6);
+        }
+      }
+    }
+  });
+
+  it('solo riderNpAtSpeed equals pullPower at speed (n_riders === 1)', () => {
+    const pull = pullPower(V, GRADE, HW, CW, RHO, soloCfg);
+    const np = riderNpAtSpeed(V, GRADE, HW, CW, RHO, soloCfg);
+    expect(Math.abs(np - pull)).toBeLessThan(1e-9);
+  });
+
+  it('group riderNpAtSpeed matches riderNpSquareWaveReference within 1e-6', () => {
+    for (const v of [6, 8, 11]) {
+      const fast = riderNpAtSpeed(v, GRADE, HW, CW, RHO, groupCfg);
+      const ref = riderNpSquareWaveReference(v, GRADE, HW, CW, RHO, groupCfg);
+      expect(Math.abs(fast - ref)).toBeLessThan(1e-6);
+    }
   });
 });
