@@ -34,4 +34,19 @@ This report is updated as the build progresses. Final summary at the bottom.
 
 ## Progress log
 
-(updated per phase)
+### Phase 0 (done)
+Branched feat/oss-web off main (no merge, see decision 2). Planning docs committed (6ccf7c7).
+
+### Phase 1 (done): shared core + NP optimization
+- Monorepo scaffold committed (dcbca7c): workspaces, tsconfig.base.json with @stp/core path mapping, transitional vitest. TS 6 needed paths without baseUrl and with leading `./`.
+- Core/cli extraction committed (73b691e): 53 files, all moves tracked as git renames (history preserved). packages/core is pure (verified: no node:/fs/child_process/fileURLToPath). packages/cli holds loadConfig, fileIo, weatherFetch, cache, ciqCompile, cli. The .mc template is embedded as a string in core/src/ciq/template.ts.
+- NP optimization committed (adc6585): precomputed quartic moments, O(1) riderNpAtSpeed. Equivalence vs the square-wave reference < 1e-6 over a (Pp,Pd) grid. **Calm solve on the full course: 34.6 s -> 0.31 s (~110x).** The whole test suite dropped 39.5 s -> 1.14 s.
+- buildSplitTable committed (a505f63): depot split rows, arrival from rolling time + stops-before (no double count), km 0 is the implicit start.
+- Gates: 261 passed | 1 skipped (the SLOW_TESTS-gated scenarios real-course smoke), typecheck clean. Planner unchanged: np 145.9 W, total 11:45 (verified via the data/-gated planner real-course test, which prints `np_target_used=145.9 W, total_time_s=42300 (11:45)`).
+- Known minor wart: per-package `tsc --noEmit -w <pkg>` fails standalone (rootDir/project-reference artifact); the root `npm run typecheck` (used by CI) is clean. The redundant PlanDelta.mc.tmpl still sits in core next to template.ts (template.ts is the source of truth).
+
+### Phase 2 (in progress): web app
+- SPIKE PASSED (the de-risk gate). @garmin/fitsdk is browser-safe: its runtime src is pure ESM with no Node builtins (only .d.ts type files mention Buffer). `vite build` of apps/web bundles core + fitsdk with zero Node-builtin warnings; the Web Worker bundles into its own clean chunk. A jsdom Vitest spike encodes a workout via encodeWorkout, decodes it with the SDK Decoder/Stream and round-trips the +1000 watt offset, and builds an activity FIT via the SDK Encoder that readFitPowerBytes decodes back. No mitigation needed.
+- apps/web scaffolded: Vite 6 + React 19 + @vitejs/plugin-react, jsdom + @testing-library/react for tests. Worker (solve.worker.ts) exposes a plain `runPipeline(input)` (testable without a real Worker) plus the worker message wiring; calm mode is fully offline (solveForTargetTime reused across scenarios), open-meteo mode fetches via core fetchOpenMeteo then buildEnsemble + solveThreeScenarios.
+- apps/web tsconfig uses module ESNext + moduleResolution Bundler (Vite owns emit, bare React imports). To make output/fitWorkout.ts compile under BOTH NodeNext (core/cli) and Bundler (web), a small `writeFitMesg` typing wrapper was added (type-only, runtime identical; the SDK's hand-written writeMesg type is narrower than the encoder accepts).
+- vitest.config.ts converted to projects: `unit` (node, packages/*) and `web` (jsdom, apps/web). 263 passed | 1 skipped.

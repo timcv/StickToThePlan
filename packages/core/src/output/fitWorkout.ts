@@ -25,6 +25,32 @@
 import { Encoder, Profile } from '@garmin/fitsdk';
 import type { DisplaySegment, Config } from '../types.js';
 
+/**
+ * A FIT message literal: the global mesgNum plus its named field values.
+ *
+ * Why this exists: the SDK ships a hand-written Encoder.writeMesg type
+ * (Encodable<Mesg>) that only declares `mesgNum`/`developerFields`. Under
+ * bundler-style module resolution (apps/web) that strict type rejects the real
+ * FIT fields (type, wktName, power, ...) as excess properties on a literal,
+ * even though the runtime accepts them; under NodeNext (core/cli) the SDK's
+ * extensionless declaration re-exports do not resolve at all, so writeMesg is
+ * effectively untyped and the same literals pass. Passing a value of this named
+ * type (not a fresh literal) into writeMesg sidesteps excess-property checking,
+ * so both resolution modes agree without using `any`.
+ */
+type FitFieldValue = string | number | boolean | bigint | Date | Array<string | number>;
+interface FitMesg {
+  mesgNum: number;
+  [field: string]: FitFieldValue | undefined;
+}
+
+function writeFitMesg(encoder: Encoder, mesg: FitMesg): void {
+  // The SDK's writeMesg parameter type (Encodable<Mesg>) is narrower than what
+  // the encoder accepts at runtime; cast through unknown so the widened message
+  // shape compiles identically under NodeNext and bundler resolution.
+  encoder.writeMesg(mesg as unknown as Parameters<Encoder['writeMesg']>[0]);
+}
+
 /** Distance subfield scale: the decoder divides the raw value by 100 to get metres. */
 const DISTANCE_SCALE = 100;
 
@@ -121,7 +147,7 @@ export function encodeWorkout(
 
   const encoder = new Encoder();
 
-  encoder.writeMesg({
+  writeFitMesg(encoder, {
     mesgNum: Profile.MesgNum.FILE_ID,
     type: 'workout',
     manufacturer: 'development',
@@ -130,7 +156,7 @@ export function encodeWorkout(
     serialNumber: 1234,
   });
 
-  encoder.writeMesg({
+  writeFitMesg(encoder, {
     mesgNum: Profile.MesgNum.WORKOUT,
     wktName: WORKOUT_NAME,
     sport: 'cycling',
@@ -138,7 +164,7 @@ export function encodeWorkout(
   });
 
   for (const step of steps) {
-    encoder.writeMesg({
+    writeFitMesg(encoder, {
       mesgNum: Profile.MesgNum.WORKOUT_STEP,
       messageIndex: step.messageIndex,
       wktStepName: step.name,
