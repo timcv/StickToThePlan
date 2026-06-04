@@ -1,0 +1,15 @@
+{
+  "race_date": "2026-06-13",
+  "start_time": "04:22",
+  "gpx_path": "data/vatternrundan-315km.gpx",
+  "fit_path": "data/23066238193_ACTIVITY.fit",
+  "ftp": 272,
+  "n_riders": 12,
+  "target_total_hm": "11:45",
+  "stops": [
+    { "control": "Gränna",    "km": 77,  "minutes": 10 },
+    { "control": "Fagerhult", "km": 134, "minutes": 10 },
+    { "control": "Boviken",   "km": 226, "minutes": 15 },
+    { "control": "Askersund", "km": 256, "minutes": 15 }
+  ]
+}

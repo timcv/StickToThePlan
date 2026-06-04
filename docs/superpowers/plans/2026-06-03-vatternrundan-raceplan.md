@@ -394,7 +394,7 @@ export function solveSpeedForPower(target: number, grade: number, headwind: numb
 - [ ] `solveForTargetTime(micro, calmWeather, cfg)` bisects `np_target` so `total_time_s` ≈ 42300 (±60 s)
 - [ ] Resulting `rolling_time_s` ≈ 39300 (10:55, ±120 s); `stop_time_s === 3000`
 - [ ] Control clock at Gränna ≈ 07:12, Boviken ≈ 12:47, finish ≈ 16:07, each within ±6 min (spec 4.1)
-- [ ] Per-segment rolling speed (non-neutral) stays ~28.6..29.0 km/h in calm case (spec 4.5) — assert mean rolling speed in [28.0, 29.6]
+- [ ] Per-segment rolling speed (non-neutral) stays ~28.6..29.0 km/h in calm case (spec 4.5), assert mean rolling speed in [28.0, 29.6]
 - [ ] If target unreachable sustainably, `reachable:false` and a note; do not crash
 
 **Verify:** `npx vitest run tests/planner.test.ts` → all pass (uses real GPX microsegments under skipIf; a synthetic flat 100 km route always tests the march/bisection/stop logic)
@@ -489,7 +489,7 @@ export function solveSpeedForPower(target: number, grade: number, headwind: numb
 
 **Acceptance Criteria (spec 9.3, 9.5):**
 - [ ] `solveThreeScenarios(micro, field, cfg)` returns `{expected, optimistic, pessimistic}` each a `PlanResult`
-- [ ] Each scenario re-bisects `np_target` to hit 11:45 (so the three differ in required NP, not total time) OR holds NP fixed and reports differing total times — choose fixed total time with differing NP per spec 9.5 ("the three anchor NPs they required"); assert optimistic NP ≤ expected NP ≤ pessimistic NP
+- [ ] Each scenario re-bisects `np_target` to hit 11:45 (so the three differ in required NP, not total time) OR holds NP fixed and reports differing total times. Choose fixed total time with differing NP per spec 9.5 ("the three anchor NPs they required"); assert optimistic NP <= expected NP <= pessimistic NP
 - [ ] Capped sectors recorded in `PlanResult.notes` (which segments were speed-limited, how much time moved)
 - [ ] With a synthetic headwind field on a flat route, pessimistic requires higher NP than optimistic
 
@@ -539,13 +539,13 @@ export function solveSpeedForPower(target: number, grade: number, headwind: numb
 - [ ] `renderMarkdown(plan, displaySegments, scenarios, cfg)` produces a header block and a table with columns From-to, Town, ETA, Distance, Height, Gradient, Wind, Pull W, Avg W, Note, Stop
 - [ ] ETA rendered as clock (`secondsToClock`), pull/avg as integer watts, gradient as %
 - [ ] `renderHtml(...)` wraps the same data in a standalone printable HTML (inline CSS, A4 page)
-- [ ] No em dash anywhere in output (assert the rendered string contains no `—`)
+- [ ] No em dash anywhere in output (assert the rendered string contains no em dash, U+2014)
 - [ ] Three-scenario summary line shows optimistic/expected/pessimistic total times and NPs
 
 **Verify:** `npx vitest run tests/tempokort.test.ts` → pass
 
 **Steps:**
-- [ ] **Step 1 (RED):** build a tiny `DisplaySegment[]` and assert the markdown has the header, a row, clock ETA, and zero `—`.
+- [ ] **Step 1 (RED):** build a tiny `DisplaySegment[]` and assert the markdown has the header, a row, clock ETA, and zero em dash (U+2014).
 - [ ] **Step 2 (GREEN):** `src/output/tempokort.ts`: `renderMarkdown` builds GFM table; `renderHtml` an HTML template with inline CSS. Both write helpers return strings; the CLI writes files.
 - [ ] **Step 3:** Verify, commit: `feat(output): tempokort markdown and printable HTML`
 

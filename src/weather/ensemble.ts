@@ -1,0 +1,278 @@
+/**
+ * Weather ensemble builder and WeatherFn factory.
+ *
+ * Aggregates WindSamples from multiple sources into spatially/temporally
+ * binned EnsembleCells with vector-mean wind direction, percentile spread,
+ * and arithmetic-mean temperature/pressure.
+ */
+
+import type { WindSample, WindCond, Scenario, WeatherFn } from '../types.js';
+import { haversine } from '../util/geo.js';
+
+// ---------------------------------------------------------------------------
+// Public types
+// ---------------------------------------------------------------------------
+
+export interface EnsembleCell {
+  time_iso: string;
+  lat: number;
+  lon: number;
+  windspeed_mean_ms: number;
+  winddir_from_deg: number; // vector mean
+  windspeed_p10_ms: number;
+  windspeed_p90_ms: number;
+  temp_c: number;
+  pressure_pa: number;
+  n_sources: number;
+}
+
+export interface EnsembleField {
+  cells: EnsembleCell[];
+  sources: string[];
+  reduced: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function toRad(deg: number): number {
+  return (deg * Math.PI) / 180;
+}
+
+function toDeg(rad: number): number {
+  return (rad * 180) / Math.PI;
+}
+
+/**
+ * Compute a percentile value from a sorted (ascending) array using linear
+ * interpolation. p is in [0, 1].
+ */
+function percentile(sorted: number[], p: number): number {
+  if (sorted.length === 0) return 0;
+  if (sorted.length === 1) return sorted[0];
+
+  const idx = p * (sorted.length - 1);
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  if (lo === hi) return sorted[lo];
+  const frac = idx - lo;
+  return sorted[lo] * (1 - frac) + sorted[hi] * frac;
+}
+
+/**
+ * Round a coordinate to 1 decimal place for spatial grouping (~11 km bin).
+ */
+function roundCoord(x: number): number {
+  return Math.round(x * 10) / 10;
+}
+
+/**
+ * Truncate an ISO-8601 timestamp to the hour: "2026-06-13T06:32:00Z" -> "2026-06-13T06".
+ */
+function truncateToHour(timeIso: string): string {
+  // e.g. "2026-06-13T06:00:00Z" -> "2026-06-13T06"
+  return timeIso.slice(0, 13);
+}
+
+/**
+ * Extract the hour of day (0-23) from an ISO-8601 string.
+ * Works for both "2026-06-13T06:00:00Z" and "2026-06-13T06:00" forms.
+ */
+function hourOfDay(timeIso: string): number {
+  const t = timeIso.slice(11, 13);
+  return parseInt(t, 10);
+}
+
+// ---------------------------------------------------------------------------
+// buildEnsemble
+// ---------------------------------------------------------------------------
+
+/**
+ * Aggregate WindSamples into EnsembleCells.
+ *
+ * Grouping key: (rounded lat, rounded lon, truncated-to-hour time_iso).
+ * Within each group:
+ *   - Wind direction: vector mean via u/v components
+ *       u = -W * sin(rad(dirFrom))
+ *       v = -W * cos(rad(dirFrom))
+ *     windspeed_mean_ms = hypot(meanU, meanV)
+ *     winddir_from_deg  = (toDeg(atan2(-meanU, -meanV)) + 360) % 360
+ *   - windspeed_p10/p90: 10th/90th percentile of scalar wind speeds
+ *   - temp_c, pressure_pa: arithmetic mean
+ *   - n_sources: count of distinct `source` values in the group
+ *
+ * Field-level:
+ *   - sources: all distinct source strings across all samples
+ *   - reduced: true if distinct source count < 3
+ */
+export function buildEnsemble(samples: WindSample[]): EnsembleField {
+  // Collect all distinct sources across the whole field
+  const allSources = new Set<string>();
+  for (const s of samples) {
+    allSources.add(s.source);
+  }
+
+  // Group samples by (roundedLat, roundedLon, hourKey)
+  const groups = new Map<string, WindSample[]>();
+  for (const s of samples) {
+    const key = `${roundCoord(s.lat)}|${roundCoord(s.lon)}|${truncateToHour(s.time_iso)}`;
+    let group = groups.get(key);
+    if (group === undefined) {
+      group = [];
+      groups.set(key, group);
+    }
+    group.push(s);
+  }
+
+  const cells: EnsembleCell[] = [];
+
+  for (const [, group] of groups) {
+    // Vector-mean wind
+    let sumU = 0;
+    let sumV = 0;
+    const speeds: number[] = [];
+    let sumTemp = 0;
+    let sumPressure = 0;
+    const groupSources = new Set<string>();
+
+    // Use the first sample's rounded coords and truncated time as cell representative
+    const rep = group[0];
+    const cellLat = roundCoord(rep.lat);
+    const cellLon = roundCoord(rep.lon);
+    const cellTimeIso = truncateToHour(rep.time_iso) + ':00:00Z';
+
+    for (const s of group) {
+      const rad = toRad(s.winddir_from_deg);
+      const u = -s.windspeed_ms * Math.sin(rad);
+      const v = -s.windspeed_ms * Math.cos(rad);
+      sumU += u;
+      sumV += v;
+      speeds.push(s.windspeed_ms);
+      sumTemp += s.temp_c;
+      sumPressure += s.pressure_pa;
+      groupSources.add(s.source);
+    }
+
+    const n = group.length;
+    const meanU = sumU / n;
+    const meanV = sumV / n;
+
+    const windspeed_mean_ms = Math.hypot(meanU, meanV);
+    const winddir_from_deg = (toDeg(Math.atan2(-meanU, -meanV)) + 360) % 360;
+
+    speeds.sort((a, b) => a - b);
+    const windspeed_p10_ms = percentile(speeds, 0.1);
+    const windspeed_p90_ms = percentile(speeds, 0.9);
+
+    cells.push({
+      time_iso: cellTimeIso,
+      lat: cellLat,
+      lon: cellLon,
+      windspeed_mean_ms,
+      winddir_from_deg,
+      windspeed_p10_ms,
+      windspeed_p90_ms,
+      temp_c: sumTemp / n,
+      pressure_pa: sumPressure / n,
+      n_sources: groupSources.size,
+    });
+  }
+
+  const sourcesArray = Array.from(allSources).sort();
+  const reduced = allSources.size < 3;
+
+  return { cells, sources: sourcesArray, reduced };
+}
+
+// ---------------------------------------------------------------------------
+// makeWeatherFn
+// ---------------------------------------------------------------------------
+
+/**
+ * Return a WeatherFn for the given EnsembleField and Scenario.
+ *
+ * For each query (lat, lon, timeS):
+ *   1. Convert timeS (seconds from race start) to hour-of-day using startClockS.
+ *   2. Find the best matching cell using a two-stage approach:
+ *      a. Find cells nearest in space (haversine).
+ *      b. Among those, pick the one nearest in time (absolute hour difference).
+ *      (Implemented as a single pass with a normalized combined score.)
+ *   3. Return WindCond with windspeed selected by scenario:
+ *      'expected'   -> windspeed_mean_ms
+ *      'optimistic' -> windspeed_p10_ms   (least wind magnitude ~ least headwind with mean direction)
+ *      'pessimistic'-> windspeed_p90_ms   (most wind magnitude ~ most headwind with mean direction)
+ *
+ * NOTE: optimistic/pessimistic approximate least/most headwind by least/most wind magnitude
+ * with the mean direction (spec 10.2, 10.5). A fuller per-segment headwind optimization
+ * (projecting wind onto bearing for each cell) is a future refinement.
+ */
+export function makeWeatherFn(
+  field: EnsembleField,
+  scenario: Scenario,
+  startClockS: number,
+): WeatherFn {
+  const { cells } = field;
+
+  if (cells.length === 0) {
+    // Fallback: return calm wind
+    return (_lat, _lon, _timeS) => ({
+      windspeed_ms: 0,
+      winddir_from_deg: 0,
+      temp_c: 10,
+      pressure_pa: 101_325,
+    });
+  }
+
+  return (lat: number, lon: number, timeS: number): WindCond => {
+    // Convert timeS (seconds from race start) to hour-of-day
+    const queryHour = Math.floor(((startClockS + timeS) % 86400) / 3600);
+
+    // Find best cell: minimize combined score of spatial distance and time distance.
+    // We normalize space by a reference distance (100 km = 100_000 m) and time
+    // by a reference (12 hours). This ensures nearby cells in both dimensions are
+    // preferred, with spatial proximity weighted slightly more.
+    const SPACE_REF_M = 100_000;
+    const TIME_REF_H = 12;
+
+    let bestCell = cells[0];
+    let bestScore = Infinity;
+
+    for (const cell of cells) {
+      const distM = haversine({ lat, lon }, { lat: cell.lat, lon: cell.lon });
+      const cellHour = hourOfDay(cell.time_iso);
+      const hourDiff = Math.abs(cellHour - queryHour);
+      // Wrap hour difference for crossing midnight (e.g. hour 23 vs 1 -> diff 2)
+      const wrappedHourDiff = Math.min(hourDiff, 24 - hourDiff);
+
+      const score =
+        distM / SPACE_REF_M + wrappedHourDiff / TIME_REF_H;
+
+      if (score < bestScore) {
+        bestScore = score;
+        bestCell = cell;
+      }
+    }
+
+    let windspeed_ms: number;
+    switch (scenario) {
+      case 'optimistic':
+        windspeed_ms = bestCell.windspeed_p10_ms;
+        break;
+      case 'pessimistic':
+        windspeed_ms = bestCell.windspeed_p90_ms;
+        break;
+      case 'expected':
+      default:
+        windspeed_ms = bestCell.windspeed_mean_ms;
+        break;
+    }
+
+    return {
+      windspeed_ms,
+      winddir_from_deg: bestCell.winddir_from_deg,
+      temp_c: bestCell.temp_c,
+      pressure_pa: bestCell.pressure_pa,
+    };
+  };
+}

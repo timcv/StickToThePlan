@@ -1,0 +1,6 @@
+# Connect IQ build configuration for the Vatternrundan plan-delta data field.
+# The source is generated per run into ciq/source/PlanDelta.mc by
+# src/ciq/generate.ts; point the build there.
+project.manifest = manifest.xml
+base.sourcePath = source
+base.resourcePath = resources

@@ -1,0 +1,421 @@
+// Segmentation: aggregate SegmentPlan (micro-level) into DisplaySegment for
+// the tempokort and FIT workout.
+// Spec reference: section 11 (segmentation) and section 12.1 (raceplan columns).
+
+import type { PlanResult, DisplaySegment, Config, SegmentPlan } from './types.js';
+
+// ---------------------------------------------------------------------------
+// Control points
+// ---------------------------------------------------------------------------
+
+export interface ControlPoint {
+  name: string;
+  km: number;
+}
+
+/** Locked Vatternrundan control points (section 4.1). */
+export const VATTERN_CONTROLS: ControlPoint[] = [
+  { name: 'Motala', km: 0 },
+  { name: 'Hästholmen', km: 40 },
+  { name: 'Gränna', km: 77 },
+  { name: 'Jönköping', km: 105 },
+  { name: 'Fagerhult', km: 134 },
+  { name: 'Hjo', km: 173 },
+  { name: 'Karlsborg', km: 204 },
+  { name: 'Boviken', km: 226 },
+  { name: 'Askersund', km: 256 },
+  { name: 'Godegård', km: 284 },
+  { name: 'Motala (mål)', km: 315 },
+];
+
+// ---------------------------------------------------------------------------
+// Internal types
+// ---------------------------------------------------------------------------
+
+interface Group {
+  indices: number[]; // indices into plan.segments
+  segs: SegmentPlan[];
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function round(x: number): number {
+  return Math.round(x);
+}
+
+/**
+ * Snap a target cumulative distance (m) to the nearest SegmentPlan boundary.
+ * Returns the cum_distance_m of the chosen segment (i.e. the END of that segment).
+ */
+function snapToBoundary(targetM: number, segments: SegmentPlan[]): number {
+  let best = segments[0].micro.cum_distance_m;
+  let bestDiff = Math.abs(best - targetM);
+  for (const s of segments) {
+    const d = Math.abs(s.micro.cum_distance_m - targetM);
+    if (d < bestDiff) {
+      bestDiff = d;
+      best = s.micro.cum_distance_m;
+    }
+  }
+  return best;
+}
+
+/**
+ * Compute the wind label for a group of SegmentPlans.
+ * Uses mean headwind and mean absolute crosswind over the group.
+ */
+function windLabel(segs: SegmentPlan[]): string {
+  if (segs.length === 0) return 'Lugnt';
+  const meanHead = segs.reduce((s, p) => s + p.headwind_ms, 0) / segs.length;
+  const meanCross = segs.reduce((s, p) => s + Math.abs(p.crosswind_ms), 0) / segs.length;
+  if (meanHead > 1) return `Mot ${round(meanHead)} m/s`;
+  if (meanHead < -1) return `Med ${round(-meanHead)} m/s`;
+  if (meanCross > 1) return `Sido ${round(meanCross)} m/s`;
+  return 'Lugnt';
+}
+
+/**
+ * Aggregate a group of SegmentPlan into a DisplaySegment.
+ * cfg is used for band_pct and stop lookup.
+ * controlAtEnd: the ControlPoint whose km matches the end boundary, if any.
+ * stopMinutesAtEnd: the stop minutes for that control, if any.
+ */
+function aggregateGroup(
+  group: Group,
+  cfg: Config,
+  allSegs: SegmentPlan[],
+  controlAtEnd: ControlPoint | undefined,
+  stopMinutesAtEnd: number | undefined,
+): DisplaySegment {
+  const segs = group.segs;
+  const firstMicro = segs[0].micro;
+  const lastSeg = segs[segs.length - 1];
+  const lastMicro = lastSeg.micro;
+
+  // from_km: start of the first micro (cum_distance_m - distance_m gives start of segment)
+  const startCumM = firstMicro.cum_distance_m - firstMicro.distance_m;
+  const endCumM = lastMicro.cum_distance_m;
+
+  const from_km = Math.round(startCumM / 100) / 10;
+  const to_km = Math.round(endCumM / 100) / 10;
+
+  const distance_m = segs.reduce((s, p) => s + p.micro.distance_m, 0);
+  const net_height_m = segs.reduce((s, p) => s + (p.micro.ele_end_m - p.micro.ele_start_m), 0);
+  const avg_grade = distance_m > 0 ? net_height_m / distance_m : 0;
+
+  const eta_s = lastSeg.eta_s;
+
+  // Power: only non-neutral segments contribute.
+  const effortSegs = segs.filter(s => !s.micro.neutral);
+  let pull_w_mean = 0;
+  let avg_w = 0;
+  if (effortSegs.length > 0) {
+    pull_w_mean = effortSegs.reduce((s, p) => s + p.p_pull_w, 0) / effortSegs.length;
+    avg_w = round(effortSegs.reduce((s, p) => s + p.p_mean_w, 0) / effortSegs.length);
+  }
+  const pull_w_low = round(pull_w_mean * (1 - cfg.band_pct));
+  const pull_w_high = round(pull_w_mean * (1 + cfg.band_pct));
+
+  const wind = windLabel(segs);
+  const meanHead = segs.length > 0
+    ? segs.reduce((s, p) => s + p.headwind_ms, 0) / segs.length
+    : 0;
+
+  const town = controlAtEnd?.name;
+
+  let stop_minutes: number | undefined;
+  let depart_s: number | undefined;
+  if (stopMinutesAtEnd !== undefined && stopMinutesAtEnd > 0) {
+    stop_minutes = stopMinutesAtEnd;
+    depart_s = eta_s + stop_minutes * 60;
+  }
+
+  // Note keyword (Swedish).
+  // Determine if this is the last climbing segment before the finish.
+  let note: string;
+  if (stop_minutes !== undefined) {
+    note = 'DEPÅ';
+  } else if (avg_grade > cfg.climb_threshold) {
+    // Check if this is the last climbing display segment before the finish.
+    // We detect this at finalization time (after all groups are known).
+    // For now, mark as KLÄTTRING and patch to SISTA UPPFÖR in a post-pass.
+    note = 'KLÄTTRING';
+  } else if (avg_grade < -cfg.climb_threshold) {
+    note = 'BACKAR';
+  } else if (meanHead > 3) {
+    note = 'TA DET LUGNT';
+  } else if (meanHead < -3) {
+    note = 'ÖKA';
+  } else {
+    note = 'JÄMN FART';
+  }
+
+  return {
+    from_km,
+    to_km,
+    town,
+    distance_m,
+    net_height_m,
+    avg_grade,
+    eta_s,
+    wind_label: wind,
+    pull_w_low,
+    pull_w_high,
+    avg_w,
+    note,
+    stop_minutes,
+    depart_s,
+    micro_indices: [...group.indices],
+  };
+}
+
+/**
+ * Re-aggregate two adjacent DisplaySegment groups into one.
+ * Used for the merge pass.
+ */
+function mergeDisplaySegs(a: DisplaySegment, b: DisplaySegment): DisplaySegment {
+  const distance_m = a.distance_m + b.distance_m;
+  const net_height_m = a.net_height_m + b.net_height_m;
+  const avg_grade = distance_m > 0 ? net_height_m / distance_m : 0;
+
+  // Weighted average wind label: recompute from the already-labeled strings is
+  // not ideal, but we need numeric values. We will derive them from avg_grade
+  // and the stored wind_label. Instead, store the mean headwind numerically
+  // during build, but since DisplaySegment only has wind_label, we re-derive.
+  // Simple approach: keep b's eta, merge indices, pick note from the dominant
+  // half by distance.
+  const aNote = a.note;
+  const bNote = b.note;
+  const note = a.distance_m >= b.distance_m ? aNote : bNote;
+
+  // pull_w: weighted average of the two averages (by distance).
+  const totalDist = distance_m;
+  const aW = a.avg_w;
+  const bW = b.avg_w;
+  const avg_w = totalDist > 0 ? round((aW * a.distance_m + bW * b.distance_m) / totalDist) : 0;
+
+  // Weighted pull mean for band computation.
+  const aPullMid = (a.pull_w_low + a.pull_w_high) / 2;
+  const bPullMid = (b.pull_w_low + b.pull_w_high) / 2;
+  const pullMid = totalDist > 0
+    ? (aPullMid * a.distance_m + bPullMid * b.distance_m) / totalDist
+    : 0;
+  // We do not have band_pct here, so approximate: use b's band ratio as proxy.
+  // Since band_pct is uniform we can recover it: band_pct ~ (high - low) / (2 * mid).
+  const bandRatio = aPullMid > 0 ? (a.pull_w_high - a.pull_w_low) / (2 * aPullMid) : 0;
+  const pull_w_low = round(pullMid * (1 - bandRatio));
+  const pull_w_high = round(pullMid * (1 + bandRatio));
+
+  // Wind label: pick from whichever half has larger distance.
+  const wind_label = a.distance_m >= b.distance_m ? a.wind_label : b.wind_label;
+
+  // town / stop_minutes / depart_s: preserve b (the end boundary matters).
+  return {
+    from_km: a.from_km,
+    to_km: b.to_km,
+    town: b.town,
+    distance_m,
+    net_height_m,
+    avg_grade,
+    eta_s: b.eta_s,
+    wind_label,
+    pull_w_low,
+    pull_w_high,
+    avg_w,
+    note: b.stop_minutes !== undefined ? 'DEPÅ' : note,
+    stop_minutes: b.stop_minutes,
+    depart_s: b.depart_s,
+    micro_indices: [...a.micro_indices, ...b.micro_indices],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Main export
+// ---------------------------------------------------------------------------
+
+/**
+ * Aggregate plan.segments (SegmentPlan[]) into DisplaySegment[] for the
+ * tempokort and FIT workout. See spec section 11 and 12.1.
+ *
+ * Boundary types:
+ *  - control point km markers (snapped to nearest segment boundary)
+ *  - stop km markers from cfg.stops
+ *  - grade-state transitions (flat <-> climb where grade crosses climb_threshold)
+ *  - headwind-sign flips (headwind_ms sign changes with magnitude > 1 m/s)
+ *  - route start and end (always)
+ *
+ * After boundary-based splitting the list is merged down to <= 50 segments
+ * by repeatedly combining the most similar-avg_w pair that does not cross a
+ * depot boundary.
+ */
+export function segment(
+  plan: PlanResult,
+  cfg: Config,
+  controls: ControlPoint[] = VATTERN_CONTROLS,
+): DisplaySegment[] {
+  const segments = plan.segments;
+  if (segments.length === 0) return [];
+
+  // Build a set of cumulative-distance boundary values (in metres).
+  // A boundary is the cum_distance_m of the LAST segment in a group
+  // (i.e. the END of that boundary segment).
+  const boundarySet = new Set<number>();
+
+  // Always include the start (represented as 0, meaning "before segment 0")
+  // and the end.
+  // We'll track boundaries as "split after segment at cum_distance_m = X",
+  // which means segment X is the LAST segment of its group.
+  // The end of the last segment is always a boundary.
+  boundarySet.add(segments[segments.length - 1].micro.cum_distance_m);
+
+  // Control points.
+  for (const cp of controls) {
+    if (cp.km === 0) continue; // start marker; route start is implicit
+    const snapped = snapToBoundary(cp.km * 1000, segments);
+    boundarySet.add(snapped);
+  }
+
+  // Stop km markers.
+  for (const stop of cfg.stops) {
+    const snapped = snapToBoundary(stop.km * 1000, segments);
+    boundarySet.add(snapped);
+  }
+
+  // Grade-state transitions (flat <-> climb).
+  const thr = cfg.climb_threshold;
+  let prevAboveThreshold = segments[0].micro.grade > thr;
+  for (let i = 1; i < segments.length; i++) {
+    const above = segments[i].micro.grade > thr;
+    if (above !== prevAboveThreshold) {
+      // Transition: insert boundary at the END of the PREVIOUS segment.
+      boundarySet.add(segments[i - 1].micro.cum_distance_m);
+      prevAboveThreshold = above;
+    }
+  }
+
+  // Head<->tail wind sign transitions (magnitude > 1 m/s).
+  for (let i = 1; i < segments.length; i++) {
+    const prev = segments[i - 1].headwind_ms;
+    const curr = segments[i].headwind_ms;
+    if (Math.abs(prev) > 1 && Math.abs(curr) > 1 && Math.sign(prev) !== Math.sign(curr)) {
+      boundarySet.add(segments[i - 1].micro.cum_distance_m);
+    }
+  }
+
+  // Sort boundaries.
+  const boundaries = Array.from(boundarySet).sort((a, b) => a - b);
+
+  // Build lookup: cum_distance_m -> index in segments.
+  const cumToIdx = new Map<number, number>();
+  for (let i = 0; i < segments.length; i++) {
+    cumToIdx.set(segments[i].micro.cum_distance_m, i);
+  }
+
+  // Build groups. Each group is a contiguous range of segments.
+  // A group ends at a boundary cum_distance_m.
+  const groups: Group[] = [];
+  let groupStart = 0;
+
+  for (const bnd of boundaries) {
+    const bndIdx = cumToIdx.get(bnd);
+    if (bndIdx === undefined) continue; // snapped value not found exactly; skip
+    if (bndIdx < groupStart) continue;  // already past this boundary
+
+    const indices: number[] = [];
+    for (let i = groupStart; i <= bndIdx; i++) {
+      indices.push(i);
+    }
+    if (indices.length > 0) {
+      groups.push({ indices, segs: indices.map(i => segments[i]) });
+    }
+    groupStart = bndIdx + 1;
+  }
+
+  // Any remaining segments after the last boundary.
+  if (groupStart < segments.length) {
+    const indices: number[] = [];
+    for (let i = groupStart; i < segments.length; i++) {
+      indices.push(i);
+    }
+    groups.push({ indices, segs: indices.map(i => segments[i]) });
+  }
+
+  // Build a lookup: which control (if any) ends at this cum_distance_m?
+  const controlAtCum = new Map<number, ControlPoint>();
+  for (const cp of controls) {
+    if (cp.km === 0) continue;
+    const snapped = snapToBoundary(cp.km * 1000, segments);
+    controlAtCum.set(snapped, cp);
+  }
+
+  // Which stops (if any) end at this cum_distance_m?
+  const stopAtCum = new Map<number, number>(); // cum -> minutes
+  for (const stop of cfg.stops) {
+    const snapped = snapToBoundary(stop.km * 1000, segments);
+    stopAtCum.set(snapped, stop.minutes);
+  }
+
+  // Aggregate each group into a DisplaySegment.
+  let displaySegs: DisplaySegment[] = groups.map(g => {
+    const lastCum = g.segs[g.segs.length - 1].micro.cum_distance_m;
+    const controlAtEnd = controlAtCum.get(lastCum);
+    const stopMinutesAtEnd = stopAtCum.get(lastCum);
+    return aggregateGroup(g, cfg, segments, controlAtEnd, stopMinutesAtEnd);
+  });
+
+  // Post-pass: patch the last KLÄTTRING before the finish to SISTA UPPFÖR.
+  let lastClimbIdx = -1;
+  for (let i = displaySegs.length - 1; i >= 0; i--) {
+    if (displaySegs[i].note === 'KLÄTTRING') {
+      lastClimbIdx = i;
+      break;
+    }
+  }
+  if (lastClimbIdx >= 0) {
+    // Only mark SISTA UPPFÖR if there are non-climb segments after it
+    // (i.e. it really is the last one before a downhill or flat to the finish).
+    const hasNonClimbAfter = displaySegs.slice(lastClimbIdx + 1).some(
+      s => s.note !== 'KLÄTTRING' && s.note !== 'SISTA UPPFÖR',
+    );
+    if (hasNonClimbAfter) {
+      displaySegs[lastClimbIdx] = { ...displaySegs[lastClimbIdx], note: 'SISTA UPPFÖR' };
+    }
+  }
+
+  // Merge down to <= 50 display segments.
+  // Strategy: find the pair of adjacent segments with the most similar avg_w
+  // that does not cross a depot boundary (neither a nor b is a depot, and
+  // neither has stop_minutes set).
+  while (displaySegs.length > 50) {
+    let bestDiff = Infinity;
+    let bestIdx = -1;
+
+    for (let i = 0; i < displaySegs.length - 1; i++) {
+      const a = displaySegs[i];
+      const b = displaySegs[i + 1];
+      // Do not merge across a depot boundary.
+      if (a.stop_minutes !== undefined || b.stop_minutes !== undefined) continue;
+      const diff = Math.abs(a.avg_w - b.avg_w);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        bestIdx = i;
+      }
+    }
+
+    if (bestIdx === -1) {
+      // All remaining splits are depot boundaries; cannot merge further.
+      break;
+    }
+
+    const merged = mergeDisplaySegs(displaySegs[bestIdx], displaySegs[bestIdx + 1]);
+    displaySegs = [
+      ...displaySegs.slice(0, bestIdx),
+      merged,
+      ...displaySegs.slice(bestIdx + 2),
+    ];
+  }
+
+  return displaySegs;
+}

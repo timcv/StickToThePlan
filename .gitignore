@@ -13,3 +13,13 @@ weather-cache/
 .env.*
 # os
 .DS_Store
+# generated output (keep the directory)
+output/*
+!output/.gitkeep
+# connect iq
+ciq/bin/
+ciq/developer_key.der
+*.prg
+# generated Monkey C source (regenerated per run; keep the directory)
+ciq/source/*.mc
+!ciq/source/.gitkeep
