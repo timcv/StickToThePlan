@@ -17,7 +17,6 @@ import {
   buildPlanJson,
   encodeWorkout,
   generatePlanDeltaSource,
-  VATTERN_CONTROLS,
   type PlanJsonMeta,
 } from '@stp/core';
 import type { PipelineResult } from '../worker/solve.worker';
@@ -29,7 +28,7 @@ interface Props {
 }
 
 export function Downloads({ result, weatherMode }: Props) {
-  const { cfg, micro, scenarios, displaySegments, anchor } = result;
+  const { cfg, micro, scenarios, displaySegments, anchor, controls } = result;
 
   const onWorkout = () => {
     const bytes = encodeWorkout(displaySegments, cfg);
@@ -37,7 +36,7 @@ export function Downloads({ result, weatherMode }: Props) {
   };
 
   const onCourse = () => {
-    const gpx = buildCourseGpx(micro, scenarios.expected, cfg, VATTERN_CONTROLS);
+    const gpx = buildCourseGpx(micro, scenarios.expected, cfg, controls);
     downloadBlob('course.gpx', gpx, 'application/gpx+xml');
   };
 

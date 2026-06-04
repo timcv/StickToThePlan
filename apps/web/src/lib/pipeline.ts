@@ -17,8 +17,8 @@ import {
   buildSplitTable,
   buildEnsemble,
   fetchOpenMeteo,
-  VATTERN_CONTROLS,
   type Config,
+  type ControlPoint,
   type RawConfig,
   type ThreeScenarios,
   type DisplaySegment,
@@ -65,6 +65,7 @@ export interface PipelineResult {
   // boundary.
   cfg: Config;
   micro: MicroSegment[];
+  controls: ControlPoint[];
 }
 
 // ---------------------------------------------------------------------------
@@ -98,6 +99,24 @@ function sampleWeatherPoints(micro: MicroSegment[]): GeoPoint[] {
  */
 function calmThreeScenarios(plan: PlanResult): ThreeScenarios {
   return { expected: plan, optimistic: plan, pessimistic: plan };
+}
+
+/**
+ * Control points for a generic uploaded route: the start, the user's stops in
+ * km order, and the finish at the route end. This is what makes the depot split
+ * table meaningful for any route. (The CLI keeps the fixed VATTERN_CONTROLS for
+ * the Vatternrundan example; the web tool is route agnostic, so the depots are
+ * the legs between the user's own stops.)
+ */
+function controlsFromStops(cfg: Config, micro: MicroSegment[]): ControlPoint[] {
+  const routeEndKm = micro.length > 0 ? micro[micro.length - 1].cum_distance_m / 1000 : 0;
+  const ordered = [...cfg.stops].sort((a, b) => a.km - b.km);
+  const controls: ControlPoint[] = [{ name: 'Start', km: 0 }];
+  for (const s of ordered) {
+    if (s.km > 0 && s.km < routeEndKm) controls.push({ name: s.control, km: s.km });
+  }
+  controls.push({ name: 'Mål', km: routeEndKm });
+  return controls;
 }
 
 // ---------------------------------------------------------------------------
@@ -150,9 +169,11 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
     scenarios = solveThreeScenarios(micro, field, cfg);
   }
 
-  // 5. Segment + split table off the expected plan.
-  const displaySegments = segment(scenarios.expected, cfg, VATTERN_CONTROLS);
-  const splits = buildSplitTable(scenarios.expected, cfg, VATTERN_CONTROLS);
+  // 5. Segment + split table off the expected plan, using controls derived
+  // from the user's stops so the depot legs match the uploaded route.
+  const controls = controlsFromStops(cfg, micro);
+  const displaySegments = segment(scenarios.expected, cfg, controls);
+  const splits = buildSplitTable(scenarios.expected, cfg, controls);
 
-  return { scenarios, displaySegments, splits, anchor, npTargetUsed, cfg, micro };
+  return { scenarios, displaySegments, splits, anchor, npTargetUsed, cfg, micro, controls };
 }

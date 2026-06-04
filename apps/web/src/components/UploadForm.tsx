@@ -88,7 +88,11 @@ export function UploadForm({ onRun, status }: Props) {
     setM(90);
     setStartTime('06:00');
     setWeatherMode('calm');
-    setStops([{ control: 'Depå', km: 38, minutes: 5 }]);
+    setStops([
+      { control: 'Depå 1', km: 18, minutes: 5 },
+      { control: 'Krönet', km: 38, minutes: 0 },
+      { control: 'Depå 2', km: 58, minutes: 5 },
+    ]);
   };
 
   const updateStop = (index: number, patch: Partial<StopRow>) => {
