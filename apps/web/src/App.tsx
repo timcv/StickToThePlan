@@ -54,7 +54,10 @@ export function App() {
 
       {status === 'done' && result && (
         <>
-          <ScenarioSummary scenarios={result.scenarios} />
+          {result.scenarios.optimistic !== result.scenarios.expected ||
+            result.scenarios.pessimistic !== result.scenarios.expected ? (
+            <ScenarioSummary scenarios={result.scenarios} />
+          ) : null}
           <SplitTable splits={result.splits} startTime={startTime} />
           <Downloads result={result} weatherMode={weatherMode} />
           <TempokortTable segments={result.displaySegments} startTime={startTime} />

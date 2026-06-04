@@ -6,7 +6,7 @@
  * time and the running cumulative are durations rendered as H:MM.
  */
 import { secondsToClock, type SplitRow } from '@stp/core';
-import { secondsToHMM, metersToKm1 } from '../lib/format';
+import { secondsToHMM, metersToKm1, avgSpeedKmh } from '../lib/format';
 
 interface Props {
   splits: SplitRow[];
@@ -24,6 +24,7 @@ export function SplitTable({ splits, startTime }: Props) {
               <th>Leg</th>
               <th className="num">Distance (km)</th>
               <th className="num">Leg time</th>
+              <th className="num">Avg (km/h)</th>
               <th className="num">Arrival</th>
               <th className="num">Stop (min)</th>
               <th className="num">Departure</th>
@@ -38,6 +39,7 @@ export function SplitTable({ splits, startTime }: Props) {
                 </td>
                 <td className="num">{metersToKm1(row.leg_distance_m)}</td>
                 <td className="num">{secondsToHMM(row.leg_time_s)}</td>
+                <td className="num">{avgSpeedKmh(row.leg_distance_m, row.leg_time_s)}</td>
                 <td className="num">{secondsToClock(row.arrive_s, startTime)}</td>
                 <td className="num">{row.stop_minutes > 0 ? row.stop_minutes : ''}</td>
                 <td className="num">{secondsToClock(row.depart_s, startTime)}</td>

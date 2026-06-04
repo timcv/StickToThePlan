@@ -17,3 +17,9 @@ export function secondsToHMM(totalSeconds: number): string {
 export function metersToKm1(m: number): string {
   return (m / 1000).toFixed(1);
 }
+
+/** Leg avg speed in km/h to one decimal. Returns "0.0" if timeS is zero. */
+export function avgSpeedKmh(distanceM: number, timeS: number): string {
+  if (timeS <= 0) return '0.0';
+  return ((distanceM / timeS) * 3.6).toFixed(1);
+}

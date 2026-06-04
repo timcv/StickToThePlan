@@ -9,6 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { SplitTable } from '../src/components/SplitTable';
+import { avgSpeedKmh } from '../src/lib/format';
 import type { SplitRow } from '@stp/core';
 
 // ---------------------------------------------------------------------------
@@ -74,5 +75,21 @@ describe('SplitTable', () => {
     const { container } = render(<SplitTable splits={fixture} startTime="06:00" />);
     const firstRow = container.querySelector('tbody tr:first-child');
     expect(firstRow?.textContent).toContain('07:10');
+  });
+
+  it('displays avg speed in km/h for the first leg', () => {
+    // leg: 40_200 m in 4200 s -> 40.2 km / 1.1667 h ~= 34.5 km/h
+    const { container } = render(<SplitTable splits={fixture} startTime="06:00" />);
+    const firstRow = container.querySelector('tbody tr:first-child');
+    expect(firstRow?.textContent).toContain('34.5');
+  });
+
+  it('avgSpeedKmh returns 0.0 for zero time', () => {
+    expect(avgSpeedKmh(1000, 0)).toBe('0.0');
+  });
+
+  it('avgSpeedKmh computes correctly', () => {
+    // 40200 m / 4200 s = 9.571 m/s = 34.457 km/h -> "34.5"
+    expect(avgSpeedKmh(40_200, 4200)).toBe('34.5');
   });
 });
