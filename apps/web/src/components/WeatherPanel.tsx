@@ -11,7 +11,6 @@ import { WindHourTable } from './WindHourTable';
 export type WeatherMode = 'calm' | 'fetched' | 'manual';
 
 interface Props {
-  hours: number[];
   mode: WeatherMode;
   onModeChange: (m: WeatherMode) => void;
   rows: HourlyWind[];

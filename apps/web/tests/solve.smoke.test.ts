@@ -27,6 +27,7 @@ describe('runPipeline smoke test (calm mode)', () => {
       gpxText: sampleGpxText,
       fitBytes: null,
       weatherMode: 'calm',
+      field: null,
       form: {
         target_total_hm: '2:30',
         ftp: 250,
