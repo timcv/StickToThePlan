@@ -54,6 +54,7 @@ export {
   type WorkoutStepTarget,
 } from './output/fitWorkout.js';
 export { buildPlanJson, type PlanJsonMeta } from './output/planJson.js';
+export { buildSplitTable, type SplitRow } from './output/splits.js';
 
 // Weather: url builders + parsers (pure) and the browser-safe Open-Meteo fetch.
 export * from './weather/openMeteo.js';
