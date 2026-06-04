@@ -45,8 +45,54 @@ Branched feat/oss-web off main (no merge, see decision 2). Planning docs committ
 - Gates: 261 passed | 1 skipped (the SLOW_TESTS-gated scenarios real-course smoke), typecheck clean. Planner unchanged: np 145.9 W, total 11:45 (verified via the data/-gated planner real-course test, which prints `np_target_used=145.9 W, total_time_s=42300 (11:45)`).
 - Known minor wart: per-package `tsc --noEmit -w <pkg>` fails standalone (rootDir/project-reference artifact); the root `npm run typecheck` (used by CI) is clean. The redundant PlanDelta.mc.tmpl still sits in core next to template.ts (template.ts is the source of truth).
 
-### Phase 2 (in progress): web app
+### Phase 2 (done): web app
 - SPIKE PASSED (the de-risk gate). @garmin/fitsdk is browser-safe: its runtime src is pure ESM with no Node builtins (only .d.ts type files mention Buffer). `vite build` of apps/web bundles core + fitsdk with zero Node-builtin warnings; the Web Worker bundles into its own clean chunk. A jsdom Vitest spike encodes a workout via encodeWorkout, decodes it with the SDK Decoder/Stream and round-trips the +1000 watt offset, and builds an activity FIT via the SDK Encoder that readFitPowerBytes decodes back. No mitigation needed.
 - apps/web scaffolded: Vite 6 + React 19 + @vitejs/plugin-react, jsdom + @testing-library/react for tests. Worker (solve.worker.ts) exposes a plain `runPipeline(input)` (testable without a real Worker) plus the worker message wiring; calm mode is fully offline (solveForTargetTime reused across scenarios), open-meteo mode fetches via core fetchOpenMeteo then buildEnsemble + solveThreeScenarios.
 - apps/web tsconfig uses module ESNext + moduleResolution Bundler (Vite owns emit, bare React imports). To make output/fitWorkout.ts compile under BOTH NodeNext (core/cli) and Bundler (web), a small `writeFitMesg` typing wrapper was added (type-only, runtime identical; the SDK's hand-written writeMesg type is narrower than the encoder accepts).
 - vitest.config.ts converted to projects: `unit` (node, packages/*) and `web` (jsdom, apps/web). 263 passed | 1 skipped.
+- Full UI committed (8259ead): useSolver hook driving the worker, upload + parameter form with an editable stops list and load-sample, the depot split table (hero), scenario summary, tempokort from DisplaySegment data, and four Blob download buttons calling the pure core builders on the main thread, plus the privacy note. The pipeline was extracted to apps/web/src/lib/pipeline.ts so it is testable without a real Worker. Added a calm-mode smoke test and a SplitTable render test. Root typecheck now also runs the web workspace (it uses bundler resolution, so the NodeNext root tsc does not cover it otherwise).
+- Controls fix committed (12d91d0): the worker hard-coded VATTERN_CONTROLS, which collapsed every control past the route end for any route shorter than 315 km. Now the depot controls are built generically as start + the user's stops (km order) + finish at the route end, passed to both segment and buildSplitTable, and the course.gpx download uses the same controls. This is the correct behavior for a route-agnostic tool. The CLI keeps the fixed VATTERN_CONTROLS for the Vatternrundan example.
+- BROWSER VERIFIED (real Chromium via the preview harness, not just jsdom): the app loads with no console errors, "Load sample route" + "Run" produces a correct four-leg split table (Start, Depå 1, Krönet, Depå 2, Mål) summing to 74.7 km and hitting the 2:30 target with consistent arrival/departure clocks, and all four downloads produce valid blobs (workout.fit 348 B, course.gpx 82.6 KB, plan.json 504 KB, PlanDelta.mc 5.4 KB). The worker keeps the UI responsive (results arrive asynchronously).
+
+### Phase 3 (done): open source and deploy
+- Synthetic sample route committed (fc15408): deterministic generator (examples/scripts/gen-sample-route.mjs, seeded LCG, no deps), examples/sample-route.gpx (901 points, 74.8 km, 309 m ascent), examples/sample-config.json, and a .gitignore negation so the synthetic .gpx is tracked past the global *.gpx rule.
+- Docs committed (5b67a6b): LICENSE (MIT 2026 timcv), README (hosted-app placeholder, web + CLI quick starts, monorepo layout, development, deployment, privacy), MODELL.md (the model end to end with validation numbers cited from the test suite and the M1-M8 report: 314.89 km conservation, calm 11:45 at np 145.9 W, rolling 10:55, plus the config-defaults table).
+- CI committed (4850779): .github/workflows/ci.yml runs npm ci, typecheck, test, build:web on Node 22 for push and pull_request.
+- De-personalization committed (8061372): MET Norway User-Agent contact is now configurable, defaulting to the public project URL (the personal email is gone). Home-directory paths and the personal email were scrubbed from the committed design and plan docs. A repo-wide grep for the personal email and /Users paths returns nothing.
+- Vercel config (vercel.json): installCommand npm install (workspaces), buildCommand npm run build:web, outputDirectory apps/web/dist. Validated as JSON; the build is confirmed to emit apps/web/dist/index.html.
+
+## Final validation (spec section 10)
+
+| Item | Result |
+|---|---|
+| All relocated tests green | 268 passed, 1 skipped (the SLOW_TESTS-gated scenarios real-course smoke), 26 files, suite ~1.2 s |
+| NP equivalence < 1e-6 | PASS (grid over Pp 100..400, Pd 50..300, two cycle shapes) |
+| Planner unchanged | np 145.9 W, total 11:45 on the full 315 km course (data/-gated planner test) |
+| Calm solve speed | 34.6 s -> 0.31 s (target was 1 to 2 s; far exceeded) |
+| Web smoke + component | pipeline smoke on the sample route yields a non-empty split table; SplitTable renders one row per leg |
+| No personal data | repo-wide grep for tim's email and /Users paths returns nothing |
+| CI | workflow authored; the four steps (npm ci, typecheck, test, build:web) all pass locally; the lockfile is in sync so npm ci will install cleanly. Actual green-on-GitHub requires a push (not done; push is not authorized without an explicit request). |
+| Vercel preview | vercel.json configured and the static build is verified locally; the in-browser sample run and the four downloads were confirmed via the local preview harness. An actual Vercel preview deploy requires the user's Vercel account, so the hosted preview itself is pending the user's deploy. |
+| FIT round-trip with the 1000 offset | confirmed in the fitsdk spike (encode -> decode round-trips the +1000 watt target) under Vite/jsdom |
+
+## Blockers
+
+None that stopped the build. Two items are inherently outside an autonomous local run and await the user:
+1. CI green on GitHub requires a push (push is gated on explicit user request per the project rules).
+2. A live Vercel preview deploy requires the user's Vercel account. All local prerequisites (build, config, in-browser sample run, downloads) are verified.
+
+## Out of scope (as specified)
+
+Phase 4 (serverless weather proxy for the full SMHI + MET Norway ensemble) was skipped per the brief. The browser uses calm mode or the CORS-friendly Open-Meteo client directly.
+
+## Notes and minor warts
+
+- Per-package `tsc --noEmit -w <pkg>` for cli/web can fail in isolation (rootDir / module-resolution artifacts of standalone invocation). The root `npm run typecheck` (what CI runs) covers core + cli (NodeNext) and chains the web workspace (bundler resolution) and is clean.
+- A redundant copy of PlanDelta.mc.tmpl remains in packages/core/src/ciq next to template.ts; template.ts (the embedded string) is the source of truth and the only one used.
+- The main web bundle is ~660 KB (gzip ~137 KB), dominated by @garmin/fitsdk on the main thread for the downloads. Acceptable for an SPA; could be lazy-loaded later if desired.
+
+## How to publish (user actions remaining)
+
+1. Push `feat/oss-web` and open a PR, or merge to `main`, to trigger CI on GitHub.
+2. Import the repo into Vercel (it reads vercel.json), deploy, then fill the hosted-app link in README.md.
+3. Flip the GitHub repo from private to public.
