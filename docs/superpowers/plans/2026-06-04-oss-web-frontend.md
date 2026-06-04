@@ -577,7 +577,7 @@ Coordinator adds `buildSplitTable`/`SplitRow` to `index.ts`. Commit Phase 1 afte
 - [ ] README: what it is, hosted link placeholder, web quick start, CLI quick start (`npm install`, `npm start -w @stp/cli`, `--calm`, `--offline`, bring-your-own GPX/FIT), model summary linking MODELL.md, license, privacy note, chosen Vercel config documented.
 - [ ] MODELL.md: end-to-end split computation (NP anchor -> per-segment physics+chaingang -> leg time -> depot ETA -> splits), validation numbers (314.89 km conservation, calm 11:45 and 10:55, sanity table), references. No personal data.
 
-**Verify:** manual read; `grep -r "tim@haus.se\|/Users/tim" README.md MODELL.md LICENSE` -> empty.
+**Verify:** manual read; confirm README.md, MODELL.md, and LICENSE contain no personal email addresses or home-directory paths.
 
 ---
 
@@ -585,7 +585,7 @@ Coordinator adds `buildSplitTable`/`SplitRow` to `index.ts`. Commit Phase 1 afte
 
 **Goal:** Remove personal identifiers from committed files; make MET Norway UA configurable.
 
-**Files:** `packages/core/src/weather/metNorway.ts` (UA contact configurable, default a generic repo URL), scrub `docs/build-report.md` and any other committed file containing `/Users/tim` or `tim@haus.se`.
+**Files:** `packages/core/src/weather/metNorway.ts` (UA contact configurable, default a generic repo URL), scrub `docs/build-report.md` and any other committed file containing home-directory paths or the maintainer's personal email.
 
 **Acceptance Criteria:**
 - [ ] `metNorwayHeaders()` uses a configurable contact, default `https://github.com/timcv/StickToThePlan` (not a personal email).
@@ -666,4 +666,4 @@ Write `docs/build-report-oss.md`: assumptions, decisions (Phase 0 no-merge ratio
 - [ ] Calm solve on full course ~1 to 2 s after optimization (report before/after).
 - [ ] CI config runs the full pipeline green locally.
 - [ ] Vercel build produces `apps/web/dist`; sample run works in-browser; four files download; FIT round-trips with 1000 offset.
-- [ ] No `/Users/tim` or `tim@haus.se` in committed files.
+- [ ] No home-directory paths or personal email addresses in committed files.

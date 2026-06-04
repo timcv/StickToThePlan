@@ -13,12 +13,20 @@ export function buildMetNorwayUrl(point: GeoPoint): string {
 }
 
 /**
- * Return required headers for MET Norway API requests.
- * MET Norway requires a descriptive User-Agent identifying the application and a contact address.
+ * Default contact for the MET Norway User-Agent. MET Norway requires a
+ * descriptive User-Agent that identifies the application and a way to reach the
+ * operator. A public project URL satisfies this without exposing a personal
+ * email. Override with your own contact when running a fork.
  */
-export function metNorwayHeaders(): Record<string, string> {
+export const DEFAULT_MET_NORWAY_CONTACT = 'https://github.com/timcv/StickToThePlan';
+
+/**
+ * Return required headers for MET Norway API requests.
+ * MET Norway requires a descriptive User-Agent identifying the application and a contact.
+ */
+export function metNorwayHeaders(contact: string = DEFAULT_MET_NORWAY_CONTACT): Record<string, string> {
   return {
-    'User-Agent': 'StickToThePlan/1.0 vatternrundan-raceplan (tim@haus.se)',
+    'User-Agent': `StickToThePlan/1.0 (${contact})`,
   };
 }
 

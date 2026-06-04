@@ -146,8 +146,14 @@ describe('metNorwayHeaders', () => {
     expect(headers['User-Agent']).toContain('StickToThePlan');
   });
 
-  it('includes contact email in User-Agent', () => {
+  it('includes the default project contact in User-Agent', () => {
     const headers = metNorwayHeaders();
-    expect(headers['User-Agent']).toContain('tim@haus.se');
+    expect(headers['User-Agent']).toContain('github.com/timcv/StickToThePlan');
+  });
+
+  it('honors a custom contact override', () => {
+    const headers = metNorwayHeaders('https://example.org/contact');
+    expect(headers['User-Agent']).toContain('https://example.org/contact');
+    expect(headers['User-Agent']).not.toContain('github.com');
   });
 });
