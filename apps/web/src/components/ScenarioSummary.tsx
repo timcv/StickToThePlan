@@ -14,21 +14,21 @@ interface Props {
 }
 
 const ROWS = [
-  { key: 'optimistic', label: 'Optimistic' },
-  { key: 'expected', label: 'Expected' },
-  { key: 'pessimistic', label: 'Pessimistic' },
+  { key: 'optimistic', label: 'Optimistiskt' },
+  { key: 'expected', label: 'Förväntat' },
+  { key: 'pessimistic', label: 'Pessimistiskt' },
 ] as const;
 
 export function ScenarioSummary({ scenarios }: Props) {
   return (
     <section className="card">
-      <h2>Scenario summary</h2>
+      <h2>Väderscenarier</h2>
       <table className="data-table">
         <thead>
           <tr>
             <th>Scenario</th>
-            <th>Total time</th>
-            <th>Required NP (W)</th>
+            <th>Total tid</th>
+            <th>Effektmål (NP, W)</th>
           </tr>
         </thead>
         <tbody>
@@ -46,7 +46,7 @@ export function ScenarioSummary({ scenarios }: Props) {
       </table>
       {!scenarios.expected.reachable && (
         <p className="warn">
-          Target time not reachable sustainably. Showing the fastest sustainable plan.
+          Måltiden går inte att hålla uthålligt. Visar den snabbaste hållbara planen.
         </p>
       )}
     </section>

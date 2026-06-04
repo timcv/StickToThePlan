@@ -17,6 +17,7 @@ import { useSolver } from './useSolver';
 import { UploadForm, type FormSubmit } from './components/UploadForm';
 import { WeatherPanel, type WeatherMode } from './components/WeatherPanel';
 import { ScenarioSummary } from './components/ScenarioSummary';
+import { SummaryCard } from './components/SummaryCard';
 import { SplitTable } from './components/SplitTable';
 import { Downloads } from './components/Downloads';
 import { TempokortTable } from './components/TempokortTable';
@@ -129,14 +130,20 @@ export function App() {
     <main className="app">
       <header className="app-header">
         <h1>StickToThePlan</h1>
-        <p className="tagline">Vatternrundan race-plan calculator</p>
+        <p className="tagline">Körschema för Vätternrundan</p>
       </header>
 
+      <p className="intro">
+        Ställ in ditt mål och få ett detaljerat körschema för Vätternrundan. Rutten är redan
+        inläst, så du kan börja direkt: justera måltid och starttid, kör planen och ladda ner
+        ditt styrkort.
+      </p>
+
       <p className="privacy">
-        Uploaded GPX and FIT files are processed entirely in your browser and never uploaded.
-        In <strong>Hämta</strong> (server) mode, only the route's rounded sample coordinates and the
-        date are sent to our weather function, which queries SMHI, MET Norway and Open-Meteo.
-        Calm and manual modes send nothing.
+        Uppladdade GPX- och FIT-filer behandlas helt i din webbläsare och laddas aldrig upp.
+        I läget <strong>Hämta</strong> skickas endast ruttens avrundade punkter och datumet till
+        vår väderfunktion, som frågar SMHI, MET Norway och Open-Meteo. Lugnt och manuellt läge
+        skickar ingenting.
       </p>
 
       <UploadForm onRun={(f) => { setLastForm(f); }} status={status} />
@@ -168,24 +175,26 @@ export function App() {
 
       {status === 'error' && (
         <section className="card error-card">
-          <h2>Something went wrong</h2>
+          <h2>Något gick fel</h2>
           <p>{error}</p>
         </section>
       )}
 
       {status === 'done' && result && (
         <>
-          {result.scenarios.optimistic !== result.scenarios.expected ||
-          result.scenarios.pessimistic !== result.scenarios.expected ? (
-            <ScenarioSummary scenarios={result.scenarios} />
-          ) : null}
+          <p className="done-banner">Planen är klar! Se sammanfattningen nedan.</p>
+          <SummaryCard scenarios={result.scenarios} splits={result.splits} cfg={result.cfg} />
           <SplitTable splits={result.splits} startTime={startTime} />
-          <Downloads result={result} sources={ranSources} reduced={ranReduced} />
           <TempokortTable
             segments={result.displaySegments}
             compactSegments={result.styrkortSegments}
             startTime={startTime}
           />
+          {result.scenarios.optimistic !== result.scenarios.expected ||
+          result.scenarios.pessimistic !== result.scenarios.expected ? (
+            <ScenarioSummary scenarios={result.scenarios} />
+          ) : null}
+          <Downloads result={result} sources={ranSources} reduced={ranReduced} />
         </>
       )}
     </main>

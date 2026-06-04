@@ -66,27 +66,48 @@ export function Downloads({ result, sources, reduced }: Props) {
 
   return (
     <section className="card">
-      <h2>Downloads</h2>
-      <div className="download-row">
-        <button type="button" onClick={onWorkout}>
-          workout.fit
-        </button>
-        <button type="button" onClick={onCourse}>
-          course.gpx
-        </button>
-        <button type="button" onClick={onPlanJson}>
-          plan.json
-        </button>
-        <button type="button" onClick={onPlanDelta}>
-          PlanDelta.mc
-        </button>
-        <button type="button" onClick={onStyrkort}>
-          styrkortet.html
-        </button>
+      <h2>Nedladdningar</h2>
+
+      <div className="download-group">
+        <h3>Cykeldator</h3>
+        <div className="download-row">
+          <button type="button" className="download-btn" onClick={onCourse}>
+            <span className="download-title">GPX för cykeldator</span>
+            <span className="download-desc">Rutt med ankomsttider (course.gpx)</span>
+          </button>
+          <button type="button" className="download-btn" onClick={onWorkout}>
+            <span className="download-title">FIT-träningspass</span>
+            <span className="download-desc">Effektmål per sträcka (workout.fit)</span>
+          </button>
+        </div>
       </div>
+
+      <div className="download-group">
+        <h3>Garmin-klocka</h3>
+        <div className="download-row">
+          <button type="button" className="download-btn" onClick={onPlanDelta}>
+            <span className="download-title">Connect IQ-källa</span>
+            <span className="download-desc">Datafält att kompilera (PlanDelta.mc)</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="download-group">
+        <h3>Utskrift &amp; data</h3>
+        <div className="download-row">
+          <button type="button" className="download-btn" onClick={onStyrkort}>
+            <span className="download-title">Utskrivbart styrkort</span>
+            <span className="download-desc">Att skriva ut och tejpa på styret (styrkortet.html)</span>
+          </button>
+          <button type="button" className="download-btn" onClick={onPlanJson}>
+            <span className="download-title">Plan som JSON</span>
+            <span className="download-desc">Maskinläsbar fullständig plan (plan.json)</span>
+          </button>
+        </div>
+      </div>
+
       <p className="note">
-        The .prg watch file must be compiled locally with the Garmin Connect IQ SDK (monkeyc);
-        see the CLI.
+        .prg-filen för klockan måste kompileras lokalt med Garmin Connect IQ SDK (monkeyc); se CLI:t.
       </p>
     </section>
   );

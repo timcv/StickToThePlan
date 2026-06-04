@@ -305,3 +305,164 @@ button.ghost:hover {
 .wind-arrow { display: inline-block; }
 .badge { margin-left: 6px; padding: 1px 6px; background: #ffd; border: 1px solid #cc0; border-radius: 4px; font-size: 11px; }
 .link { background: none; border: none; color: #1f6feb; cursor: pointer; padding: 0; }
+
+/* ---- Intro ---- */
+
+.intro {
+  margin: 16px 0 0;
+  font-size: 1.02rem;
+  color: var(--text);
+}
+
+/* ---- Form sections ---- */
+
+fieldset.form-section {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 16px 4px;
+  margin: 0 0 16px;
+  background: #fcfdff;
+}
+
+fieldset.form-section legend {
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.advanced-toggle {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 16px;
+}
+
+/* ---- InfoTip ---- */
+
+.infotip {
+  position: relative;
+  display: inline-block;
+}
+
+.infotip-trigger {
+  background: none;
+  border: none;
+  padding: 0 0 0 2px;
+  color: var(--accent);
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: help;
+  vertical-align: middle;
+}
+
+.infotip-bubble {
+  position: absolute;
+  left: 0;
+  top: 130%;
+  z-index: 20;
+  width: max-content;
+  max-width: 240px;
+  background: #1c2430;
+  color: #fff;
+  font-weight: 400;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+/* ---- Summary card ---- */
+
+.summary-card { border-left: 4px solid var(--accent); }
+
+.summary-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 14px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-label {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.done-banner {
+  background: #e7f7ec;
+  border: 1px solid #b7e4c7;
+  color: #1b6b3a;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 12px 0;
+  font-weight: 600;
+}
+
+/* ---- Tempokort head + stop rows ---- */
+
+.tempokort-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.data-table tr.stop-row td {
+  background: #fff3cd;
+  font-weight: 600;
+}
+
+/* ---- Downloads ---- */
+
+.download-group { margin-bottom: 14px; }
+.download-group h3 {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+
+button.download-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  text-align: left;
+  font-family: inherit;
+}
+
+button.download-btn:hover { border-color: var(--accent); }
+.download-title { font-weight: 600; font-size: 0.95rem; }
+.download-desc { font-size: 0.8rem; color: var(--muted); }
+
+/* ---- Responsive: hide secondary table columns on narrow screens ---- */
+
+@media (max-width: 640px) {
+  .data-table th.col-secondary,
+  .data-table td.col-secondary {
+    display: none;
+  }
+  .data-table { font-size: 0.84rem; }
+  .data-table th, .data-table td { padding: 5px 7px; }
+  .stat-value { font-size: 1.3rem; }
+}
