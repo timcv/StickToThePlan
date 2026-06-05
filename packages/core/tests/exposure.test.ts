@@ -46,4 +46,12 @@ describe('applyExposure', () => {
     expect(m[0].exposure_class).toBeUndefined();
     expect(exposureCoveragePct(m)).toBe(0);
   });
+
+  it('reports partial coverage when runs cover only part of the route', () => {
+    const m = micros(16); // 16 * 0.5 km = 8 km; fixture only covers 0..4 km
+    applyExposure(m, runs);
+    expect(exposureCoveragePct(m)).toBeCloseTo(50, 1);
+    expect(m[0].exposure_class).toBeDefined(); // first half stamped
+    expect(m[15].exposure_class).toBeUndefined(); // second half beyond the runs
+  });
 });

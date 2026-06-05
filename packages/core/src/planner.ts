@@ -392,6 +392,15 @@ export interface ThreeScenarios {
    * time spread due to weather uncertainty. `source` is always 'scenario'.
    */
   time_uncertainty_s: { expected: number; low: number; high: number; source: 'scenario' };
+  /**
+   * Plan-level data-quality summary. exposureCoveragePct/exposureSource reflect
+   * whatever exposure was stamped on `microsegments` BEFORE this call: callers
+   * must run `applyExposure(microsegments, runs)` first for baked data to register
+   * (otherwise coverage reads 0% and source reads 'terrain'). The 'fetched' source
+   * and 'ensemble'/'none' variants are set by the app layer (web/CLI) which knows
+   * the provenance; the core only distinguishes 'baked' vs 'terrain' and
+   * 'manual' vs 'forecast'.
+   */
   data_quality?: {
     exposureCoveragePct: number;
     exposureSource: 'baked' | 'fetched' | 'terrain' | 'none';

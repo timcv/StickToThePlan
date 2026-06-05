@@ -24,6 +24,7 @@ export function applyExposure(micros: MicroSegment[], data: ExposureRuns): void 
   if (!data?.runs?.length) return;
   for (const m of micros) {
     const midKm = (m.cum_distance_m - m.distance_m / 2) / 1000;
+    // runs are short (~100s) and the route ~thousands of segments; O(n×m) find is fine here
     const run = data.runs.find((r) => midKm >= r.from_km && midKm < r.to_km);
     if (run) {
       m.exposure_class = run.class;
