@@ -34,7 +34,7 @@ function escapeXml(s: string): string {
 /**
  * Find the index of the microsegment whose cum_distance_m is nearest targetM.
  */
-function nearestMicroIndex(micros: MicroSegment[], targetM: number): number {
+export function nearestMicroIndex(micros: MicroSegment[], targetM: number): number {
   let bestIdx = 0;
   let bestDiff = Math.abs(micros[0].cum_distance_m - targetM);
   for (let i = 1; i < micros.length; i++) {
@@ -51,7 +51,7 @@ function nearestMicroIndex(micros: MicroSegment[], targetM: number): number {
  * Find the index of the SegmentPlan whose micro.cum_distance_m is nearest targetM.
  * Returns the eta_s from that segment.
  */
-function nearestEtaS(plan: PlanResult, targetM: number): number {
+export function nearestEtaS(plan: PlanResult, targetM: number): number {
   const segs = plan.segments;
   if (segs.length === 0) return 0;
   let bestIdx = 0;

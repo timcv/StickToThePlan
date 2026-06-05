@@ -25,8 +25,9 @@ React 19 + Vite, vanilla CSS (no UI framework). Minimal, light theme. System fon
 ## The input form
 
 **File uploads**
-- *GPX route (required)* — pre-loaded with a bundled "Vätternrundan 315 km.gpx" so the app works on first visit without uploading anything.
-- *FIT power file (optional)* — a past ride's power data; used to anchor the power target. Without it, the app falls back to 0.60 × FTP.
+
+- _GPX route (required)_ — pre-loaded with a bundled "Vätternrundan 315 km.gpx" so the app works on first visit without uploading anything.
+- _FIT power file (optional)_ — a past ride's power data; used to anchor the power target. Without it, the app falls back to 0.60 × FTP.
 
 **Parameters** (responsive grid, 2–4 columns)
 | Field | Default | Notes |
@@ -51,11 +52,12 @@ React 19 + Vite, vanilla CSS (no UI framework). Minimal, light theme. System fon
 
 **Split plan** (hero table, thick blue border) — one row per leg between stops. Columns: Leg, Distance (km), Leg time, Avg (km/h), Arrival, Stop (min), Departure, Cumulative.
 
-**Downloads** — five buttons: `workout.fit`, `course.gpx`, `plan.json`, `PlanDelta.mc` (Garmin Connect IQ source), `styrkortet.html` (printable handlebar card). Note that the compiled watch file needs the Garmin SDK locally.
+**Downloads** — five buttons: `workout.fit`, `course.gpx`, `plan.json`, `course.fit` (FIT Course for the Next Control Pace watch field), `styrkortet.html` (printable handlebar card).
 
 **Tempokort** (pace card) — toggles between two views via a button ("Styrkortsläge" ↔ "Fullständigt"):
-- *Compact (Styrkortsläge)* — handlebar-optimized 6 cols: Km, Ort (town), km/h, Ankomst (arrival), Avgång (departure), W. Stop rows are bold + yellow.
-- *Full (Fullständigt)* — Section (km), Town, Distance, Net height (m), Avg grade, Wind, Pull band (W), Avg (W), Note, Stop. Wind shown in Swedish ("Mot 6 m/s", "Med 4 m/s", "Sido 5 m/s", "Lugnt"). Notes in Swedish caps ("JÄMN FART", "KLÄTTRING", "BACKAR", "SISTA UPPFÖR", "DEPÅ").
+
+- _Compact (Styrkortsläge)_ — handlebar-optimized 6 cols: Km, Ort (town), km/h, Ankomst (arrival), Avgång (departure), W. Stop rows are bold + yellow.
+- _Full (Fullständigt)_ — Section (km), Town, Distance, Net height (m), Avg grade, Wind, Pull band (W), Avg (W), Note, Stop. Wind shown in Swedish ("Mot 6 m/s", "Med 4 m/s", "Sido 5 m/s", "Lugnt"). Notes in Swedish caps ("JÄMN FART", "KLÄTTRING", "BACKAR", "SISTA UPPFÖR", "DEPÅ").
 
 ## Known mixed-language quirk (relevant for UX feedback)
 
