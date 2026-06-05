@@ -1,0 +1,19 @@
+<settings>
+    <setting propertyKey="@Properties.layoutMode" title="@Strings.SettingLayout">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.LayoutStandard</listEntry>
+            <listEntry value="1">@Strings.LayoutCompact</listEntry>
+            <listEntry value="2">@Strings.LayoutSpeedDist</listEntry>
+            <listEntry value="3">@Strings.LayoutEtaOnly</listEntry>
+        </settingConfig>
+    </setting>
+    <setting propertyKey="@Properties.units" title="@Strings.SettingUnits">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.UnitKmh</listEntry>
+            <listEntry value="1">@Strings.UnitMph</listEntry>
+        </settingConfig>
+    </setting>
+    <setting propertyKey="@Properties.showPlanDelta" title="@Strings.SettingShowDelta">
+        <settingConfig type="boolean" />
+    </setting>
+</settings>

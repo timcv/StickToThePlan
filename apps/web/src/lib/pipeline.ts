@@ -81,7 +81,7 @@ export interface PipelineResult {
   npTargetUsed: number;
   // The applied Config and the ingested microsegments are returned so the main
   // thread can call the pure, fast download builders (FIT workout, course GPX,
-  // plan JSON, Connect IQ source) on click without re-running the pipeline. Both
+  // course FIT, plan JSON) on click without re-running the pipeline. Both
   // are plain objects/arrays and so are structured-clone-safe across the worker
   // boundary.
   cfg: Config;

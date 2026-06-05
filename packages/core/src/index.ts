@@ -55,6 +55,7 @@ export { analyzePass, readFitPowerBytes, determineAnchorFromPower } from './inge
 // Output builders.
 export { renderMarkdown, renderHtml, buildStyrkortHtml } from './output/tempokort.js';
 export { buildCourseGpx } from './output/course.js';
+export { buildCourseFit } from './output/fitCourse.js';
 export { buildSteps, encodeWorkout, type WorkoutStepTarget } from './output/fitWorkout.js';
 export { buildPlanJson, type PlanJsonMeta } from './output/planJson.js';
 export { buildSplitTable, type SplitRow } from './output/splits.js';
@@ -89,6 +90,3 @@ export {
   type ExposureRun,
   type ExposureRuns,
 } from './weather/exposure.js';
-
-// Connect IQ data-field source generation (pure).
-export { buildLookupTable, generatePlanDeltaSource, type LookupEntry } from './ciq/generate.js';

@@ -13,13 +13,13 @@ This README is for developers who want to run the code locally, reuse the core, 
 
 This is an npm-workspaces monorepo. ESM throughout, TypeScript, no build step for the libraries (source is imported directly).
 
-| Path            | What it is                                                                                                                                                                                                              |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/core` | The pure calculation core and output builders: physics, chaingang model, planner, segmentation, GPX/FIT ingest, and the FIT/GPX/JSON/Connect IQ builders. Browser-safe, no Node-only IO. **This is the reusable part.** |
-| `packages/cli`  | Node CLI that does file IO, weather fetch + cache, and the `monkeyc` compile, calling `@stp/core` for all math.                                                                                                         |
-| `apps/web`      | Vite + React single-page app. Runs `@stp/core` in a Web Worker; serves the form, split table, tempokort, and downloads.                                                                                                 |
-| `api/`          | Vercel serverless function for the server-side weather fetch.                                                                                                                                                           |
-| `ciq/`          | Garmin Connect IQ data-field template compiled by the CLI.                                                                                                                                                              |
+| Path            | What it is                                                                                                                                                                                                                                          |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/core` | The pure calculation core and output builders: physics, chaingang model, planner, segmentation, GPX/FIT ingest, and the FIT/GPX/JSON builders (incl. the `course.fit` course export). Browser-safe, no Node-only IO. **This is the reusable part.** |
+| `packages/cli`  | Node CLI that does file IO, weather fetch + cache, and the `monkeyc` compile, calling `@stp/core` for all math.                                                                                                                                     |
+| `apps/web`      | Vite + React single-page app. Runs `@stp/core` in a Web Worker; serves the form, split table, tempokort, and downloads.                                                                                                                             |
+| `api/`          | Vercel serverless function for the server-side weather fetch.                                                                                                                                                                                       |
+| `ciq/`          | Garmin Connect IQ data field (Next Control Pace): a static, generic field compiled once with `npm run build:ciq`.                                                                                                                                   |
 
 ## Getting started
 

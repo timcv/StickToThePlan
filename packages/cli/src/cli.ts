@@ -3,8 +3,9 @@
  *
  * runPlan wires the whole calculator together: load config, ingest GPX, derive
  * the np_target anchor, gather weather (with cache + offline + per-source
- * isolation), solve the three time scenarios, segment, then write the five
- * artifacts (tempokort.md, tempokort.html, workout.fit, course.gpx, plan.json).
+ * isolation), solve the three time scenarios, segment, then write the six
+ * artifacts (tempokort.md, tempokort.html, workout.fit, course.gpx, course.fit,
+ * plan.json).
  *
  * Robustness (spec 16):
  *  - Missing GPX -> a clear error naming the path.
@@ -41,11 +42,11 @@ import {
   determineAnchor,
   writeWorkout,
   writeCourseGpx,
+  writeCourseFit,
   writePlanJson,
 } from './fileIo.js';
 import { gatherWindSamples } from './weatherFetch.js';
 import { readCache, writeCache } from './cache.js';
-import { generateCiq } from './ciqCompile.js';
 
 // ---------------------------------------------------------------------------
 // Public API types
@@ -55,8 +56,6 @@ export interface RunOptions {
   offline?: boolean;
   outDir?: string;
   configPath?: string;
-  /** Skip the best-effort monkeyc compile of the Connect IQ data field. */
-  noCiqCompile?: boolean;
 }
 
 export interface RunSummary {
@@ -65,8 +64,6 @@ export interface RunSummary {
   reachable: boolean;
   expectedNp: number;
   expectedTotalS: number;
-  /** Connect IQ data field generation result (spec 12.5). */
-  ciq: { compiled: boolean; message: string };
 }
 
 // ---------------------------------------------------------------------------
@@ -178,49 +175,31 @@ export async function runPlan(opts: RunOptions = {}): Promise<RunSummary> {
     notes.push(warn);
   }
 
-  // 7. Write the five artifacts.
+  // 7. Write the six artifacts.
   const meta: PlanJsonMeta = { reducedEnsemble, weatherSources, notes };
 
   const mdPath = join(outDir, 'tempokort.md');
   const htmlPath = join(outDir, 'tempokort.html');
   const fitPath = join(outDir, 'workout.fit');
   const coursePath = join(outDir, 'course.gpx');
+  const courseFitPath = join(outDir, 'course.fit');
   const planPath = join(outDir, 'plan.json');
 
   writeFileUtf8(mdPath, markdown);
   writeFileUtf8(htmlPath, renderHtml(scenarios, displaySegments, cfg));
   writeWorkout(displaySegments, cfg, fitPath);
   writeCourseGpx(micro, scenarios.expected, cfg, controls, coursePath);
+  writeCourseFit(micro, scenarios.expected, cfg, controls, courseFitPath);
   writePlanJson(scenarios, displaySegments, anchor, cfg, meta, planPath);
 
-  // 8b. Connect IQ plan-delta data field (spec 12.5). Best-effort: the source is
-  // always written; the compile is attempted unless skipped. Wrapped so a
-  // missing SDK or a compile error never breaks the run.
-  let ciq = { compiled: false, message: 'not attempted' };
-  try {
-    const ciqResult = generateCiq(displaySegments, scenarios.expected, cfg, outDir, {
-      compile: !opts.noCiqCompile,
-    });
-    ciq = { compiled: ciqResult.compiled, message: ciqResult.message };
-    if (ciqResult.compiled) {
-      console.log(`Connect IQ data field compiled: ${ciqResult.message}.`);
-    } else {
-      console.warn(`Connect IQ data field not compiled (source written): ${ciqResult.message}`);
-    }
-  } catch (err) {
-    ciq = { compiled: false, message: err instanceof Error ? err.message : String(err) };
-    console.warn(`Connect IQ data field generation failed: ${ciq.message}`);
-  }
-
   // 9. Summary.
-  const artifacts = [mdPath, htmlPath, fitPath, coursePath, planPath];
+  const artifacts = [mdPath, htmlPath, fitPath, coursePath, courseFitPath, planPath];
   const summary: RunSummary = {
     artifacts,
     reducedEnsemble,
     reachable: scenarios.expected.reachable,
     expectedNp: Math.round(scenarios.expected.np_target_used),
     expectedTotalS: scenarios.expected.total_time_s,
-    ciq,
   };
 
   console.log(

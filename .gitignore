@@ -30,7 +30,5 @@ output/*
 ciq/bin/
 ciq/developer_key.der
 *.prg
-# generated Monkey C source (regenerated per run; keep the directory)
-ciq/source/*.mc
-!ciq/source/.gitkeep
+# Connect IQ data field source is now static and committed (ciq/source/*.mc)
 .vercel

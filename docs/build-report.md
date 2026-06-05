@@ -10,7 +10,7 @@ Records the numbers the model is validated against, from the M1–M8 build run o
 - `workout.fit` (distance-based structured workout, watt targets with the +1000 offset)
 - `course.gpx` (route track plus ETA waypoints at the controls)
 - `plan.json` (full machine-readable plan)
-- `PlanDelta.mc` (Connect IQ source; the `.prg` compiles locally when a device package is installed)
+- `course.fit` (FIT Course with named control points for the Next Control Pace watch field)
 
 Test suite at the original M1–M8 build run: **252 passed, 1 skipped** (the skipped one is the three-scenario real-course solve, gated behind `SLOW_TESTS=1`; one full solve over ~4760 microsegments is compute-heavy). `tsc --noEmit` clean.
 

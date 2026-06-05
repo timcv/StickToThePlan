@@ -8,15 +8,10 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import {
-  mkdtempSync,
-  rmSync,
-  writeFileSync,
-  existsSync,
-  readFileSync,
-} from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { Decoder, Stream } from '@garmin/fitsdk';
 import { runPlan } from '../src/cli.js';
 
 // ---------------------------------------------------------------------------
@@ -79,18 +74,25 @@ afterAll(() => {
 // ---------------------------------------------------------------------------
 
 describe('runPlan (offline calm fallback, solo)', () => {
-  it('produces all five artifacts and a parseable plan.json with no network', async () => {
-    const summary = await runPlan({ offline: true, outDir, configPath, noCiqCompile: true });
+  it('produces all six artifacts and a parseable plan.json with no network', async () => {
+    const summary = await runPlan({ offline: true, outDir, configPath });
 
-    // The five documented artifacts.
-    const expected = ['tempokort.md', 'tempokort.html', 'workout.fit', 'course.gpx', 'plan.json'];
+    // The six documented artifacts.
+    const expected = [
+      'tempokort.md',
+      'tempokort.html',
+      'workout.fit',
+      'course.gpx',
+      'course.fit',
+      'plan.json',
+    ];
     for (const name of expected) {
       const p = join(outDir, name);
       expect(existsSync(p), `${name} should exist`).toBe(true);
     }
 
-    // The summary lists the five written paths.
-    expect(summary.artifacts).toHaveLength(5);
+    // The summary lists the six written paths.
+    expect(summary.artifacts).toHaveLength(6);
     for (const name of expected) {
       expect(summary.artifacts.some((a) => a.endsWith(name))).toBe(true);
     }
@@ -111,14 +113,24 @@ describe('runPlan (offline calm fallback, solo)', () => {
     const notesJoined = (plan.meta.notes as string[]).join(' ');
     expect(notesJoined.toLowerCase()).toContain('calm');
 
+    // course.fit decodes as a FIT Course.
+    const courseBytes = readFileSync(join(outDir, 'course.fit'));
+    const { messages, errors } = new Decoder(Stream.fromByteArray(Array.from(courseBytes))).read();
+    expect(errors.length).toBe(0);
+    expect((messages.fileIdMesgs ?? [])[0]?.type).toBe('course');
+    expect((messages.coursePointMesgs ?? []).length).toBeGreaterThan(0);
+
     // tempokort.md has no em dash.
     const md = readFileSync(join(outDir, 'tempokort.md'), 'utf-8');
     expect(md).not.toContain(String.fromCharCode(0x2014));
   });
 
   it('reuses the calm plan for all three scenarios (they are equal)', async () => {
-    await runPlan({ offline: true, outDir, configPath, noCiqCompile: true });
-    const plan = JSON.parse(readFileSync(join(outDir, 'plan.json'), 'utf-8')) as Record<string, any>;
+    await runPlan({ offline: true, outDir, configPath });
+    const plan = JSON.parse(readFileSync(join(outDir, 'plan.json'), 'utf-8')) as Record<
+      string,
+      any
+    >;
     const s = plan.scenarios;
     expect(s.expected.total_time_s).toBe(s.optimistic.total_time_s);
     expect(s.expected.total_time_s).toBe(s.pessimistic.total_time_s);
@@ -141,8 +153,8 @@ describe('runPlan error handling', () => {
     };
     writeFileSync(badConfigPath, JSON.stringify(badCfg, null, 2), 'utf-8');
 
-    await expect(
-      runPlan({ offline: true, outDir, configPath: badConfigPath }),
-    ).rejects.toThrow(badGpx);
+    await expect(runPlan({ offline: true, outDir, configPath: badConfigPath })).rejects.toThrow(
+      badGpx,
+    );
   });
 });

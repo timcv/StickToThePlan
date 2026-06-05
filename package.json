@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit && tsc --noEmit -p api/tsconfig.json && npm run typecheck -w apps/web",
     "build:web": "npm run build -w apps/web",
+    "build:ciq": "tsx packages/cli/src/buildCiq.ts",
     "start": "npm run start -w @stp/cli",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

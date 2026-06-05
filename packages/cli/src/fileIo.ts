@@ -10,6 +10,7 @@ import {
   readFitPowerBytes,
   determineAnchorFromPower,
   buildCourseGpx,
+  buildCourseFit,
   buildSteps,
   encodeWorkout,
   buildPlanJson,
@@ -80,6 +81,20 @@ export function writeCourseGpx(
 ): void {
   const gpx = buildCourseGpx(microsegments, plan, cfg, controls);
   writeFileSync(outPath, gpx, 'utf-8');
+}
+
+/**
+ * Build the course FIT bytes and write them to outPath.
+ */
+export function writeCourseFit(
+  microsegments: MicroSegment[],
+  plan: PlanResult,
+  cfg: Config,
+  controls: ControlPoint[],
+  outPath: string,
+): void {
+  const bytes = buildCourseFit(microsegments, plan, cfg, controls);
+  writeFileSync(outPath, Buffer.from(bytes));
 }
 
 // ---------------------------------------------------------------------------
