@@ -125,6 +125,63 @@ describe('A) synthetic flat route, three wind scenarios', () => {
 });
 
 // ---------------------------------------------------------------------------
+// A2) NET-DOWNWIND route: optimistic/pessimistic spread must INVERT.
+//
+// Route travels east (bearing 90); wind FROM 270 (west) => pure tailwind on the
+// whole route. More wind is FASTER here, so the WORST (pessimistic) case is the
+// LEAST wind (p10) and the BEST (optimistic) case is the MOST wind (p90). The old
+// magnitude-only mapping (pessimistic = p90) would have called the windiest
+// tailwind the worst case, which is backwards. Guards the routeIsNetDownwind /
+// favorableWind inversion.
+// ---------------------------------------------------------------------------
+describe('A2) net-downwind route inverts the optimistic/pessimistic spread', () => {
+  const TARGET = '0:40'; // 30 km/h avg over 20 km; reachable even at the least tailwind
+
+  const field: EnsembleField = {
+    cells: [
+      {
+        time_iso: '2026-06-13T05:00:00Z',
+        lat: LAT,
+        lon: LON,
+        windspeed_mean_ms: 5,
+        winddir_from_deg: 270, // FROM the west; route travels east => tailwind
+        windspeed_p10_ms: 2,
+        windspeed_p90_ms: 8,
+        temp_c: 12,
+        pressure_pa: 101325,
+        n_sources: 3,
+      },
+    ],
+    sources: ['a', 'b', 'c'],
+    reduced: false,
+  };
+
+  const cfg: Config = applyDefaults({
+    race_date: '2026-06-13',
+    start_time: '04:22',
+    gpx_path: 'x',
+    ftp: 272,
+    n_riders: 12,
+    target_total_hm: TARGET,
+    stops: [],
+  });
+
+  const three = solveThreeScenarios(buildFlatRoute(200), field, cfg);
+
+  it('pessimistic is the SLOWEST and optimistic the FASTEST (inverted vs magnitude)', () => {
+    // Same target time, so on a tailwind route the slowest case needs the MOST
+    // power (least tailwind = p10) and the fastest needs the least (most tailwind).
+    expect(three.pessimistic.np_target_used).toBeGreaterThan(three.optimistic.np_target_used);
+  });
+
+  it('all three remain reachable at this target', () => {
+    expect(three.optimistic.reachable).toBe(true);
+    expect(three.expected.reachable).toBe(true);
+    expect(three.pessimistic.reachable).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // B) REAL GPX smoke (slow, gated behind SLOW_TESTS). Runs three full course
 // solves (~100 s). One ensemble cell over the course is acceptable for the smoke.
 // ---------------------------------------------------------------------------

@@ -198,19 +198,27 @@ export function buildEnsemble(samples: WindSample[]): EnsembleField {
  *      a. Find cells nearest in space (haversine).
  *      b. Among those, pick the one nearest in time (absolute hour difference).
  *      (Implemented as a single pass with a normalized combined score.)
- *   3. Return WindCond with windspeed selected by scenario:
- *      'expected'   -> windspeed_mean_ms
- *      'optimistic' -> windspeed_p10_ms   (least wind magnitude ~ least headwind with mean direction)
- *      'pessimistic'-> windspeed_p90_ms   (most wind magnitude ~ most headwind with mean direction)
+ *   3. Return WindCond with windspeed selected by scenario.
  *
- * NOTE: optimistic/pessimistic approximate least/most headwind by least/most wind magnitude
- * with the mean direction (spec 10.2, 10.5). A fuller per-segment headwind optimization
- * (projecting wind onto bearing for each cell) is a future refinement.
+ * Scenario -> percentile mapping. Optimistic = best (fastest) case, pessimistic
+ * = worst (slowest). On a route that is NET INTO the wind, more wind is slower,
+ * so pessimistic = p90 and optimistic = p10. On a NET DOWNWIND route more wind is
+ * *faster*, so the mapping inverts: pessimistic = p10 (least tailwind = slowest),
+ * optimistic = p90. The caller (solveThreeScenarios) decides which case the route
+ * is in by projecting the route onto the mean wind direction and passes
+ * `favorableWind`. For a loop (net exposure ~ 0) head/tail cancel and either
+ * choice is near-identical; we keep favorableWind=false so the convex "more wind
+ * is slightly slower" default holds. Manual wind has p10=p90=mean, so the mapping
+ * is moot. (spec 10.2, 10.5; supersedes the old magnitude-only approximation.)
+ *
+ * @param favorableWind  true when the route is net downwind (more wind => faster),
+ *                       which swaps the optimistic/pessimistic percentiles.
  */
 export function makeWeatherFn(
   field: EnsembleField,
   scenario: Scenario,
   startClockS: number,
+  favorableWind = false,
 ): WeatherFn {
   const { cells } = field;
 
@@ -245,8 +253,7 @@ export function makeWeatherFn(
       // Wrap hour difference for crossing midnight (e.g. hour 23 vs 1 -> diff 2)
       const wrappedHourDiff = Math.min(hourDiff, 24 - hourDiff);
 
-      const score =
-        distM / SPACE_REF_M + wrappedHourDiff / TIME_REF_H;
+      const score = distM / SPACE_REF_M + wrappedHourDiff / TIME_REF_H;
 
       if (score < bestScore) {
         bestScore = score;
@@ -254,13 +261,17 @@ export function makeWeatherFn(
       }
     }
 
+    const pLow = bestCell.windspeed_p10_ms;
+    const pHigh = bestCell.windspeed_p90_ms;
     let windspeed_ms: number;
     switch (scenario) {
       case 'optimistic':
-        windspeed_ms = bestCell.windspeed_p10_ms;
+        // Best case: less wind on a net-headwind route, more wind if net downwind.
+        windspeed_ms = favorableWind ? pHigh : pLow;
         break;
       case 'pessimistic':
-        windspeed_ms = bestCell.windspeed_p90_ms;
+        // Worst case: more wind on a net-headwind route, less wind if net downwind.
+        windspeed_ms = favorableWind ? pLow : pHigh;
         break;
       case 'expected':
       default:

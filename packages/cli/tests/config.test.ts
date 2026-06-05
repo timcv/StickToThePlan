@@ -16,9 +16,9 @@ describe('applyDefaults (unit, no disk IO)', () => {
       n_riders: 12,
       target_total_hm: '11:45',
       stops: [
-        { control: 'Gränna',    km: 77,  minutes: 10 },
+        { control: 'Gränna', km: 77, minutes: 10 },
         { control: 'Fagerhult', km: 134, minutes: 10 },
-        { control: 'Boviken',   km: 226, minutes: 15 },
+        { control: 'Boviken', km: 226, minutes: 15 },
         { control: 'Askersund', km: 256, minutes: 15 },
       ],
     };
@@ -26,7 +26,12 @@ describe('applyDefaults (unit, no disk IO)', () => {
     expect(cfg.ftp).toBe(272);
     expect(cfg.cda_pull).toBe(0.32);
     expect(cfg.pull_cap_soft).toBe(250);
-    expect(cfg.pull_cap_hard).toBe(272);
+    // Hard pull cap is now pull_cap_mult (1.3) * ftp: a 45 s paceline pull is a
+    // short supra-FTP effort; sustainability is bounded by rider NP, not the cap.
+    expect(cfg.pull_cap_mult).toBe(1.3);
+    expect(cfg.pull_cap_hard).toBe(354);
+    expect(cfg.max_plan_speed_kmh).toBe(50);
+    expect(cfg.sustain_if_warn).toBe(0.75);
     expect(cfg.solo).toBe(false);
     expect(cfg.watch_target).toBe('pull');
     expect(cfg.m).toBe(96);
@@ -154,7 +159,7 @@ describe('loadConfig (disk IO)', () => {
     expect(cfg.ftp).toBe(272);
     expect(cfg.cda_pull).toBe(0.32);
     expect(cfg.pull_cap_soft).toBe(250);
-    expect(cfg.pull_cap_hard).toBe(272);
+    expect(cfg.pull_cap_hard).toBe(354);
     expect(cfg.solo).toBe(false);
     expect(cfg.watch_target).toBe('pull');
     expect(cfg.m).toBe(96);

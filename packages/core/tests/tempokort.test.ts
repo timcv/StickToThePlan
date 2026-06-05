@@ -11,6 +11,8 @@ import { renderMarkdown, renderHtml } from '../src/output/tempokort.js';
 function makePlanResult(total_time_s: number, np_target_used: number): PlanResult {
   return {
     np_target_used,
+    rider_np_ride_w: np_target_used,
+    intensity_factor: np_target_used / 272,
     total_time_s,
     rolling_time_s: total_time_s,
     stop_time_s: 0,
@@ -42,7 +44,8 @@ const seg1: DisplaySegment = {
   pull_w_high: 155,
   avg_w: 130,
   note: 'JÄMN FART',
-  avg_speed_kmh: 0, micro_indices: [0, 1, 2],
+  avg_speed_kmh: 0,
+  micro_indices: [0, 1, 2],
 };
 
 const seg2: DisplaySegment = {
@@ -101,8 +104,11 @@ const cfg: Config = {
   g: 9.81,
   rho_fallback: 1.2,
   pull_seconds: 45,
-  pull_cap_hard: 272,
+  pull_cap_hard: 354,
   pull_cap_soft: 250,
+  pull_cap_mult: 1.3,
+  max_plan_speed_kmh: 50,
+  sustain_if_warn: 0.75,
   climb_threshold: 0.03,
   climb_discount: true,
   watch_target: 'pull',

@@ -76,19 +76,25 @@ function buildPlanResult(segs: SegmentPlan[], stopMinutesAt30: number = 0): Plan
 
   return {
     np_target_used: 163,
+    rider_np_ride_w: 163,
+    intensity_factor: 163 / 272,
     total_time_s: elapsed + stopAddS,
     rolling_time_s: elapsed,
     stop_time_s: stopAddS,
     segments: adjusted,
-    stops: stopMinutesAt30 > 0
-      ? [{
-          control: 'Mid',
-          km: 30,
-          minutes: stopMinutesAt30,
-          arrive_s: adjusted.find(s => s.micro.cum_distance_m >= 30000)?.eta_s ?? 0,
-          depart_s: (adjusted.find(s => s.micro.cum_distance_m >= 30000)?.eta_s ?? 0) + stopAddS,
-        }]
-      : [],
+    stops:
+      stopMinutesAt30 > 0
+        ? [
+            {
+              control: 'Mid',
+              km: 30,
+              minutes: stopMinutesAt30,
+              arrive_s: adjusted.find((s) => s.micro.cum_distance_m >= 30000)?.eta_s ?? 0,
+              depart_s:
+                (adjusted.find((s) => s.micro.cum_distance_m >= 30000)?.eta_s ?? 0) + stopAddS,
+            },
+          ]
+        : [],
     reachable: true,
     notes: [],
   };
@@ -129,7 +135,10 @@ const BASE_CFG: Config = applyDefaults({
 // ---------------------------------------------------------------------------
 describe('segment() synthetic 60-segment route', () => {
   // Two climb ranges: indices 5-14 and 45-54.
-  const micros = buildMicros(60, [[5, 15], [45, 55]]);
+  const micros = buildMicros(60, [
+    [5, 15],
+    [45, 55],
+  ]);
   const plans = micros.map((m, i) => {
     const inClimb = (i >= 5 && i < 15) || (i >= 45 && i < 55);
     return makeSeg(m, {
@@ -153,31 +162,32 @@ describe('segment() synthetic 60-segment route', () => {
   });
 
   it('boundaries include km 0, 30, and 60', () => {
-    const fromKms = result.map(s => s.from_km);
-    const toKms = result.map(s => s.to_km);
+    const fromKms = result.map((s) => s.from_km);
+    const toKms = result.map((s) => s.to_km);
     // Route starts at 0
     expect(fromKms[0]).toBeCloseTo(0, 0);
     // Route ends at 60
     expect(toKms[toKms.length - 1]).toBeCloseTo(60, 0);
     // km 30 must appear as a boundary (either a to_km or a from_km)
-    const has30 = toKms.some(k => Math.abs(k - 30) < 0.5) || fromKms.some(k => Math.abs(k - 30) < 0.5);
+    const has30 =
+      toKms.some((k) => Math.abs(k - 30) < 0.5) || fromKms.some((k) => Math.abs(k - 30) < 0.5);
     expect(has30).toBe(true);
   });
 
   it('at least one segment has note KLÄTTRING', () => {
-    const climbSegs = result.filter(s => s.note === 'KLÄTTRING');
+    const climbSegs = result.filter((s) => s.note === 'KLÄTTRING');
     expect(climbSegs.length).toBeGreaterThan(0);
   });
 
   it('segment ending at km 30 has note DEPÅ and stop_minutes 10', () => {
-    const depot = result.find(s => Math.abs(s.to_km - 30) < 0.5);
+    const depot = result.find((s) => Math.abs(s.to_km - 30) < 0.5);
     expect(depot).toBeDefined();
     expect(depot!.note).toBe('DEPÅ');
     expect(depot!.stop_minutes).toBe(10);
   });
 
   it('depot segment has depart_s set and depart_s > eta_s', () => {
-    const depot = result.find(s => Math.abs(s.to_km - 30) < 0.5);
+    const depot = result.find((s) => Math.abs(s.to_km - 30) < 0.5);
     expect(depot!.depart_s).toBeDefined();
     expect(depot!.depart_s!).toBeGreaterThan(depot!.eta_s);
   });
@@ -189,7 +199,7 @@ describe('segment() synthetic 60-segment route', () => {
   });
 
   it('conservation: micro_indices cover every input segment exactly once', () => {
-    const allIndices = result.flatMap(s => s.micro_indices);
+    const allIndices = result.flatMap((s) => s.micro_indices);
     allIndices.sort((a, b) => a - b);
     expect(allIndices.length).toBe(planResult.segments.length);
     for (let i = 0; i < planResult.segments.length; i++) {
@@ -211,14 +221,14 @@ describe('segment() synthetic 60-segment route', () => {
   });
 
   it('KLÄTTRING segments have avg_grade > climb_threshold', () => {
-    const climbSegs = result.filter(s => s.note === 'KLÄTTRING' || s.note === 'SISTA UPPFÖR');
+    const climbSegs = result.filter((s) => s.note === 'KLÄTTRING' || s.note === 'SISTA UPPFÖR');
     for (const s of climbSegs) {
       expect(s.avg_grade).toBeGreaterThan(BASE_CFG.climb_threshold - 0.001);
     }
   });
 
   it('BACKAR segments have avg_grade < -climb_threshold', () => {
-    const downSegs = result.filter(s => s.note === 'BACKAR');
+    const downSegs = result.filter((s) => s.note === 'BACKAR');
     for (const s of downSegs) {
       expect(s.avg_grade).toBeLessThan(-BASE_CFG.climb_threshold + 0.001);
     }
@@ -238,12 +248,12 @@ describe('segment() synthetic 60-segment route', () => {
 
   it('flat calm segment before the first climb has note JÄMN FART', () => {
     // First group (km 0-5) should be flat and calm.
-    const preclimb = result.find(s => s.to_km <= 5);
+    const preclimb = result.find((s) => s.to_km <= 5);
     expect(preclimb?.note).toBe('JÄMN FART');
   });
 
   it('KLÄTTRING segment covers the first climb indices (5-14)', () => {
-    const climb = result.find(s => s.note === 'KLÄTTRING');
+    const climb = result.find((s) => s.note === 'KLÄTTRING');
     expect(climb).toBeDefined();
     // The climb A group must include indices 5 through 14.
     const minIdx = Math.min(...climb!.micro_indices);
@@ -253,7 +263,7 @@ describe('segment() synthetic 60-segment route', () => {
   });
 
   it('last climb (indices 45-54) has note SISTA UPPFÖR', () => {
-    const sista = result.find(s => s.note === 'SISTA UPPFÖR');
+    const sista = result.find((s) => s.note === 'SISTA UPPFÖR');
     expect(sista).toBeDefined();
     const minIdx = Math.min(...sista!.micro_indices);
     const maxIdx = Math.max(...sista!.micro_indices);
@@ -309,7 +319,7 @@ describe('segment() merge: alternating grades force >50 boundaries before merge'
   });
 
   it('micro_indices cover every segment exactly once after merge', () => {
-    const allIndices = result.flatMap(s => s.micro_indices);
+    const allIndices = result.flatMap((s) => s.micro_indices);
     allIndices.sort((a, b) => a - b);
     expect(allIndices.length).toBe(planResult.segments.length);
     for (let i = 0; i < planResult.segments.length; i++) {
@@ -337,7 +347,7 @@ describe('VATTERN_CONTROLS', () => {
   });
 
   it('contains Hjo at km 173', () => {
-    const hjo = VATTERN_CONTROLS.find(c => c.name === 'Hjo');
+    const hjo = VATTERN_CONTROLS.find((c) => c.name === 'Hjo');
     expect(hjo).toBeDefined();
     expect(hjo!.km).toBe(173);
   });
@@ -358,9 +368,7 @@ describe('segment() wind labels', () => {
   // Build a 20-segment route (1000 m each = 20 km) with uniform wind.
   function makeWindPlan(headwind: number, crosswind: number): PlanResult {
     const micros = buildMicros(20);
-    const plans = micros.map(m =>
-      makeSeg(m, { headwind_ms: headwind, crosswind_ms: crosswind }),
-    );
+    const plans = micros.map((m) => makeSeg(m, { headwind_ms: headwind, crosswind_ms: crosswind }));
     const planResult = buildPlanResult(plans, 0);
     return planResult;
   }
@@ -385,28 +393,28 @@ describe('segment() wind labels', () => {
     const plan = makeWindPlan(5, 0);
     const segs = segment(plan, noStopCfg, simpleControls);
     // At least one non-neutral segment (from_km > 0) should have Mot label.
-    const withMot = segs.filter(s => s.wind_label.startsWith('Mot'));
+    const withMot = segs.filter((s) => s.wind_label.startsWith('Mot'));
     expect(withMot.length).toBeGreaterThan(0);
   });
 
   it('strong tailwind gives Med label', () => {
     const plan = makeWindPlan(-5, 0);
     const segs = segment(plan, noStopCfg, simpleControls);
-    const withMed = segs.filter(s => s.wind_label.startsWith('Med'));
+    const withMed = segs.filter((s) => s.wind_label.startsWith('Med'));
     expect(withMed.length).toBeGreaterThan(0);
   });
 
   it('strong crosswind with calm head gives Sido label', () => {
     const plan = makeWindPlan(0, 5);
     const segs = segment(plan, noStopCfg, simpleControls);
-    const withSido = segs.filter(s => s.wind_label.startsWith('Sido'));
+    const withSido = segs.filter((s) => s.wind_label.startsWith('Sido'));
     expect(withSido.length).toBeGreaterThan(0);
   });
 
   it('calm wind gives Lugnt label on all segments', () => {
     const plan = makeWindPlan(0, 0);
     const segs = segment(plan, noStopCfg, simpleControls);
-    expect(segs.every(s => s.wind_label === 'Lugnt')).toBe(true);
+    expect(segs.every((s) => s.wind_label === 'Lugnt')).toBe(true);
   });
 });
 
