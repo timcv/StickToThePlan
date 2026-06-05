@@ -1,5 +1,3 @@
 <resources xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
-    <drawable id="LauncherIcon" class="Toybox.WatchUi.Drawable">
-        <shape type="rectangle" x="0" y="0" width="40" height="40" color="Graphics.COLOR_DK_BLUE" />
-    </drawable>
+    <bitmap id="LauncherIcon" filename="launcher_icon.png" />
 </resources>
