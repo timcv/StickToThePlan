@@ -27,7 +27,7 @@ Steady-state pedal power for a given ground speed `v`, grade, and headwind is th
 
 - Gravity: `F_grav = m * g * sin(atan(grade))`.
 - Rolling resistance: `F_roll = m * g * cos(atan(grade)) * crr`.
-- Aerodynamic drag: `F_aero = 0.5 * rho * CdA * v_air * |v_air|`, where `v_air = v_ground + headwind`. The signed form handles a tailwind stronger than ground speed.
+- Aerodynamic drag: `F_aero = 0.5 * rho * CdA * vApp * u`, where `u = v_ground + headwind` (signed axial component) and `vApp = hypot(u, crosswind)` (apparent-wind speed). With zero crosswind this reduces to the earlier axial form `0.5 * rho * CdA * u * |u|`. The signed `u` handles a tailwind stronger than ground speed.
 - `P_wheel = (F_grav + F_roll + F_aero) * v_ground`, and `P_pedal = P_wheel / eta`.
 
 Air density `rho` is computed from temperature and pressure (`airDensity`): dry air `rho = p / (Rd * T)` with `Rd = 287.058 J/(kg K)`, with an optional moist-air virtual-temperature correction. CdA is yaw-adjusted (`yawCdaFactor`): the yaw angle is `atan2(crosswind, v_air)` and the effective CdA rises by `k_yaw * |yaw_deg| / 10`. Wind is split into headwind and crosswind components by `decomposeWind` using the angle between the meteorological wind-from direction and the road bearing.
@@ -60,13 +60,13 @@ Arrival and departure clocks come straight out of the time march. For each segme
 
 The per-depot split table is built by `buildSplitTable` in `packages/core/src/output/splits.ts`. For each control it computes arrival as the rolling segment time at the nearest segment boundary plus the duration of stops at controls strictly before this one (`s.km < km`). The strict inequality is what prevents double counting: a control's own stop is added on departure, not on arrival, so a stop is never counted both before and at the same control. Each split row carries the leg distance, the leg rolling time, the arrival and departure clocks, the stop minutes, and the cumulative time. The km-0 start is treated as the implicit origin (cum 0, elapsed 0) so the opening leg includes the first segment.
 
-## 4a. Effektiv vind, exponering och osakekerhetsspann
+## 4a. Effektiv vind, exponering och osäkerhetsspann
 
-Prognosvind ges pa 10 m hojd (WMO-standard), men cyklisten sitter pa ungefar 1.2 m. Med logaritmisk vindprofil skalar modellen ned vindhastigheten till rytternivan med faktorn `k = ln(1.2/z0) / ln(10/z0)`, dar `z0` ar terrangens aerodynamiska kastrighet. Over blandad mark (z0 = 0.05, standard) reduceras en 6 m/s-prognos till ungefar 3.6 m/s pa rytternivan. Pa Vatternrundan 315 km ger det en skillnad pa knappt 19 W i krav-NP for att na samma maltid, allt annat lika.
+Prognosvind ges på 10 m höjd (WMO-standard), men cyklisten sitter på ungefär 1.2 m. Med logaritmisk vindprofil skalar modellen ned vindhastigheten till rytternivån med faktorn `k = ln(1.2/z0) / ln(10/z0)`, där `z0` är terrängens aerodynamiska råstrighet. Över blandad mark (z0 = 0.05, standard) reduceras en 6 m/s-prognos till ungefär 3.6 m/s på rytternivån. På Vätternrundan 315 km ger det en skillnad på knappt 19 W i krav-NP för att nå samma måltid, allt annat lika.
 
-Kastrighet (z0) kan sattes globalt via `exposure_terrain` (open 0.03, mixed 0.05, sheltered 0.30) eller per segment via inbakad exponeringsdata fran OpenStreetMap. Sju klasser anvands: Vattennara, Bro, Oppet, Halvoppet, Skog, Bebyggt och Skyddat, med z0-varden fran litteraturen. For Vatternrundans rutt ar exponeringsdata inbakad offline (se `scripts/bake-exposure.mjs`) och lagrad i `data/vatternrundan-exposure.json`. Denna data gar att ta bort och beraknas om nar terrangkartor uppdateras. Observera att z0-vardena ar litteratur-startpunkter, inte kalibrerade mot verkliga akter; exponeringsklassificeringen talar om var pa rutten vinden dampar mer eller mindre, men inte exakt hur mycket.
+Råstrighet (z0) kan sätts globalt via `exposure_terrain` (open 0.03, mixed 0.05, sheltered 0.30) eller per segment via inbakad exponeringsdata från OpenStreetMap. Sju klasser används: Vattennära, Bro, Öppet, Halvöppet, Skog, Bebyggt och Skyddat, med z0-värden från litteraturen. För Vätternrundans rutt är exponeringsdata inbakad offline (se `scripts/bake-exposure.mjs`) och lagrad i `data/vatternrundan-exposure.json`. Denna data går att ta bort och beräknas om när terrängkartor uppdateras. Observera att z0-värdena är litteratur-startpunkter, inte kalibrerade mot verkliga åkturer; exponeringsklassificeringen talar om var på rutten vinden dämpar mer eller mindre, men inte exakt hur mycket.
 
-Osakekerhetsspanet i tempokort-rubriken ("rimligt spann H:MM-H:MM") visar skillnaden i total tid nar forarvens NP halls fast pa forvantat scenario och rutten beraknas om under optimistisk respektive pessimistisk vindprofil. Spannet aterspeglar vindosakekerhet, inte rytterprestation, och kollapsar till "spann saknas" nar spridningen understiger en minut (t.ex. vid manuell vind eller lugnt).
+Osäkerhetsspannet i tempokort-rubriken ("rimligt spann H:MM-H:MM") visar skillnaden i total tid när förarens NP hålls fast på förväntat scenario och rutten beräknas om under optimistisk respektive pessimistisk vindprofil. Spannet återspeglar vindosäkerhet, inte rytterprestation, och kollapsar till "spann saknas" när spridningen understiger en minut (t.ex. vid manuell vind eller lugnt).
 
 ## 5. Validation numbers
 
@@ -109,7 +109,7 @@ The finish clock 16:07 (42300 s after the 04:22 start) is the only hard gate in 
 
 ### Test suite scope
 
-The full Vätternrundan build reported 252 passed and 1 skipped, with `tsc --noEmit` clean (`docs/build-report.md`). After the wind-realism work the suite is 309 passed and 10 skipped, with `tsc` and `eslint` clean; the skipped tests are the slow real-course solves, gated behind `SLOW_TESTS=1` or a committed-GPX guard because one full solve over roughly 4760 microsegments is compute-heavy. The added coverage exercises the spin-out ceiling, supra-FTP pulls, the IF sustainability warning, and the net-downwind scenario inversion (`packages/core/tests/headwind-caps.test.ts`, `packages/core/tests/scenarios.test.ts`).
+The full Vätternrundan build reported 252 passed and 1 skipped, with `tsc --noEmit` clean (`docs/build-report.md`). After the wind-realism work the suite is 354 passed and 4 skipped, with `tsc` and `eslint` clean; the skipped tests are the slow real-course solves, gated behind `SLOW_TESTS=1` or a committed-GPX guard because one full solve over roughly 4760 microsegments is compute-heavy. The added coverage exercises the spin-out ceiling, supra-FTP pulls, the IF sustainability warning, and the net-downwind scenario inversion (`packages/core/tests/headwind-caps.test.ts`, `packages/core/tests/scenarios.test.ts`).
 
 ## 6. References and default assumptions
 

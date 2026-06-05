@@ -1,4 +1,4 @@
-# Exposure model — per-segment terrain classification
+# Exposure model: per-segment terrain classification
 
 This document describes how the planner obtains terrain roughness (z0) for each microsegment, including the offline OSM bake pipeline for the built-in Vatternrundan route, the fallback coarse selector for other routes, and the seven exposure classes.
 
@@ -12,10 +12,10 @@ Each microsegment can carry one of seven `ExposureClass` values. The correspondi
 
 | Class       | z0 (m) | Swedish label | Description                                      |
 | ----------- | ------ | ------------- | ------------------------------------------------ |
-| `water`     | 0.001  | Vattennara    | Open water surface (lake, sea)                   |
+| `water`     | 0.001  | Vattennära    | Open water surface (lake, sea)                   |
 | `bridge`    | 0.002  | Bro           | Bridge deck above water                          |
-| `open`      | 0.03   | Oppet         | Open farmland, meadows, minimal obstacles        |
-| `semi_open` | 0.08   | Halvoppet     | Mixed terrain, sparse scrub, scattered buildings |
+| `open`      | 0.03   | Öppet         | Open farmland, meadows, minimal obstacles        |
+| `semi_open` | 0.08   | Halvöppet     | Mixed terrain, sparse scrub, scattered buildings |
 | `forest`    | 0.30   | Skog          | Dense forest                                     |
 | `urban`     | 0.40   | Bebyggt       | Residential, commercial, industrial              |
 | `sheltered` | 0.50   | Skyddat       | Enclosed roads, dense windbreaks                 |

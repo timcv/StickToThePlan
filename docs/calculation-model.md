@@ -1,4 +1,4 @@
-# Calculation model and algorithm — StickToThePlan
+# Calculation model and algorithm: StickToThePlan
 
 A complete technical description of how the app computes a pacing plan (tempokort) for Vätternrundan and other road-cycling routes. The goal is that a reviewer (human or LLM) can check the physics, the algorithm, and the plausibility without reading the source, but with exact file references for going deeper.
 
@@ -203,7 +203,7 @@ Reference implementation (`riderNpSquareWaveReference`, `chaingang.ts:135`): bui
 
 ## 6. Pacing solver
 
-### 6.1 Inner solve — `runInnerSolve(micro, npTarget, weather, cfg, startClockS)` (`planner.ts:96`)
+### 6.1 Inner solve: `runInnerSolve(micro, npTarget, weather, cfg, startClockS)` (`planner.ts:96`)
 
 Marches the route at a **constant rider NP = `npTarget`**:
 
@@ -225,7 +225,7 @@ For each microsegment:
 
 **Totals**: `total_time` (incl. neutral + stops), `rolling_time = total − stop_time`.
 
-### 6.2 Sustainability — ride NP and IF (`planner.ts`, totals)
+### 6.2 Sustainability: ride NP and IF (`planner.ts`, totals)
 
 ```
 ride_NP = ( Σ_eff  rider_np_w_i^4 · t_i  /  Σ_eff t_i )^(1/4)      // time-weighted fourth-power mean
@@ -234,7 +234,7 @@ IF      = ride_NP / ftp
 
 If `IF > sustain_if_warn` (0.75) a note is added (in Swedish, to match the app UI). `rider_np_ride_w` and `intensity_factor` are returned on `PlanResult` (shown in the UI and `plan.json`).
 
-### 6.3 Outer solve — `solveForTargetTime(micro, weather, cfg)` (`planner.ts:266`)
+### 6.3 Outer solve: `solveForTargetTime(micro, weather, cfg)` (`planner.ts:266`)
 
 Bisection on `npTarget` to hit the target time `target_total_hm`:
 
@@ -249,7 +249,7 @@ else: bisect npTarget ∈ [60, ftp], 45 iterations, tolerance 20 s on total_time
 
 So NP is bounded above by FTP. If even NP = FTP cannot hit the target, `reachable=false` is reported and the fastest plan is returned.
 
-### 6.4 The power caps — design choices
+### 6.4 The power caps: design choices
 
 - `pull_cap_hard = round(pull_cap_mult · ftp)`, default `pull_cap_mult = 1.3` ⇒ 354 W at FTP 272. **Rationale**: a 45 s front pull is a short supra-threshold effort (~1.3× FTP is realistic). Sustainability is bounded by the rider's **NP** (the outer solve's [60, ftp] range), not by holding every pull under FTP. The earlier cap = FTP throttled ~95 % of segments into a headwind and wrongly reported "unreachable".
 - `pull_cap_soft = round(0.92 · ftp)` = 250 W. Climbs > 3 % only. Prevents the group redlining every ramp.
@@ -275,7 +275,7 @@ pessimistic  → favorableWind ? p10 : p90
 
 `buildManualField` (`weather/hourly.ts:77`): one cell per hour at the route centroid, `p10 = p90 = mean = the user's wind speed`, direction = the user's. All cells at the same location ⇒ every microsegment gets the same wind ⇒ **uniform constant wind** over the whole route. The head/tail variation comes solely from each segment's bearing.
 
-### 7.3 Optimistic/pessimistic — direction correction
+### 7.3 Optimistic/pessimistic: direction correction
 
 Problem: always choosing p90 as "pessimistic" assumes more wind = worse. On a **downwind route** more wind is faster, so the labels invert.
 
@@ -390,7 +390,7 @@ For the reviewer, these are deliberate simplifications:
 
 ---
 
-## 11. Validation — what a reviewer should check
+## 11. Validation: what a reviewer should check
 
 ### 11.1 Physics vs textbook (flat, ρ = 1.225, m = 96, CdA = 0.32, Crr = 0.0045, η = 0.97)
 

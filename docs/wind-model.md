@@ -1,4 +1,4 @@
-# Wind model — effective wind and height correction
+# Wind model: effective wind and height correction
 
 This document describes how the planner converts a forecast wind reading (given at 10 m height) into the wind that a cyclist at 1.2 m actually experiences, using a logarithmic wind profile with a terrain-roughness parameter.
 

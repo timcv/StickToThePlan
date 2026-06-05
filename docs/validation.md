@@ -1,4 +1,4 @@
-# Validation — wind model and uncertainty interval
+# Validation: wind model and uncertainty interval
 
 This document records the before/after figures for the wind height-correction change, explains what the uncertainty interval means, and describes the intended reference-ride replay method for future calibration.
 

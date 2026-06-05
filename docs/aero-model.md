@@ -1,4 +1,4 @@
-# Aero model — vector apparent wind and yaw adjustment
+# Aero model: vector apparent wind and yaw adjustment
 
 This document describes the aerodynamic drag formula used in the pacing solver, specifically the vector apparent-wind extension added in Task 4 and the yaw-CdA adjustment from the original model.
 
