@@ -105,7 +105,7 @@ function calmThreeScenarios(plan: PlanResult): ThreeScenarios {
     optimistic: plan,
     pessimistic: plan,
     // No wind data: all three scenarios are identical, so the interval collapses
-    // to a point (high - low < 60 s) and the UI shows "spann saknas".
+    // to a point (high - low < 60 s) and the UI shows just that point value.
     time_uncertainty_s: {
       expected: plan.total_time_s,
       low: plan.total_time_s,
