@@ -41,7 +41,9 @@ export function SplitTable({ splits, startTime }: Props) {
                 <td className="num">{secondsToHMM(row.leg_time_s)}</td>
                 <td className="num">{avgSpeedKmh(row.leg_distance_m, row.leg_time_s)}</td>
                 <td className="num">{secondsToClock(row.arrive_s, startTime)}</td>
-                <td className="num col-secondary">{row.stop_minutes > 0 ? row.stop_minutes : ''}</td>
+                <td className="num col-secondary">
+                  {row.stop_minutes > 0 ? row.stop_minutes : ''}
+                </td>
                 <td className="num col-secondary">{secondsToClock(row.depart_s, startTime)}</td>
                 <td className="num col-secondary">{secondsToHMM(row.cumulative_s)}</td>
               </tr>

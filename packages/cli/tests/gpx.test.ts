@@ -2,12 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import {
-  dedupePoints,
-  smoothElevation,
-  buildMicroSegments,
-  applyDefaults,
-} from '@stp/core';
+import { dedupePoints, smoothElevation, buildMicroSegments, applyDefaults } from '@stp/core';
 import { parseGpx, ingestGpx } from '../src/fileIo.js';
 
 // -------------------------------------------------------------------------
@@ -141,7 +136,10 @@ describe('buildMicroSegments', () => {
     const pts = parseGpx(path);
     const deduped = dedupePoints(pts);
     const cfg = makeConfig();
-    const smoothed = smoothElevation(deduped.map(p => p.ele), cfg.ele_smooth_window);
+    const smoothed = smoothElevation(
+      deduped.map((p) => p.ele),
+      cfg.ele_smooth_window,
+    );
     const segs = buildMicroSegments(deduped, smoothed, cfg);
     expect(segs).toHaveLength(2);
   });
@@ -151,7 +149,10 @@ describe('buildMicroSegments', () => {
     const pts = parseGpx(path);
     const deduped = dedupePoints(pts);
     const cfg = makeConfig();
-    const smoothed = smoothElevation(deduped.map(p => p.ele), cfg.ele_smooth_window);
+    const smoothed = smoothElevation(
+      deduped.map((p) => p.ele),
+      cfg.ele_smooth_window,
+    );
     const segs = buildMicroSegments(deduped, smoothed, cfg);
     // Each segment should be roughly 1 km (0.009 degrees latitude ~ 1 km)
     for (const seg of segs) {
@@ -165,15 +166,15 @@ describe('buildMicroSegments', () => {
     const pts = parseGpx(path);
     const deduped = dedupePoints(pts);
     const cfg = makeConfig();
-    const smoothed = smoothElevation(deduped.map(p => p.ele), cfg.ele_smooth_window);
+    const smoothed = smoothElevation(
+      deduped.map((p) => p.ele),
+      cfg.ele_smooth_window,
+    );
     const segs = buildMicroSegments(deduped, smoothed, cfg);
     // cum_distance at end of seg[0] equals seg[0].distance_m
     expect(segs[0].cum_distance_m).toBeCloseTo(segs[0].distance_m, 3);
     // cum_distance at end of seg[1] = seg[0].distance + seg[1].distance
-    expect(segs[1].cum_distance_m).toBeCloseTo(
-      segs[0].distance_m + segs[1].distance_m,
-      3,
-    );
+    expect(segs[1].cum_distance_m).toBeCloseTo(segs[0].distance_m + segs[1].distance_m, 3);
   });
 
   it('grade is clamped within [-max_grade, max_grade]', () => {
@@ -181,7 +182,10 @@ describe('buildMicroSegments', () => {
     const pts = parseGpx(path);
     const deduped = dedupePoints(pts);
     const cfg = makeConfig();
-    const smoothed = smoothElevation(deduped.map(p => p.ele), cfg.ele_smooth_window);
+    const smoothed = smoothElevation(
+      deduped.map((p) => p.ele),
+      cfg.ele_smooth_window,
+    );
     const segs = buildMicroSegments(deduped, smoothed, cfg);
     for (const seg of segs) {
       expect(seg.grade).toBeGreaterThanOrEqual(-cfg.max_grade);
@@ -194,7 +198,10 @@ describe('buildMicroSegments', () => {
     const pts = parseGpx(path);
     const deduped = dedupePoints(pts);
     const cfg = makeConfig();
-    const smoothed = smoothElevation(deduped.map(p => p.ele), cfg.ele_smooth_window);
+    const smoothed = smoothElevation(
+      deduped.map((p) => p.ele),
+      cfg.ele_smooth_window,
+    );
     const segs = buildMicroSegments(deduped, smoothed, cfg);
     for (const seg of segs) {
       expect(seg.bearing_deg).toBeGreaterThanOrEqual(0);
@@ -208,7 +215,10 @@ describe('buildMicroSegments', () => {
     const deduped = dedupePoints(pts);
     // Use a cfg where neutral_distance_km is larger than the synthetic route
     const cfg = { ...makeConfig(), neutral_distance_km: 10 };
-    const smoothed = smoothElevation(deduped.map(p => p.ele), cfg.ele_smooth_window);
+    const smoothed = smoothElevation(
+      deduped.map((p) => p.ele),
+      cfg.ele_smooth_window,
+    );
     const segs = buildMicroSegments(deduped, smoothed, cfg);
     for (const seg of segs) {
       expect(seg.neutral).toBe(true);
@@ -221,7 +231,10 @@ describe('buildMicroSegments', () => {
     const deduped = dedupePoints(pts);
     // neutral_distance_km = 0 so nothing is neutral
     const cfg = { ...makeConfig(), neutral_distance_km: 0 };
-    const smoothed = smoothElevation(deduped.map(p => p.ele), cfg.ele_smooth_window);
+    const smoothed = smoothElevation(
+      deduped.map((p) => p.ele),
+      cfg.ele_smooth_window,
+    );
     const segs = buildMicroSegments(deduped, smoothed, cfg);
     for (const seg of segs) {
       expect(seg.neutral).toBe(false);
@@ -233,7 +246,10 @@ describe('buildMicroSegments', () => {
     const pts = parseGpx(path);
     const deduped = dedupePoints(pts);
     const cfg = makeConfig();
-    const smoothed = smoothElevation(deduped.map(p => p.ele), cfg.ele_smooth_window);
+    const smoothed = smoothElevation(
+      deduped.map((p) => p.ele),
+      cfg.ele_smooth_window,
+    );
     const segs = buildMicroSegments(deduped, smoothed, cfg);
     segs.forEach((seg, i) => expect(seg.index).toBe(i));
   });
@@ -276,17 +292,13 @@ describe('real file: vatternrundan-315km.gpx', () => {
     expect(deduped).toHaveLength(4765);
   });
 
-  it.skipIf(!existsSync(GPX_PATH))(
-    'ingestGpx total distance is within [314.0, 315.5] km',
-    () => {
-      const cfg = makeConfig();
-      const segs = ingestGpx(GPX_PATH, cfg);
-      const totalKm =
-        segs.reduce((acc, s) => acc + s.distance_m, 0) / 1000;
-      expect(totalKm).toBeGreaterThan(314.0);
-      expect(totalKm).toBeLessThan(315.5);
-    },
-  );
+  it.skipIf(!existsSync(GPX_PATH))('ingestGpx total distance is within [314.0, 315.5] km', () => {
+    const cfg = makeConfig();
+    const segs = ingestGpx(GPX_PATH, cfg);
+    const totalKm = segs.reduce((acc, s) => acc + s.distance_m, 0) / 1000;
+    expect(totalKm).toBeGreaterThan(314.0);
+    expect(totalKm).toBeLessThan(315.5);
+  });
 
   it.skipIf(!existsSync(GPX_PATH))(
     'every microsegment has finite grade within [-max_grade, max_grade] and bearing in [0, 360)',

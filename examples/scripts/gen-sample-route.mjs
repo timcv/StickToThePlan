@@ -35,7 +35,7 @@ function makeLCG(seed) {
   return {
     // Returns a float in [0, 1)
     next() {
-      state = ((Math.imul(1664525, state) + 1013904223) >>> 0);
+      state = (Math.imul(1664525, state) + 1013904223) >>> 0;
       return state / 4294967296;
     },
     // Returns a float in [lo, hi)
@@ -71,11 +71,11 @@ function haversine(lat1, lon1, lat2, lon2) {
 // a few climbs.
 // ---------------------------------------------------------------------------
 
-const SEED = 0xDEADBEEF; // fixed seed; never changes
+const SEED = 0xdeadbeef; // fixed seed; never changes
 
 // Base oval centred near Linkoping region (generic Swedish coordinates)
 const BASE_LAT = 58.95;
-const BASE_LON = 15.10;
+const BASE_LON = 15.1;
 
 // Oval semi-axes in degrees.
 // At lat ~59: 1 deg lat ~ 111 km, 1 deg lon ~ 57 km.
@@ -117,9 +117,9 @@ function generateRoute() {
   const bumps = [];
   for (let i = 0; i < N_BUMPS; i++) {
     bumps.push({
-      center: rng.range(0.05, 0.95),   // position along route [0,1]
-      height: rng.range(60, 180),       // metres of gain at peak
-      width: rng.range(0.04, 0.12),     // fraction of route width
+      center: rng.range(0.05, 0.95), // position along route [0,1]
+      height: rng.range(60, 180), // metres of gain at peak
+      width: rng.range(0.04, 0.12), // fraction of route width
     });
   }
 

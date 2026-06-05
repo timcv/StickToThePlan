@@ -47,7 +47,8 @@ export function parseWeatherQuery(q: WeatherQuery): { date: string; points: GeoP
     // Reject empty halves: Number('') is 0 (finite), so "58.5," would otherwise
     // slip through as lon=0 instead of being rejected.
     if (!latS || !lonS) return null;
-    const lat = Number(latS), lon = Number(lonS);
+    const lat = Number(latS),
+      lon = Number(lonS);
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
     if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
     points.push({ lat, lon });
@@ -59,7 +60,11 @@ export function parseWeatherQuery(q: WeatherQuery): { date: string; points: GeoP
 export async function handleWeather(q: WeatherQuery): Promise<WeatherResult> {
   const parsed = parseWeatherQuery(q);
   if (!parsed) {
-    return { status: 400, headers: {}, body: { error: 'bad query: require date=YYYY-MM-DD&pts=lat,lon|...' } };
+    return {
+      status: 400,
+      headers: {},
+      body: { error: 'bad query: require date=YYYY-MM-DD&pts=lat,lon|...' },
+    };
   }
   const samples = await gatherWindSamples(parsed.points, parsed.date);
   const field = buildEnsemble(samples);

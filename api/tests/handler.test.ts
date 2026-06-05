@@ -6,7 +6,13 @@ afterEach(() => vi.restoreAllMocks());
 describe('parseWeatherQuery', () => {
   it('parses date + pipe-separated points', () => {
     const r = parseWeatherQuery({ date: '2026-06-13', pts: '58.5,14.6|58.6,14.7' });
-    expect(r).toEqual({ date: '2026-06-13', points: [{ lat: 58.5, lon: 14.6 }, { lat: 58.6, lon: 14.7 }] });
+    expect(r).toEqual({
+      date: '2026-06-13',
+      points: [
+        { lat: 58.5, lon: 14.6 },
+        { lat: 58.6, lon: 14.7 },
+      ],
+    });
   });
   it('returns null on missing date', () => {
     expect(parseWeatherQuery({ pts: '58.5,14.6' })).toBeNull();
@@ -48,11 +54,25 @@ describe('handleWeather', () => {
   });
 
   it('200 + ensemble when a source answers', async () => {
-    const om = [{ hourly: { time: ['2026-06-13T04:00'], windspeed_10m: [3], winddirection_10m: [270], temperature_2m: [9], surface_pressure: [1013] } }];
-    vi.stubGlobal('fetch', vi.fn(async (url: string) =>
-      url.startsWith('https://api.open-meteo.com')
-        ? ({ ok: true, json: async () => om } as Response)
-        : ({ ok: false, json: async () => ({}) } as Response)));
+    const om = [
+      {
+        hourly: {
+          time: ['2026-06-13T04:00'],
+          windspeed_10m: [3],
+          winddirection_10m: [270],
+          temperature_2m: [9],
+          surface_pressure: [1013],
+        },
+      },
+    ];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) =>
+        url.startsWith('https://api.open-meteo.com')
+          ? ({ ok: true, json: async () => om } as Response)
+          : ({ ok: false, json: async () => ({}) } as Response),
+      ),
+    );
     const res = await handleWeather({ date: '2026-06-13', pts: '58.5,14.6' });
     expect(res.status).toBe(200);
     expect((res.body as any).cells.length).toBeGreaterThan(0);

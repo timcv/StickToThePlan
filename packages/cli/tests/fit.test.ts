@@ -32,7 +32,7 @@ describe('analyzePass - synthetic', () => {
     expect(Math.abs(metrics.np_w - 200)).toBeLessThan(1);
     expect(metrics.classification).toBe('short_test');
     // FTP-fallback path: 0.60 * 272 = 163
-    expect(metrics.np_target_candidate).toBe(Math.round(0.60 * 272));
+    expect(metrics.np_target_candidate).toBe(Math.round(0.6 * 272));
     expect(metrics.np_target_candidate).toBe(163);
   });
 
@@ -68,7 +68,7 @@ describe('determineAnchor - no FIT path', () => {
     const anchor = determineAnchor(cfg);
 
     expect(anchor.classification).toBe('short_test');
-    expect(anchor.np_target_candidate).toBe(Math.round(0.60 * 272));
+    expect(anchor.np_target_candidate).toBe(Math.round(0.6 * 272));
     expect(anchor.np_target_candidate).toBe(163);
     expect(anchor.duration_s).toBe(0);
     expect(anchor.note).toMatch(/0\.60 x ftp fallback/i);

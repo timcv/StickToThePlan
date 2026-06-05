@@ -16,10 +16,7 @@ import { runPipeline, type PipelineInput } from '../src/lib/pipeline';
 
 // Resolve the sample GPX from the repo root. process.cwd() is the repo root
 // when vitest runs from the monorepo root (as the workspace config requires).
-const sampleGpxText = readFileSync(
-  resolve(process.cwd(), 'examples/sample-route.gpx'),
-  'utf-8',
-);
+const sampleGpxText = readFileSync(resolve(process.cwd(), 'examples/sample-route.gpx'), 'utf-8');
 
 describe('runPipeline smoke test (calm mode)', () => {
   it('returns a non-empty split table and valid scenarios for the sample route', async () => {

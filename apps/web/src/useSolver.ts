@@ -15,9 +15,7 @@ import type { PipelineInput, PipelineResult } from './worker/solve.worker';
 export type SolverStatus = 'idle' | 'running' | 'done' | 'error';
 
 /** Shape posted back by the worker glue (see solve.worker.ts). */
-type WorkerReply =
-  | { ok: true; result: PipelineResult }
-  | { ok: false; error: string };
+type WorkerReply = { ok: true; result: PipelineResult } | { ok: false; error: string };
 
 export interface UseSolver {
   run: (input: PipelineInput) => void;

@@ -122,7 +122,7 @@ function refNpFromPowers(Pp: number, Pd: number, n: number, pull: number): numbe
   const w = 30;
   const roll = arr.map((_, i) => {
     let s = 0;
-    for (let j = 0; j < w; j++) s += arr[((i - j) % cycle + cycle) % cycle];
+    for (let j = 0; j < w; j++) s += arr[(((i - j) % cycle) + cycle) % cycle];
     return s / w;
   });
   return (roll.reduce((a, r) => a + r ** 4, 0) / roll.length) ** 0.25;
@@ -130,10 +130,15 @@ function refNpFromPowers(Pp: number, Pd: number, n: number, pull: number): numbe
 
 describe('NP moments equivalence', () => {
   it('matches the square-wave reference within 1e-6 across a grid', () => {
-    for (const [n, pull] of [[12, 45], [8, 30]] as const) {
+    for (const [n, pull] of [
+      [12, 45],
+      [8, 30],
+    ] as const) {
       for (let Pp = 100; Pp <= 400; Pp += 20) {
         for (let Pd = 50; Pd <= 300; Pd += 20) {
-          expect(Math.abs(npFromMoments(Pp, Pd, n, pull) - refNpFromPowers(Pp, Pd, n, pull))).toBeLessThan(1e-6);
+          expect(
+            Math.abs(npFromMoments(Pp, Pd, n, pull) - refNpFromPowers(Pp, Pd, n, pull)),
+          ).toBeLessThan(1e-6);
         }
       }
     }

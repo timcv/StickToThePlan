@@ -35,8 +35,7 @@ function haversine(a, b) {
   const dLat = toR(b.lat - a.lat);
   const dLon = toR(b.lon - a.lon);
   const s =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.sin(dLon / 2) ** 2;
+    Math.sin(dLat / 2) ** 2 + Math.cos(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.sin(dLon / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
@@ -71,13 +70,17 @@ out geom;`;
       });
     } catch (fetchErr) {
       const wait = DELAY_MS * attempt;
-      console.log(`  fetch error (attempt ${attempt}/${MAX_RETRIES}): ${fetchErr.message} — waiting ${wait} ms`);
+      console.log(
+        `  fetch error (attempt ${attempt}/${MAX_RETRIES}): ${fetchErr.message} — waiting ${wait} ms`,
+      );
       await sleep(wait);
       continue;
     }
     if (res.status === 429 || res.status === 504 || res.status === 503 || res.status === 502) {
       const wait = DELAY_MS * attempt * 2;
-      console.log(`  HTTP ${res.status} — waiting ${wait} ms before retry ${attempt}/${MAX_RETRIES} (${endpoint})`);
+      console.log(
+        `  HTTP ${res.status} — waiting ${wait} ms before retry ${attempt}/${MAX_RETRIES} (${endpoint})`,
+      );
       await sleep(wait);
       continue;
     }
@@ -93,11 +96,7 @@ function classOf(el) {
   if (t.bridge === 'yes') return 'bridge';
   if (t.natural === 'water' || t.waterway === 'riverbank') return 'water';
   if (t.natural === 'wood' || t.landuse === 'forest') return 'forest';
-  if (
-    t.landuse === 'residential' ||
-    t.landuse === 'commercial' ||
-    t.landuse === 'industrial'
-  )
+  if (t.landuse === 'residential' || t.landuse === 'commercial' || t.landuse === 'industrial')
     return 'urban';
   return null;
 }
@@ -110,8 +109,7 @@ function inPoly(pt, geom) {
       xj = geom[j].lon,
       yj = geom[j].lat;
     const hit =
-      yi > pt.lat !== yj > pt.lat &&
-      pt.lon < ((xj - xi) * (pt.lat - yi)) / (yj - yi) + xi;
+      yi > pt.lat !== yj > pt.lat && pt.lon < ((xj - xi) * (pt.lat - yi)) / (yj - yi) + xi;
     if (hit) inside = !inside;
   }
   return inside;
@@ -212,7 +210,9 @@ for (const c of centres) {
 
   tilesDone++;
   if (tilesDone % 10 === 0 || tilesDone === centres.length) {
-    process.stdout.write(`  ${tilesDone}/${centres.length} tiles done, polys so far=${polys.length}\n`);
+    process.stdout.write(
+      `  ${tilesDone}/${centres.length} tiles done, polys so far=${polys.length}\n`,
+    );
   }
 }
 

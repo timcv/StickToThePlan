@@ -24,10 +24,10 @@ const fixture: SplitRow[] = [
     fromControl: 'Motala',
     toControl: 'Hästholmen',
     leg_distance_m: 40_200,
-    leg_time_s: 4200,          // 1:10 riding
-    arrive_s: 4200,            // 06:00 + 4200 s = 07:10
+    leg_time_s: 4200, // 1:10 riding
+    arrive_s: 4200, // 06:00 + 4200 s = 07:10
     stop_minutes: 5,
-    depart_s: 4500,            // 06:00 + 4500 s = 07:15
+    depart_s: 4500, // 06:00 + 4500 s = 07:15
     cumulative_s: 4500,
   },
   {
@@ -35,7 +35,7 @@ const fixture: SplitRow[] = [
     toControl: 'Gränna',
     leg_distance_m: 37_000,
     leg_time_s: 3900,
-    arrive_s: 8400,            // 06:00 + 8400 s = 08:20
+    arrive_s: 8400, // 06:00 + 8400 s = 08:20
     stop_minutes: 0,
     depart_s: 8400,
     cumulative_s: 8400,
@@ -45,7 +45,7 @@ const fixture: SplitRow[] = [
     toControl: 'Jönköping',
     leg_distance_m: 28_000,
     leg_time_s: 2940,
-    arrive_s: 11_340,          // 06:00 + 11340 s = 09:09
+    arrive_s: 11_340, // 06:00 + 11340 s = 09:09
     stop_minutes: 0,
     depart_s: 11_340,
     cumulative_s: 11_340,

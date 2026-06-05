@@ -39,7 +39,8 @@ function makeSegments(): DisplaySegment[] {
     avg_grade: 0,
     eta_s: 0,
     wind_label: '',
-    avg_speed_kmh: 0, micro_indices: [] as number[],
+    avg_speed_kmh: 0,
+    micro_indices: [] as number[],
   };
   return [
     {
@@ -180,7 +181,8 @@ describe('buildSteps', () => {
       pull_w_high: 0,
       avg_w: 0,
       note: 'NEUTRAL',
-      avg_speed_kmh: 0, micro_indices: [],
+      avg_speed_kmh: 0,
+      micro_indices: [],
     };
     const steps = buildSteps([neutral, ...segs], cfg);
 

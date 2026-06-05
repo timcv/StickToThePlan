@@ -111,7 +111,7 @@ function aggregateGroup(
   const avg_speed_kmh = total_time_s > 0 ? (distance_m / total_time_s) * 3.6 : 0;
 
   // Power: only non-neutral segments contribute.
-  const effortSegs = segs.filter(s => !s.micro.neutral);
+  const effortSegs = segs.filter((s) => !s.micro.neutral);
   let pull_w_mean = 0;
   let avg_w = 0;
   if (effortSegs.length > 0) {
@@ -122,9 +122,7 @@ function aggregateGroup(
   const pull_w_high = round(pull_w_mean * (1 + cfg.band_pct));
 
   const wind = windLabel(segs);
-  const meanHead = segs.length > 0
-    ? segs.reduce((s, p) => s + p.headwind_ms, 0) / segs.length
-    : 0;
+  const meanHead = segs.length > 0 ? segs.reduce((s, p) => s + p.headwind_ms, 0) / segs.length : 0;
 
   const town = controlAtEnd?.name;
 
@@ -203,9 +201,8 @@ function mergeDisplaySegs(a: DisplaySegment, b: DisplaySegment): DisplaySegment 
   // Weighted pull mean for band computation.
   const aPullMid = (a.pull_w_low + a.pull_w_high) / 2;
   const bPullMid = (b.pull_w_low + b.pull_w_high) / 2;
-  const pullMid = totalDist > 0
-    ? (aPullMid * a.distance_m + bPullMid * b.distance_m) / totalDist
-    : 0;
+  const pullMid =
+    totalDist > 0 ? (aPullMid * a.distance_m + bPullMid * b.distance_m) / totalDist : 0;
   // We do not have band_pct here, so approximate: use b's band ratio as proxy.
   // Since band_pct is uniform we can recover it: band_pct ~ (high - low) / (2 * mid).
   const bandRatio = aPullMid > 0 ? (a.pull_w_high - a.pull_w_low) / (2 * aPullMid) : 0;
@@ -219,9 +216,8 @@ function mergeDisplaySegs(a: DisplaySegment, b: DisplaySegment): DisplaySegment 
   const time_a = a.avg_speed_kmh > 0 ? a.distance_m / (a.avg_speed_kmh / 3.6) : 0;
   const time_b = b.avg_speed_kmh > 0 ? b.distance_m / (b.avg_speed_kmh / 3.6) : 0;
   const total_time = time_a + time_b;
-  const avg_speed_kmh = total_time > 0
-    ? Math.round(((a.distance_m + b.distance_m) / total_time) * 3.6 * 10) / 10
-    : 0;
+  const avg_speed_kmh =
+    total_time > 0 ? Math.round(((a.distance_m + b.distance_m) / total_time) * 3.6 * 10) / 10 : 0;
 
   // town / stop_minutes / depart_s: preserve b (the end boundary matters).
   return {
@@ -348,14 +344,14 @@ export function segment(
   for (const bnd of boundaries) {
     const bndIdx = cumToIdx.get(bnd);
     if (bndIdx === undefined) continue; // snapped value not found exactly; skip
-    if (bndIdx < groupStart) continue;  // already past this boundary
+    if (bndIdx < groupStart) continue; // already past this boundary
 
     const indices: number[] = [];
     for (let i = groupStart; i <= bndIdx; i++) {
       indices.push(i);
     }
     if (indices.length > 0) {
-      groups.push({ indices, segs: indices.map(i => segments[i]) });
+      groups.push({ indices, segs: indices.map((i) => segments[i]) });
     }
     groupStart = bndIdx + 1;
   }
@@ -366,7 +362,7 @@ export function segment(
     for (let i = groupStart; i < segments.length; i++) {
       indices.push(i);
     }
-    groups.push({ indices, segs: indices.map(i => segments[i]) });
+    groups.push({ indices, segs: indices.map((i) => segments[i]) });
   }
 
   // Build a lookup: which control (if any) ends at this cum_distance_m?
@@ -385,7 +381,7 @@ export function segment(
   }
 
   // Aggregate each group into a DisplaySegment.
-  let displaySegs: DisplaySegment[] = groups.map(g => {
+  let displaySegs: DisplaySegment[] = groups.map((g) => {
     const lastCum = g.segs[g.segs.length - 1].micro.cum_distance_m;
     const controlAtEnd = controlAtCum.get(lastCum);
     const stopMinutesAtEnd = stopAtCum.get(lastCum);
@@ -403,9 +399,9 @@ export function segment(
   if (lastClimbIdx >= 0) {
     // Only mark SISTA UPPFÖR if there are non-climb segments after it
     // (i.e. it really is the last one before a downhill or flat to the finish).
-    const hasNonClimbAfter = displaySegs.slice(lastClimbIdx + 1).some(
-      s => s.note !== 'KLÄTTRING' && s.note !== 'SISTA UPPFÖR',
-    );
+    const hasNonClimbAfter = displaySegs
+      .slice(lastClimbIdx + 1)
+      .some((s) => s.note !== 'KLÄTTRING' && s.note !== 'SISTA UPPFÖR');
     if (hasNonClimbAfter) {
       displaySegs[lastClimbIdx] = { ...displaySegs[lastClimbIdx], note: 'SISTA UPPFÖR' };
     }
@@ -427,21 +423,22 @@ export function segment(
         let bestDiff = Infinity;
         if (i > 0 && displaySegs[i - 1].stop_minutes === undefined) {
           const diff = Math.abs(displaySegs[i - 1].avg_w - seg.avg_w);
-          if (diff < bestDiff) { bestDiff = diff; bestIdx = i - 1; }
+          if (diff < bestDiff) {
+            bestDiff = diff;
+            bestIdx = i - 1;
+          }
         }
         if (i < displaySegs.length - 1 && displaySegs[i + 1].stop_minutes === undefined) {
           const diff = Math.abs(displaySegs[i + 1].avg_w - seg.avg_w);
-          if (diff < bestDiff) { bestIdx = i + 1; }
+          if (diff < bestDiff) {
+            bestIdx = i + 1;
+          }
         }
         if (bestIdx === -1) continue;
         const lo = Math.min(i, bestIdx);
         const hi = Math.max(i, bestIdx);
         const merged = mergeDisplaySegs(displaySegs[lo], displaySegs[hi]);
-        displaySegs = [
-          ...displaySegs.slice(0, lo),
-          merged,
-          ...displaySegs.slice(hi + 1),
-        ];
+        displaySegs = [...displaySegs.slice(0, lo), merged, ...displaySegs.slice(hi + 1)];
         changed = true;
         break; // restart scan after any merge
       }
@@ -471,11 +468,7 @@ export function segment(
         if (a.note !== b.note) continue;
         if (Math.abs(a.avg_grade - b.avg_grade) >= gradeThr) continue;
         const merged = mergeDisplaySegs(a, b);
-        displaySegs = [
-          ...displaySegs.slice(0, i),
-          merged,
-          ...displaySegs.slice(i + 2),
-        ];
+        displaySegs = [...displaySegs.slice(0, i), merged, ...displaySegs.slice(i + 2)];
         changed = true;
         break; // restart scan after any merge
       }
@@ -509,11 +502,7 @@ export function segment(
     }
 
     const merged = mergeDisplaySegs(displaySegs[bestIdx], displaySegs[bestIdx + 1]);
-    displaySegs = [
-      ...displaySegs.slice(0, bestIdx),
-      merged,
-      ...displaySegs.slice(bestIdx + 2),
-    ];
+    displaySegs = [...displaySegs.slice(0, bestIdx), merged, ...displaySegs.slice(bestIdx + 2)];
   }
 
   return displaySegs;

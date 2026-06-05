@@ -33,7 +33,13 @@ function makeField(): EnsembleField {
 
 // Resolve the .cache directory relative to the repo root
 // (packages/cli/tests -> ../../.. -> repo root, then .cache).
-const CACHE_DIR = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..', '..', '.cache');
+const CACHE_DIR = path.resolve(
+  path.dirname(new URL(import.meta.url).pathname),
+  '..',
+  '..',
+  '..',
+  '.cache',
+);
 
 afterEach(() => {
   // Clean up any files written by the test date
