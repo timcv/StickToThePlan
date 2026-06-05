@@ -66,7 +66,7 @@ Prognosvind ges på 10 m höjd (WMO-standard), men cyklisten sitter på ungefär
 
 Skrovlighet (z0) kan sättas globalt via `exposure_terrain` (open 0.03, mixed 0.05, sheltered 0.30) eller per segment via inbakad exponeringsdata från OpenStreetMap. Sju klasser används: Vattennära, Bro, Öppet, Halvöppet, Skog, Bebyggt och Skyddat, med z0-värden från litteraturen. För Vätternrundans rutt är exponeringsdata inbakad offline (se `scripts/bake-exposure.mjs`) och lagrad i `data/vatternrundan-exposure.json`. Denna data går att ta bort och beräknas om när terrängkartor uppdateras. Observera att z0-värdena är litteratur-startpunkter, inte kalibrerade mot verkliga åkturer; exponeringsklassificeringen talar om var på rutten vinden dämpar mer eller mindre, men inte exakt hur mycket.
 
-Osäkerhetsspannet i tempokort-rubriken ("rimligt spann H:MM-H:MM") visar skillnaden i total tid när förarens NP hålls fast på förväntat scenario och rutten beräknas om under optimistisk respektive pessimistisk vindprofil. Spannet återspeglar vindosäkerhet, inte rytterprestation, och kollapsar till "spann saknas" när spridningen understiger en minut (t.ex. vid manuell vind eller lugnt).
+Osäkerhetsspannet visas i sammanfattningen "Din plan" ("H:MM · spann H:MM–H:MM") och anger skillnaden i total tid när förarens NP hålls fast på förväntat scenario och rutten beräknas om under optimistisk respektive pessimistisk vindprofil. Spannet återspeglar vindosäkerhet, inte rytterprestation, och kollapsar till en enskild tid (inget spann visas) när spridningen understiger en minut (t.ex. vid manuell vind eller lugnt).
 
 ## 5. Validation numbers
 

@@ -57,25 +57,25 @@ Used in the exposure selector and in data-quality tooltips.
 
 ## Uncertainty interval (spann)
 
-| Context                   | Label / copy                                                                                                                                         |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Headline with interval    | "Beräknad tid H:MM (rimligt spann H:MM–H:MM)"                                                                                                        |
-| Headline, no interval     | "Beräknad tid H:MM (spann saknas)"                                                                                                                   |
-| Spann explanation tooltip | "Spannet visas om optimistisk och pessimistisk vind-scenario ger mer än en minuts skillnad. Siffrorna speglar vindosäkerhet, inte rytterprestation." |
-| Source label              | "Källa: scenario"                                                                                                                                    |
+| Context                   | Label / copy                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------ |
+| Headline with interval    | label "Beräknad sluttid", value "H:MM · spann H:MM–H:MM" (shown in the "Din plan"-summary) |
+| Headline, no interval     | just the point "H:MM" (the range collapses silently; no "spann saknas"-text is shown)      |
+| Spann explanation tooltip | "Tiden är ingen exakt prognos. Spannet visar rimlig variation från vind och exponering."   |
+| Source field              | internal "time_uncertainty_s.source" = "scenario" (not shown in the UI)                    |
 
 ---
 
 ## Data quality (exposure and weather)
 
-| Context                           | Label / copy                                                                            |
-| --------------------------------- | --------------------------------------------------------------------------------------- |
-| Exposure source, baked            | "Exponering: inbakad (OSM)"                                                             |
-| Exposure source, terrain          | "Exponering: terrängselektorn (grov)"                                                   |
-| Exposure coverage OK              | "Exponeringstäckning: XX %"                                                             |
-| Exposure coverage warning (< 60%) | "Exponeringstäckning låg (XX %): terrängselektorn används för oklassificerade segment." |
-| Weather source, manual            | "Vind: manuell"                                                                         |
-| Weather source, forecast          | "Vind: prognos"                                                                         |
+| Context                           | Label / copy                                                                  |
+| --------------------------------- | ----------------------------------------------------------------------------- |
+| Exposure source, baked            | "Exponering: inbakad (OSM)"                                                   |
+| Exposure source, terrain          | "Exponering: terrängselektorn (grov)"                                         |
+| Exposure coverage OK              | "Exponeringsdata: XX% av rutten"                                              |
+| Exposure coverage warning (< 60%) | "Exponeringsdata saknas för YY% av rutten, vindintervallet är extra osäkert." |
+| Weather source, manual            | "Vind: manuell"                                                               |
+| Weather source, forecast          | "Vind: prognos"                                                               |
 
 ---
 
