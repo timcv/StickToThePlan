@@ -140,3 +140,21 @@ describe('buildCourseFit round-trip', () => {
     expect(Math.abs(lonDeg - 14.5)).toBeLessThan(0.0002);
   });
 });
+
+describe('buildCourseFit relative-time labels', () => {
+  const micro = makeMicro();
+  const bytes = buildCourseFit(micro, makePlan(micro), makeConfig(), CONTROLS, {
+    relativeTime: true,
+  });
+  const m = decode(bytes);
+
+  it('bakes elapsed "+H:MM" course-point names, independent of start_time', () => {
+    const names = (m.coursePointMesgs ?? []).map((c) => c.name);
+    // eta 0 s -> +0:00 ; eta 1200 s (20 min) -> +0:20. No "04:22" wall clock.
+    expect(names).toContain('Start +0:00');
+    expect(names).toContain('Gränna +0:20');
+    for (const n of names) {
+      expect(n as string).toContain('+');
+    }
+  });
+});

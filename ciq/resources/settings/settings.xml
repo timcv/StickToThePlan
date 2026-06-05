@@ -1,10 +1,8 @@
 <settings>
     <setting propertyKey="@Properties.layoutMode" title="@Strings.SettingLayout">
         <settingConfig type="list">
-            <listEntry value="0">@Strings.LayoutStandard</listEntry>
-            <listEntry value="1">@Strings.LayoutCompact</listEntry>
-            <listEntry value="2">@Strings.LayoutSpeedDist</listEntry>
-            <listEntry value="3">@Strings.LayoutEtaOnly</listEntry>
+            <listEntry value="0">@Strings.LayoutCompact</listEntry>
+            <listEntry value="1">@Strings.LayoutEtaOnly</listEntry>
         </settingConfig>
     </setting>
     <setting propertyKey="@Properties.units" title="@Strings.SettingUnits">

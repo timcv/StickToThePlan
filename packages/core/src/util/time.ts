@@ -34,3 +34,15 @@ export function secondsToClock(offsetS: number, startHHMM: string): string {
   const mm = Math.floor((total % 3600) / 60);
   return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
 }
+
+/**
+ * Format an elapsed-seconds offset as H:MM with the hour not zero-padded.
+ * Used for start-independent (relative) course-point labels.
+ * Example: secondsToElapsed(9720) -> "2:42"
+ */
+export function secondsToElapsed(offsetS: number): string {
+  const total = Math.max(0, Math.floor(offsetS));
+  const hh = Math.floor(total / 3600);
+  const mm = Math.floor((total % 3600) / 60);
+  return `${hh}:${String(mm).padStart(2, '0')}`;
+}

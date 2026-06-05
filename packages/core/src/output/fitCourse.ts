@@ -16,7 +16,7 @@
 import { Encoder, Profile } from '@garmin/fitsdk';
 import type { MicroSegment, PlanResult, Config } from '../types.js';
 import type { ControlPoint } from '../segmentation.js';
-import { secondsToClock } from '../util/time.js';
+import { secondsToClock, secondsToElapsed } from '../util/time.js';
 import { nearestMicroIndex, nearestEtaS } from './course.js';
 
 type FitFieldValue = string | number | boolean | bigint | Date | Array<string | number>;
@@ -44,6 +44,16 @@ const BASE_MS = Date.UTC(2026, 0, 1, 0, 0, 0);
 /** Course name written to the FIT file and shown on the watch. */
 const COURSE_NAME = 'Vatternrundan';
 
+export interface CourseFitOptions {
+  /**
+   * When true, bake start-independent elapsed labels ("+H:MM") into each course
+   * point name instead of absolute wall-clock ("HH:MM"). The Connect IQ field
+   * detects the leading '+' and compares against the rider's own elapsed time,
+   * so the plan delta is correct no matter when the ride is started.
+   */
+  relativeTime?: boolean;
+}
+
 /**
  * Encode a FIT Course from the route microsegments and the control points.
  * Mirrors buildCourseGpx's inputs so the cli can write both from one call site.
@@ -53,6 +63,7 @@ export function buildCourseFit(
   plan: PlanResult,
   cfg: Config,
   controls: ControlPoint[],
+  opts: CourseFitOptions = {},
 ): Uint8Array {
   const encoder = new Encoder();
 
@@ -118,18 +129,22 @@ export function buildCourseFit(
     });
   }
 
-  // course points: one per control, named "<control> HH:MM".
+  // course points: one per control, named "<control> HH:MM" (absolute clock)
+  // or "<control> +H:MM" (elapsed-since-start, when relativeTime is set).
   for (const cp of controls) {
     const targetM = cp.km * 1000;
     const micro = microsegments[nearestMicroIndex(microsegments, targetM)];
-    const clock = secondsToClock(nearestEtaS(plan, targetM), cfg.start_time);
+    const etaS = nearestEtaS(plan, targetM);
+    const timeLabel = opts.relativeTime
+      ? `+${secondsToElapsed(etaS)}`
+      : secondsToClock(etaS, cfg.start_time);
     writeFitMesg(encoder, {
       mesgNum: Profile.MesgNum.COURSE_POINT,
       timestamp: tsAtDist(micro.cum_distance_m),
       positionLat: toSemicircles(micro.lat),
       positionLong: toSemicircles(micro.lon),
       distance: micro.cum_distance_m,
-      name: `${cp.name} ${clock}`,
+      name: `${cp.name} ${timeLabel}`,
       type: 'generic',
     });
   }

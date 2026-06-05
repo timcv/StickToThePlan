@@ -1,9 +1,7 @@
 <resources xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
     <string id="AppName">Next Control Pace</string>
     <string id="SettingLayout">Layout</string>
-    <string id="LayoutStandard">Standard</string>
     <string id="LayoutCompact">Kompakt</string>
-    <string id="LayoutSpeedDist">Fart och distans</string>
     <string id="LayoutEtaOnly">Endast ETA</string>
     <string id="SettingUnits">Enhet</string>
     <string id="UnitKmh">km/h</string>

@@ -82,3 +82,6 @@ Recorded here so the cuts are not lost:
 - **Drop the web `@stp/core` vite alias** (`apps/web/vite.config.ts`) once confirmed
   redundant on `main`. It was added so a shared-`node_modules` worktree resolved the local
   core source; it points at the same file the workspace symlink does.
+- **CLI relative-time course export:** `buildCourseFit` now takes `{ relativeTime }` (the
+  web exposes it as a checkbox), but the CLI (`packages/cli/src/fileIo.ts`) always writes
+  absolute wall-clock course points. Add a CLI flag/config to emit the relative variant.

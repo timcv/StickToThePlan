@@ -19,6 +19,7 @@ import {
   encodeWorkout,
   type PlanJsonMeta,
 } from '@stp/core';
+import { useState } from 'react';
 import type { PipelineResult } from '../worker/solve.worker';
 import { downloadBlob } from '../lib/download';
 
@@ -32,6 +33,10 @@ interface Props {
 
 export function Downloads({ result, sources, reduced }: Props) {
   const { cfg, micro, scenarios, displaySegments, styrkortSegments, anchor, controls } = result;
+
+  // Relative-time course points compare against the rider's own elapsed time
+  // instead of a fixed wall clock, so a test ride can start whenever.
+  const [relativeTime, setRelativeTime] = useState(false);
 
   const onWorkout = () => {
     const bytes = encodeWorkout(displaySegments, cfg);
@@ -54,7 +59,7 @@ export function Downloads({ result, sources, reduced }: Props) {
   };
 
   const onCourseFit = () => {
-    const bytes = buildCourseFit(micro, scenarios.expected, cfg, controls);
+    const bytes = buildCourseFit(micro, scenarios.expected, cfg, controls, { relativeTime });
     downloadBlob('course.fit', bytes, 'application/octet-stream');
   };
 
@@ -91,6 +96,17 @@ export function Downloads({ result, sources, reduced }: Props) {
             </span>
           </button>
         </div>
+        <label className="download-option">
+          <input
+            type="checkbox"
+            checked={relativeTime}
+            onChange={(e) => setRelativeTime(e.target.checked)}
+          />
+          <span>
+            Relativ tid (starta loppet när du vill) – avvikelsen mäts mot din egen förflutna tid
+            istället för ett fast klockslag.
+          </span>
+        </label>
         <ol className="install-steps">
           <li>
             Ladda ner <code>course.fit</code> och lägg in den som en bana på din Fenix 7X.

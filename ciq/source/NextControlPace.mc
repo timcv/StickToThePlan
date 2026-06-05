@@ -18,7 +18,7 @@ import Toybox.WatchUi;
 class NextControlPaceView extends WatchUi.DataField {
 
     // Settings (re-read each compute()).
-    private var mLayoutMode as Number = 0;   // 0 standard, 1 compact, 2 speed+dist, 3 eta-only
+    private var mLayoutMode as Number = 0;   // 0 compact, 1 eta-only
     private var mUnits as Number = 0;         // 0 km/h, 1 mph
     private var mShowDelta as Boolean = true;
 
@@ -33,6 +33,7 @@ class NextControlPaceView extends WatchUi.DataField {
     private var mPassedName as String? = null;
     private var mSmoothedSpeed as Float = 0.0; // m/s
     private var mNowTimer as Number = 0;       // ms, last seen timerTime
+    private var mNowElapsed as Number = 0;     // ms, total elapsed since start
 
     // Computed display values.
     private var mNextName as String? = null;
@@ -109,6 +110,16 @@ class NextControlPaceView extends WatchUi.DataField {
         return null;
     }
 
+    // A course-point name baked in relative mode carries a leading '+' on its
+    // time token ("Gränna +2:42"); absolute mode has none ("Gränna 07:04").
+    private function isRelativeName(name as String) as Boolean {
+        var chars = name.toCharArray();
+        for (var i = 0; i < chars.size(); i++) {
+            if (chars[i] == '+') { return true; }
+        }
+        return false;
+    }
+
     public function compute(info as Activity.Info) as Void {
         loadSettings();
         mStatus = null;
@@ -117,6 +128,7 @@ class NextControlPaceView extends WatchUi.DataField {
         var distToNext = (info has :distanceToNextPoint) ? info.distanceToNextPoint : null;
         var elapsedDist = (info has :elapsedDistance) ? info.elapsedDistance : null;
         var timer = (info has :timerTime) ? info.timerTime : null;
+        var elapsedT = (info has :elapsedTime) ? info.elapsedTime : null;
         var curSpeed = (info has :currentSpeed) ? info.currentSpeed : null;
 
         if (name == null && distToNext == null) {
@@ -131,6 +143,10 @@ class NextControlPaceView extends WatchUi.DataField {
         }
 
         mNowTimer = timer as Number;
+        // Total time since start (includes pauses), so the relative-mode delta
+        // mirrors wall-clock and is unaffected by auto-pause. Falls back to the
+        // timer when elapsedTime is unavailable.
+        mNowElapsed = (elapsedT != null) ? (elapsedT as Number) : mNowTimer;
         var ed = elapsedDist as Float;
 
         if (mSegIndex == 0) {
@@ -176,9 +192,19 @@ class NextControlPaceView extends WatchUi.DataField {
             if (mShowDelta && name != null) {
                 var planned = parsePlannedSec(name);
                 if (planned != null) {
-                    var d = etaClock - (planned as Number);
-                    if (d > 43200) { d -= 86400; }
-                    if (d < -43200) { d += 86400; }
+                    var d;
+                    if (isRelativeName(name)) {
+                        // Plan time is elapsed-since-start: compare projected
+                        // elapsed at the control to our own elapsed time, so the
+                        // delta is correct whatever clock time we started at.
+                        var elapsedSec = mNowElapsed / 1000;
+                        d = (elapsedSec + etaSec.toNumber()) - (planned as Number);
+                    } else {
+                        // Plan time is wall-clock: compare projected arrival clock.
+                        d = etaClock - (planned as Number);
+                        if (d > 43200) { d -= 86400; }
+                        if (d < -43200) { d += 86400; }
+                    }
                     mDeltaMin = (d / 60.0).toNumber();
                 } else {
                     mDeltaMin = null;
@@ -228,13 +254,15 @@ class NextControlPaceView extends WatchUi.DataField {
         return sign + a.format("%02d");
     }
 
-    private function deltaColor(min as Number?, fg as Number) as Number {
+    private function deltaColor(min as Number?, fg as Number, bg as Number) as Number {
         if (min == null) { return fg; }
         var a = (min as Number);
         if (a < 0) { a = -a; }
-        if (a <= 2) { return Graphics.COLOR_GREEN; }
-        if (a <= 10) { return Graphics.COLOR_YELLOW; }
-        return Graphics.COLOR_RED;
+        // Darker variants on light backgrounds so the accent stays legible.
+        var dark = (bg == Graphics.COLOR_BLACK);
+        if (a <= 2) { return dark ? Graphics.COLOR_GREEN : Graphics.COLOR_DK_GREEN; }
+        if (a <= 10) { return dark ? Graphics.COLOR_YELLOW : Graphics.COLOR_ORANGE; }
+        return dark ? Graphics.COLOR_RED : Graphics.COLOR_DK_RED;
     }
 
     private function nameUpper() as String {
@@ -261,25 +289,30 @@ class NextControlPaceView extends WatchUi.DataField {
         dc.clear();
 
         var nm = Graphics.FONT_NUMBER_MEDIUM;
+        var big = Graphics.FONT_NUMBER_HOT;
         var med = Graphics.FONT_MEDIUM;
         var tiny = Graphics.FONT_TINY;
+        // Theme-aware accent colours so the field reads on both light and dark
+        // data screens: greyed labels, a blue speed accent, white/black hero.
+        var label = (bg == Graphics.COLOR_BLACK) ? Graphics.COLOR_LT_GRAY : Graphics.COLOR_DK_GRAY;
+        var blue = Graphics.COLOR_BLUE;
 
         // Passed confirmation takes over briefly after a segment switch.
         if (mNowTimer < mShowPassedUntil) {
             var passedFrom = (mPassedName != null) ? (mPassedName as String).toUpper() : "";
             var nextTo = (mNextName != null) ? (mNextName as String).toUpper() : "";
             drawStack(dc, [
-                ["OK", med, Graphics.COLOR_GREEN],
-                [passedFrom, tiny, fg],
-                ["Passerad!", med, fg],
-                ["Nästa: " + nextTo, tiny, fg]]);
+                ["✓", nm, Graphics.COLOR_GREEN],
+                [passedFrom + " Passerad!", med, fg],
+                ["Nästa: " + nextTo, tiny, label],
+                [fmtKm(mDistToNext), med, fg]]);
             return;
         }
 
         // Status / fallback states.
         if (mStatus != null) {
             if ((mStatus as String).equals("Bygger snitt...")) {
-                drawStack(dc, [[nameUpper(), tiny, fg], [fmtKm(mDistToNext), nm, fg], [mStatus as String, tiny, fg]]);
+                drawStack(dc, [[nameUpper(), tiny, label], [fmtKm(mDistToNext), nm, fg], [mStatus as String, tiny, label]]);
             } else if ((mStatus as String).equals("Ingen bana")) {
                 drawStack(dc, [[mStatus as String, med, fg], ["Starta navigation", tiny, fg]]);
             } else {
@@ -288,38 +321,22 @@ class NextControlPaceView extends WatchUi.DataField {
             return;
         }
 
-        var dCol = deltaColor(mDeltaMin, fg);
-        var spd = fmtSpeed(mAvgSpeed) + " " + speedUnit();
+        var dCol = deltaColor(mDeltaMin, fg, bg);
 
         if (mLayoutMode == 1) {
-            // Compact.
+            // ETA: big finish clock with coloured plan delta.
             drawStack(dc, [
-                [nameUpper(), tiny, fg],
-                [fmtKm(mDistToNext), nm, fg],
-                [fmtSpeed(mAvgSpeed), med, fg],
-                [fmtDelta(mDeltaMin), med, dCol]]);
-        } else if (mLayoutMode == 2) {
-            // Speed + distance.
-            drawStack(dc, [
-                ["SNITTFART", tiny, fg],
-                [spd, nm, fg],
-                [fmtKm(mDistToNext), med, fg],
-                ["till " + nameUpper(), tiny, fg]]);
-        } else if (mLayoutMode == 3) {
-            // ETA only.
-            drawStack(dc, [
-                ["ETA", tiny, fg],
-                [fmtClock(mEtaClockSec), nm, fg],
+                ["ETA", tiny, label],
+                [fmtClock(mEtaClockSec), big, fg],
                 [fmtDelta(mDeltaMin) + " min", med, dCol],
-                ["till " + nameUpper(), tiny, fg]]);
+                ["TILL " + nameUpper(), tiny, label]]);
         } else {
-            // Standard.
+            // Compact (default): big distance + big blue speed, plan footer.
             drawStack(dc, [
-                [nameUpper(), tiny, fg],
-                [fmtKm(mDistToNext), nm, fg],
-                [spd, med, fg],
-                ["ETA " + fmtClock(mEtaClockSec), tiny, fg],
-                [fmtDelta(mDeltaMin) + " min", tiny, dCol]]);
+                [nameUpper(), tiny, label],
+                [fmtKm(mDistToNext), big, fg],
+                [fmtSpeed(mAvgSpeed), nm, blue],
+                ["ETA " + fmtClock(mEtaClockSec) + " | " + fmtDelta(mDeltaMin), tiny, fg]]);
         }
     }
 }
