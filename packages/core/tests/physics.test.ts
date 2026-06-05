@@ -22,8 +22,8 @@ describe('pedalPower', () => {
   it('flat with 20 km/h (5.56 m/s) headwind at 8.0 m/s is within 10% of 325 W', () => {
     const headwind = 20 / 3.6; // 5.556 m/s
     const pw = pedalPower(8.0, 0, headwind, p);
-    expect(pw).toBeGreaterThan(325 * 0.90);
-    expect(pw).toBeLessThan(325 * 1.10);
+    expect(pw).toBeGreaterThan(325 * 0.9);
+    expect(pw).toBeLessThan(325 * 1.1);
   });
 
   it('returns positive power going uphill', () => {

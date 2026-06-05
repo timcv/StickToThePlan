@@ -5,7 +5,5 @@
   "ftp": 250,
   "n_riders": 6,
   "target_total_hm": "2:30",
-  "stops": [
-    { "control": "Midpoint control", "km": 38, "minutes": 5 }
-  ]
+  "stops": [{ "control": "Midpoint control", "km": 38, "minutes": 5 }]
 }

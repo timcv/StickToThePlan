@@ -168,10 +168,7 @@ export async function fetchOpenMeteoForecastBatched(
  * source never blocks the rest of the pipeline. The caller should log which
  * sources answered via the source field on each WindSample.
  */
-export async function fetchOpenMeteo(
-  points: GeoPoint[],
-  date: string,
-): Promise<WindSample[]> {
+export async function fetchOpenMeteo(points: GeoPoint[], date: string): Promise<WindSample[]> {
   const all: WindSample[] = [];
 
   for (const point of points) {

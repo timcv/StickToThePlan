@@ -4,8 +4,16 @@ import type { MicroSegment } from '../src/types.js';
 
 function seg(lat: number, lon: number): MicroSegment {
   return {
-    index: 0, distance_m: 100, cum_distance_m: 100, grade: 0, bearing_deg: 0,
-    lat, lon, ele_start_m: 0, ele_end_m: 0, neutral: false,
+    index: 0,
+    distance_m: 100,
+    cum_distance_m: 100,
+    grade: 0,
+    bearing_deg: 0,
+    lat,
+    lon,
+    ele_start_m: 0,
+    ele_end_m: 0,
+    neutral: false,
   };
 }
 

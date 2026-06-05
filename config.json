@@ -7,9 +7,9 @@
   "n_riders": 12,
   "target_total_hm": "11:45",
   "stops": [
-    { "control": "Gränna",    "km": 77,  "minutes": 10 },
+    { "control": "Gränna", "km": 77, "minutes": 10 },
     { "control": "Fagerhult", "km": 134, "minutes": 10 },
-    { "control": "Boviken",   "km": 226, "minutes": 15 },
+    { "control": "Boviken", "km": 226, "minutes": 15 },
     { "control": "Askersund", "km": 256, "minutes": 15 }
   ]
 }

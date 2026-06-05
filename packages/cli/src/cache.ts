@@ -59,11 +59,7 @@ export function writeCache(raceDate: string, field: EnsembleField): void {
  *
  * Returns null when the file is absent or stale (and offline === false).
  */
-export function readCache(
-  raceDate: string,
-  ttlH: number,
-  offline: boolean,
-): EnsembleField | null {
+export function readCache(raceDate: string, ttlH: number, offline: boolean): EnsembleField | null {
   const p = cachePath(raceDate);
 
   let stat: fs.Stats;

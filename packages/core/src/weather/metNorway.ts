@@ -24,7 +24,9 @@ export const DEFAULT_MET_NORWAY_CONTACT = 'https://github.com/timcv/StickToThePl
  * Return required headers for MET Norway API requests.
  * MET Norway requires a descriptive User-Agent identifying the application and a contact.
  */
-export function metNorwayHeaders(contact: string = DEFAULT_MET_NORWAY_CONTACT): Record<string, string> {
+export function metNorwayHeaders(
+  contact: string = DEFAULT_MET_NORWAY_CONTACT,
+): Record<string, string> {
   return {
     'User-Agent': `StickToThePlan/1.0 (${contact})`,
   };

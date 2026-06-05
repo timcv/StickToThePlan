@@ -10,16 +10,23 @@ import type { EnsembleField } from '../src/weather/ensemble.js';
 function cell(hour: number, dir: number, speed: number) {
   const HH = String(hour).padStart(2, '0');
   return {
-    time_iso: `2026-06-13T${HH}:00:00Z`, lat: 58.5, lon: 14.6,
-    windspeed_mean_ms: speed, winddir_from_deg: dir,
-    windspeed_p10_ms: speed - 1, windspeed_p90_ms: speed + 1,
-    temp_c: 10, pressure_pa: 101_325, n_sources: 3,
+    time_iso: `2026-06-13T${HH}:00:00Z`,
+    lat: 58.5,
+    lon: 14.6,
+    windspeed_mean_ms: speed,
+    winddir_from_deg: dir,
+    windspeed_p10_ms: speed - 1,
+    windspeed_p90_ms: speed + 1,
+    temp_c: 10,
+    pressure_pa: 101_325,
+    n_sources: 3,
   };
 }
 
 const field: EnsembleField = {
   cells: [cell(6, 90, 4), cell(7, 180, 6)],
-  sources: ['a', 'b', 'c'], reduced: false,
+  sources: ['a', 'b', 'c'],
+  reduced: false,
 };
 
 describe('summarizeHourly', () => {

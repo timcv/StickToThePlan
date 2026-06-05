@@ -6,7 +6,9 @@ import { buildEnsemble, makeWeatherFn } from '../src/weather/ensemble.js';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeSample(overrides: Partial<WindSample> & { windspeed_ms: number; winddir_from_deg: number }): WindSample {
+function makeSample(
+  overrides: Partial<WindSample> & { windspeed_ms: number; winddir_from_deg: number },
+): WindSample {
   return {
     time_iso: '2026-06-13T06:00:00Z',
     lat: 58.0,
@@ -26,7 +28,7 @@ describe('buildEnsemble vector mean', () => {
   it('averages 350 deg and 10 deg to ~0 deg (not 180), speed between 4.8 and 5.0', () => {
     const samples: WindSample[] = [
       makeSample({ windspeed_ms: 5, winddir_from_deg: 350, source: 'src-A' }),
-      makeSample({ windspeed_ms: 5, winddir_from_deg: 10,  source: 'src-B' }),
+      makeSample({ windspeed_ms: 5, winddir_from_deg: 10, source: 'src-B' }),
     ];
 
     const field = buildEnsemble(samples);
@@ -115,11 +117,11 @@ describe('makeWeatherFn scenario selection', () => {
     const lon = 15.0;
     const startClockS = 0; // doesn't affect single-cell field
 
-    const fnExpected   = makeWeatherFn(field, 'expected',   startClockS);
+    const fnExpected = makeWeatherFn(field, 'expected', startClockS);
     const fnOptimistic = makeWeatherFn(field, 'optimistic', startClockS);
     const fnPessimistic = makeWeatherFn(field, 'pessimistic', startClockS);
 
-    const condExpected   = fnExpected(lat, lon, 0);
+    const condExpected = fnExpected(lat, lon, 0);
     const condOptimistic = fnOptimistic(lat, lon, 0);
     const condPessimistic = fnPessimistic(lat, lon, 0);
 

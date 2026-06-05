@@ -18,7 +18,7 @@ describe('haversine', () => {
 
   it('returns ~1000 m for two points ~1 km apart', () => {
     // Moving ~0.009 degrees latitude north from a point is roughly 1 km
-    const a = { lat: 58.390, lon: 15.047 };
+    const a = { lat: 58.39, lon: 15.047 };
     const b = { lat: 58.399, lon: 15.047 };
     const dist = haversine(a, b);
     // 0.009 deg * 111 km/deg ~= 999 m

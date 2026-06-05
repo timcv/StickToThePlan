@@ -12,6 +12,11 @@ describe('raceHours', () => {
 
 describe('centroidOf', () => {
   it('averages lat/lon', () => {
-    expect(centroidOf([{ lat: 58, lon: 14 }, { lat: 60, lon: 16 }])).toEqual({ lat: 59, lon: 15 });
+    expect(
+      centroidOf([
+        { lat: 58, lon: 14 },
+        { lat: 60, lon: 16 },
+      ]),
+    ).toEqual({ lat: 59, lon: 15 });
   });
 });

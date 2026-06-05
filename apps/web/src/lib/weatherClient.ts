@@ -6,13 +6,18 @@ function roundPt(p: GeoPoint): GeoPoint {
 }
 
 export function buildPtsParam(points: GeoPoint[]): string {
-  return points.map(roundPt).map((p) => `${p.lat},${p.lon}`).join('|');
+  return points
+    .map(roundPt)
+    .map((p) => `${p.lat},${p.lon}`)
+    .join('|');
 }
 
 /** Fetch the server-built ensemble for a date + route points. Throws on HTTP error. */
 export async function fetchEnsemble(date: string, points: GeoPoint[]): Promise<EnsembleField> {
   const pts = buildPtsParam(points);
-  const res = await fetch(`/api/weather?date=${encodeURIComponent(date)}&pts=${encodeURIComponent(pts)}`);
+  const res = await fetch(
+    `/api/weather?date=${encodeURIComponent(date)}&pts=${encodeURIComponent(pts)}`,
+  );
   if (!res.ok) throw new Error(`Weather fetch failed (${res.status})`);
   return (await res.json()) as EnsembleField;
 }

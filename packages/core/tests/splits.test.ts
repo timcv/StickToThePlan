@@ -33,25 +33,25 @@ function buildRoute(n = 300, segLen = 200): MicroSegment[] {
 }
 
 const CONTROLS: ControlPoint[] = [
-  { name: 'Start',  km: 0  },
-  { name: 'Alpha',  km: 20 },
-  { name: 'Beta',   km: 40 },
+  { name: 'Start', km: 0 },
+  { name: 'Alpha', km: 20 },
+  { name: 'Beta', km: 40 },
   { name: 'Finish', km: 60 },
 ];
 
 // One stop at the 20 km control (Alpha), 5 minutes.
 const cfg: Config = applyDefaults({
-  race_date:        '2026-06-13',
-  start_time:       '04:22',
-  gpx_path:         'x',
-  ftp:              272,
-  n_riders:         12,
-  target_total_hm:  '2:15',
+  race_date: '2026-06-13',
+  start_time: '04:22',
+  gpx_path: 'x',
+  ftp: 272,
+  n_riders: 12,
+  target_total_hm: '2:15',
   stops: [{ control: 'Alpha', km: 20, minutes: 5 }],
 });
 
 const micro = buildRoute();
-const plan  = solveForTargetTime(micro, calmWeather, cfg);
+const plan = solveForTargetTime(micro, calmWeather, cfg);
 
 describe('buildSplitTable – synthetic 60 km route', () => {
   it('returns controls.length - 1 rows', () => {
@@ -92,7 +92,7 @@ describe('buildSplitTable – synthetic 60 km route', () => {
 
   it('the leg with the stop (Alpha) has stop_minutes === 5', () => {
     const rows = buildSplitTable(plan, cfg, CONTROLS);
-    const alphaRow = rows.find(r => r.toControl === 'Alpha');
+    const alphaRow = rows.find((r) => r.toControl === 'Alpha');
     expect(alphaRow).toBeDefined();
     expect(alphaRow!.stop_minutes).toBe(5);
   });
