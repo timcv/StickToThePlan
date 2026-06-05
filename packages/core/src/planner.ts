@@ -67,14 +67,20 @@ function speedAtPull(
   cfg: Config,
 ): number {
   const cda = yawCdaFactor(crosswind, vRef + headwind, cfg.k_yaw) * cfg.cda_pull;
-  return solveSpeedForPower(capW, grade, headwind, {
-    m: cfg.m,
-    g: cfg.g,
-    crr: cfg.crr,
-    eta: cfg.eta,
-    rho,
-    cda,
-  });
+  return solveSpeedForPower(
+    capW,
+    grade,
+    headwind,
+    {
+      m: cfg.m,
+      g: cfg.g,
+      crr: cfg.crr,
+      eta: cfg.eta,
+      rho,
+      cda,
+    },
+    crosswind,
+  );
 }
 
 /** Roughness length for a segment: per-segment exposure if present, else an

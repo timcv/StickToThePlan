@@ -61,7 +61,13 @@ export function pullPower(
   rho: number,
   cfg: Config,
 ): number {
-  return pedalPower(v, grade, headwind, buildPullParams(v, headwind, crosswind, rho, cfg));
+  return pedalPower(
+    v,
+    grade,
+    headwind,
+    buildPullParams(v, headwind, crosswind, rho, cfg),
+    crosswind,
+  );
 }
 
 /**
@@ -76,7 +82,13 @@ export function draftPower(
   rho: number,
   cfg: Config,
 ): number {
-  return pedalPower(v, grade, headwind, buildDraftParams(v, headwind, crosswind, rho, cfg));
+  return pedalPower(
+    v,
+    grade,
+    headwind,
+    buildDraftParams(v, headwind, crosswind, rho, cfg),
+    crosswind,
+  );
 }
 
 /**
@@ -104,7 +116,7 @@ function circularRollingMean30(arr: number[]): number[] {
     let sum = 0;
     for (let j = 0; j < window; j++) {
       // Window covers samples ending at i: indices i, i-1, ..., i-(window-1)
-      const idx = ((i - j) % n + n) % n;
+      const idx = (((i - j) % n) + n) % n;
       sum += arr[idx];
     }
     result[i] = sum / window;
@@ -186,7 +198,7 @@ function occupancyArray(nRiders: number, pullSeconds: number): number[] {
   for (let i = 0; i < n; i++) {
     let inPull = 0;
     for (let j = 0; j < window; j++) {
-      const idx = ((i - j) % n + n) % n;
+      const idx = (((i - j) % n) + n) % n;
       if (idx < pullSeconds) inPull++;
     }
     a[i] = inPull / window;
