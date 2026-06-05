@@ -74,7 +74,4 @@ export const TERM_HELP: Record<string, FieldHelp> = {
   spann: {
     tip: 'Tiden är ingen exakt prognos. Spannet visar rimlig variation från vind och exponering.',
   },
-  cap: {
-    tip: 'Tak för planeringsfarten. Extra medvind eller utförslut räknas som marginal, inte som banktid, så splittarna blir realistiska.',
-  },
 };

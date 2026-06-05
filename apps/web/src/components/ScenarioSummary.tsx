@@ -8,6 +8,8 @@
  */
 import type { ThreeScenarios } from '@stp/core';
 import { secondsToHMM } from '../lib/format';
+import { InfoTip } from './InfoTip';
+import { TERM_HELP } from '../lib/strings';
 
 interface Props {
   scenarios: ThreeScenarios;
@@ -30,7 +32,9 @@ export function ScenarioSummary({ scenarios }: Props) {
             <th>Total tid</th>
             <th>Effektmål (NP, W)</th>
             <th>Förar-NP (W)</th>
-            <th>IF</th>
+            <th>
+              IF <InfoTip label="IF" text={TERM_HELP.if.tip} />
+            </th>
           </tr>
         </thead>
         <tbody>

@@ -21,6 +21,7 @@ export type {
   WeatherFn,
   DisplaySegment,
   ExposureClass,
+  ExposureTerrain,
 } from './types.js';
 
 // Physics, chaingang, planner, segmentation.

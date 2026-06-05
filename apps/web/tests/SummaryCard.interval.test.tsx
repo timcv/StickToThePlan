@@ -9,12 +9,12 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import { SummaryCard } from '../src/components/SummaryCard';
+import { secondsToHMM } from '../src/lib/format';
+import type { ThreeScenarios, SplitRow, Config, PlanResult } from '@stp/core';
 
 // globals:false disables @testing-library's automatic afterEach cleanup, so the
 // previous test's DOM would otherwise leak into the next render. Clean up by hand.
 afterEach(cleanup);
-import { secondsToHMM } from '../src/lib/format';
-import type { ThreeScenarios, SplitRow, Config, PlanResult } from '@stp/core';
 
 // ---------------------------------------------------------------------------
 // Fixtures

@@ -27,6 +27,7 @@ import {
   type EnsembleField,
   type MicroSegment,
   type ExposureRuns,
+  type ExposureTerrain,
 } from '@stp/core';
 // Baked OSM exposure for the built-in Vätternrundan route. Static JSON import
 // bundled at build time (resolveJsonModule + Vite JSON support), NOT a fetch:
@@ -49,7 +50,7 @@ export interface PipelineForm {
   start_time: string;
   styrkort_max_rows?: number;
   /** Coarse openness used when no per-segment exposure data is available. */
-  exposure_terrain?: 'open' | 'mixed' | 'sheltered';
+  exposure_terrain?: ExposureTerrain;
   /**
    * Whether to scale the supplied wind from the forecast 10 m height down to
    * rider level. false = the wind is already "felt" wind at the rider.

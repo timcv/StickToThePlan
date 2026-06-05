@@ -12,10 +12,9 @@ import type { PipelineForm } from '../worker/solve.worker';
 import type { SolverStatus } from '../useSolver';
 import { defaultRouteGpx, DEFAULT_ROUTE_NAME } from '../lib/defaultRoute';
 import { VATTERN_CONTROLS } from '@stp/core';
+import type { ExposureTerrain } from '@stp/core';
 import { InfoTip } from './InfoTip';
 import { FIELD_HELP } from '../lib/strings';
-
-type ExposureTerrain = 'open' | 'mixed' | 'sheltered';
 
 /** Label text + ⓘ tooltip for a field, using the shared help copy. */
 function FieldLabel({ text, helpKey }: { text: string; helpKey: keyof typeof FIELD_HELP }) {

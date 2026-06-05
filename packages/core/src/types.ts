@@ -4,6 +4,7 @@ export interface Stop {
   km: number;
   minutes: number;
 }
+export type ExposureTerrain = 'open' | 'mixed' | 'sheltered';
 export type ExposureClass =
   | 'open'
   | 'semi_open'
@@ -56,7 +57,7 @@ export interface Config {
   rider_wind_height_m: number; // 1.2: height the cyclist feels wind at
   forecast_wind_height_m: number; // 10: height the forecast wind is given at
   wind_roughness_z0?: number; // optional raw roughness override; else derived from exposure_terrain / per-segment exposure
-  exposure_terrain: 'open' | 'mixed' | 'sheltered'; // coarse global openness when no per-segment exposure data
+  exposure_terrain: ExposureTerrain; // coarse global openness when no per-segment exposure data
   apply_wind_height_correction: boolean; // false = treat wind as already at rider level (manual "felt" wind)
 }
 

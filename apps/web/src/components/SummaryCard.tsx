@@ -71,6 +71,18 @@ export function SummaryCard({ scenarios, splits, cfg, showInterval = true }: Pro
             : 'Måltiden går inte att hålla uthålligt. Planen visar den snabbaste hållbara tiden.'}
         </p>
       )}
+      {scenarios.data_quality &&
+        (() => {
+          const pct = scenarios.data_quality.exposureCoveragePct;
+          return pct >= 60 ? (
+            <p className="muted">Exponeringsdata: {Math.round(pct)}% av rutten</p>
+          ) : (
+            <p className="warn">
+              Exponeringsdata saknas för {Math.round(100 - pct)}% av rutten, vindintervallet är
+              extra osäkert.
+            </p>
+          );
+        })()}
     </section>
   );
 }
