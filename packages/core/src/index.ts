@@ -76,6 +76,12 @@ export {
   buildManualField,
   type HourlyWind,
 } from './weather/hourly.js';
+export {
+  heightFactor,
+  adjustWindForHeight,
+  terrainToZ0,
+  exposureClassToZ0,
+} from './weather/effective.js';
 
 // Connect IQ data-field source generation (pure).
 export { buildLookupTable, generatePlanDeltaSource, type LookupEntry } from './ciq/generate.js';
