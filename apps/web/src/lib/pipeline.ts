@@ -15,6 +15,7 @@ import {
   solveThreeScenarios,
   segment,
   buildSplitTable,
+  applyExposure,
   type Config,
   type ControlPoint,
   type RawConfig,
@@ -25,7 +26,13 @@ import {
   type PlanResult,
   type EnsembleField,
   type MicroSegment,
+  type ExposureRuns,
 } from '@stp/core';
+// Baked OSM exposure for the built-in Vätternrundan route. Static JSON import
+// bundled at build time (resolveJsonModule + Vite JSON support), NOT a fetch:
+// the worker stays network-free. Only applied when the user runs the default
+// route (is_default_route); uploaded routes fall back to coarse terrain.
+import bakedExposure from '../../../../data/vatternrundan-exposure.json';
 
 // ---------------------------------------------------------------------------
 // Message contract (re-exported so solve.worker.ts can import from one place)
@@ -41,6 +48,19 @@ export interface PipelineForm {
   race_date: string;
   start_time: string;
   styrkort_max_rows?: number;
+  /** Coarse openness used when no per-segment exposure data is available. */
+  exposure_terrain?: 'open' | 'mixed' | 'sheltered';
+  /**
+   * Whether to scale the supplied wind from the forecast 10 m height down to
+   * rider level. false = the wind is already "felt" wind at the rider.
+   */
+  apply_wind_height_correction?: boolean;
+  /**
+   * True when the bundled Vätternrundan route is being solved, so the baked
+   * exposure file applies. Uploaded routes leave this false and fall back to
+   * coarse terrain.
+   */
+  is_default_route?: boolean;
 }
 
 export interface PipelineInput {
@@ -66,6 +86,11 @@ export interface PipelineResult {
   cfg: Config;
   micro: MicroSegment[];
   controls: ControlPoint[];
+  // Convenience copies of the scenario-level honesty fields so the UI does not
+  // have to reach into scenarios. time_uncertainty_s is always present (the calm
+  // path collapses it to a point); data_quality is present whenever known.
+  time_uncertainty_s: ThreeScenarios['time_uncertainty_s'];
+  data_quality?: ThreeScenarios['data_quality'];
 }
 
 /**
@@ -133,9 +158,23 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
     styrkort_max_rows: form.styrkort_max_rows,
   };
   const cfg = applyDefaults(raw);
+  // Wind-model controls from the form (fall back to the core defaults when the
+  // caller omits them so older callers / tests keep working).
+  if (form.exposure_terrain !== undefined) cfg.exposure_terrain = form.exposure_terrain;
+  if (form.apply_wind_height_correction !== undefined) {
+    cfg.apply_wind_height_correction = form.apply_wind_height_correction;
+  }
 
   // 2. GPX ingest -> microsegments.
   const micro = ingestGpxString(gpxText, cfg);
+
+  // 2b. Baked per-segment exposure for the built-in route only. Stamps
+  // exposure_class + z0_used on each microsegment so the effective-wind engine
+  // uses real land cover instead of the coarse terrain fallback. Uploaded routes
+  // skip this (no baked file matches) and rely on cfg.exposure_terrain.
+  if (form.is_default_route) {
+    applyExposure(micro, bakedExposure as ExposureRuns);
+  }
 
   // 3. Anchor. determineAnchorFromPower(null, cfg) already yields the
   // 0.60 x ftp fallback when no FIT is supplied. We surface the chosen anchor as
@@ -177,5 +216,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
     cfg,
     micro,
     controls,
+    time_uncertainty_s: scenarios.time_uncertainty_s,
+    data_quality: scenarios.data_quality,
   };
 }

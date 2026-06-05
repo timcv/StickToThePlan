@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
@@ -8,6 +9,16 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   plugins: [react()],
   worker: { format: 'es' },
+  // Pin @stp/core to the workspace source so the app always bundles THIS
+  // checkout's core (matching the root vitest.config.ts alias and the tsconfig
+  // paths mapping). Without this, Node resolution can follow a hoisted
+  // node_modules symlink to a sibling checkout's core (e.g. in a git worktree
+  // that shares the main repo's node_modules), bundling stale exports.
+  resolve: {
+    alias: {
+      '@stp/core': fileURLToPath(new URL('../../packages/core/src/index.ts', import.meta.url)),
+    },
+  },
   // The bundled default route is committed at the repo root
   // (examples/vattern-315.gpx), one level above this workspace. Allow the dev
   // server to read it so the `?raw` import in src/lib/defaultRoute.ts resolves.
