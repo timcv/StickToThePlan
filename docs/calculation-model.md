@@ -58,25 +58,28 @@ Microsegment length varies with GPX point density (no resampling). For Vätternr
 
 ## 3. Physics model (steady state)
 
-`pedalPower(v, grade, headwind, p)` in `physics.ts:20`. `p` is `{m, g, crr, eta, cda, rho}`.
+`pedalPower(v, grade, headwind, p, crosswind)` in `physics.ts:20`. `p` is `{m, g, crr, eta, cda, rho}`.
 
 ```
 theta    = atan(grade)
-F_grav   = m · g · sin(theta)                         // gravity along the road
-F_roll   = m · g · cos(theta) · crr                   // rolling resistance
-v_air    = v + headwind                               // apparent air speed along the travel axis
-F_aero   = 0.5 · rho · CdA · v_air · |v_air|          // signed: tailwind > ground speed ⇒ pushed along
-P_wheel  = (F_grav + F_roll + F_aero) · v             // power at the wheel (ground speed!)
-P_pedal  = P_wheel / eta                              // drivetrain efficiency
+F_grav   = m · g · sin(theta)                              // gravity along the road
+F_roll   = m · g · cos(theta) · crr                       // rolling resistance
+u        = v + headwind                                   // axial apparent wind, + into wind
+v_app    = hypot(u, crosswind)                            // true apparent-wind magnitude
+F_aero   = 0.5 · rho · CdA · v_app · u                    // drag magnitude v_app, projected on axis, sign from u
+P_wheel  = (F_grav + F_roll + F_aero) · v                 // power at the wheel (ground speed!)
+P_pedal  = P_wheel / eta                                  // drivetrain efficiency
 ```
+
+**Vector apparent wind.** The formula uses the true apparent-wind magnitude `v_app = hypot(u, crosswind)` in `F_aero`. Crosswind therefore raises drag in two compounding ways: it inflates `v_app` directly, and it raises the yaw angle which scales up CdA (section 3.2). With `crosswind = 0`, `v_app = |u|` and the formula is byte-identical to the legacy axial form.
 
 Things to check:
 
-- `F_aero` uses `v_air·|v_air|` (not `v_air²`) so the sign is preserved: in a strong tailwind where `v_air < 0` the aero force is forward-driving. Correct.
+- `F_aero` uses `v_app · u`: magnitude is the true apparent-wind speed, but the projection onto the travel axis uses `u`. Tailwind stronger than ground speed (`u < 0`) gives forward-assisting aero force. Correct.
 - `P_wheel` is multiplied by **ground speed `v`**, not air speed. Correct (power = force × ground velocity).
 - No acceleration/inertia (steady state per segment). Reasonable for planning.
 
-**Inverse (speed given power)**: `solveSpeedForPower(target, grade, headwind, p)` (`physics.ts:40`), bisection `v ∈ [0.5, 25] m/s` (= 1.8–90 km/h), 100 iterations, tolerance 0.01 W. Assumes a single crossing in the interval (holds for a positive target; the power curve crosses the target once in the positive region).
+**Inverse (speed given power)**: `solveSpeedForPower(target, grade, headwind, p, crosswind)` (`physics.ts:40`), bisection `v ∈ [0.5, 25] m/s` (= 1.8–90 km/h), 100 iterations, tolerance 0.01 W. Assumes a single crossing in the interval (holds for a positive target; the power curve crosses the target once in the positive region).
 
 ### 3.1 Air density
 
@@ -96,11 +99,12 @@ The planner calls `airDensity(temp, pressure)` without humidity (dry). Manual wi
 `yawCdaFactor(crosswind, vAir, kYaw)` (`physics.ts:125`):
 
 ```
-yaw    = atan2(crosswind, vAir)         // apparent wind angle
-factor = 1 + kYaw · |yaw_deg| / 10      // ≥ 1
+yaw    = atan2(crosswind, vAir)              // apparent wind angle
+yaw    = clamp(yaw, -50°, +50°)              // wind-tunnel valid range; prevents u<0 blow-up
+factor = 1 + kYaw · |yaw_deg| / 10           // ≥ 1
 ```
 
-Multiplied onto CdA (both pull and draft). `k_yaw` default 0.04 ⇒ ~8 % CdA rise at 20° yaw. Models crosswind increasing the effective frontal area.
+Multiplied onto CdA (both pull and draft). `k_yaw` default 0.04 ⇒ ~8 % CdA rise at 20° yaw. Models crosswind increasing the effective frontal area. The ±50° clamp prevents a spurious near-180° yaw angle when a tailwind is stronger than ground speed (`u < 0`), keeping the factor within its wind-tunnel-valid range. See `docs/aero-model.md` for a fuller explanation.
 
 ---
 
@@ -117,6 +121,52 @@ crosswind = W · sin(delta)
 `phiFrom` = the direction the wind comes from, `beta` = direction of travel. Check: travelling north (`beta=0`) with wind from the north (`phiFrom=0`) ⇒ `delta=0` ⇒ `headwind=+W` (headwind). Travelling north with wind from the south (`phiFrom=180`) ⇒ `headwind=−W` (tailwind). Correct.
 
 **Important**: the decomposition happens **per microsegment** using that segment's own bearing (`planner.ts`, the call inside the inner solve). On a loop like Vätternrundan (south down the east shore, north up the west shore) a constant wind direction therefore yields the correct head/tail alternation with no extra logic.
+
+---
+
+## 4a. Effective wind (height correction and terrain exposure)
+
+**Not a CFD model.** z0 values are literature starting points, not calibrated to real rides. Exposure sharpens where on the route wind is high or low; it does not claim to compute the exact amount.
+
+### 4a.1 Height correction
+
+Forecast wind is given at 10 m (WMO standard). A cyclist sits at ~1.2 m. The neutral logarithmic wind profile gives the scaling factor:
+
+```
+k = ln(riderH / z0) / ln(forecastH / z0)         // where z0 is aerodynamic roughness length
+k = clamp(k, 0.15, 1)
+effW = max(0, rawW * k)
+```
+
+Implemented in `adjustWindForHeight` (`weather/effective.ts`). Applied per microsegment in `runInnerSolve` when `apply_wind_height_correction = true` (the default).
+
+For the default mixed terrain (z0 = 0.05), a 6 m/s forecast maps to ~3.6 m/s at rider level (k ≈ 0.600). On the full Vatternrundan route this reduces the required NP by ~19 W compared to using the raw 10 m wind directly (see `docs/validation.md`).
+
+**Escape hatch.** Set `rider_wind_height_m = 10` (same as `forecast_wind_height_m`) for k = 1 (no correction). Or set `apply_wind_height_correction: false` to treat the wind input as a manually felt wind already at rider level.
+
+### 4a.2 Terrain roughness z0
+
+Three-level priority in `resolveZ0(micro, cfg)` (`planner.ts`):
+
+1. `micro.z0_used` -- per-segment exposure from baked OSM data (most precise).
+2. `cfg.wind_roughness_z0` -- explicit override for the whole route.
+3. `terrainToZ0(cfg.exposure_terrain)` -- coarse selector: open 0.03, mixed 0.05 (default), sheltered 0.30.
+
+### 4a.3 Per-segment exposure classes
+
+Seven classes with literature z0 values (NOT calibrated):
+
+| Class       | z0 (m) | Description                        |
+| ----------- | ------ | ---------------------------------- |
+| `water`     | 0.001  | Open water                         |
+| `bridge`    | 0.002  | Bridge deck                        |
+| `open`      | 0.03   | Open farmland                      |
+| `semi_open` | 0.08   | Mixed scrub (unclassified default) |
+| `forest`    | 0.30   | Dense forest                       |
+| `urban`     | 0.40   | Residential / commercial           |
+| `sheltered` | 0.50   | Enclosed roads                     |
+
+For Vatternrundan, baked offline by `scripts/bake-exposure.mjs` (queries OpenStreetMap via Overpass, RLE-compresses to `data/vatternrundan-exposure.json`). The core never fetches; the app injects via `applyExposure(microsegments, runs)`. See `docs/exposure-model.md`.
 
 ---
 
@@ -241,6 +291,34 @@ favorableWind = exposure < −0.05 · total_distance         // clearly net down
 
 The 5 %-of-distance deadband keeps balanced loops on the convex-correct default. Manual wind is unaffected (p10=p90).
 
+### 7.4 Uncertainty interval (time spread from weather)
+
+The three scenarios all hit the same target time (they differ in required NP). The honest time spread is computed by holding the expected scenario's NP fixed and re-marching the route under optimistic/pessimistic wind:
+
+```
+np = expected.np_target_used
+lowTime  = runInnerSolve(microsegments, np, optimisticWeather, ...).total_time_s
+highTime = runInnerSolve(microsegments, np, pessimisticWeather, ...).total_time_s
+
+time_uncertainty_s = { expected: T, low: min(T, lowTime), high: max(T, highTime), source: 'scenario' }
+```
+
+Shown in the tempokort headline as "rimligt spann H:MM–H:MM". Collapses to "spann saknas" when the spread is less than 60 s (manual/calm wind or a very tight ensemble). See `docs/validation.md` for interpretation.
+
+### 7.5 Data quality
+
+`solveThreeScenarios` returns a `data_quality` object:
+
+```
+data_quality = {
+  exposureCoveragePct: number,        // 0–100: % of route distance with a known exposure class
+  exposureSource: 'baked' | 'terrain', // 'baked' if any microsegment has exposure_class
+  weatherSource: 'manual' | 'forecast' // 'manual' if field.sources includes 'manual'
+}
+```
+
+The web UI shows exposure coverage and warns (< 60 %) when the baked data is sparse or absent.
+
 ---
 
 ## 8. Segmentation and display
@@ -260,29 +338,34 @@ Note the distinction: the tempokort W column = **mean power** (~190 W in the exa
 
 ## 9. Constants and defaults (`config.ts`)
 
-| Parameter                | Default     | Role                        |
-| ------------------------ | ----------- | --------------------------- |
-| `m`                      | 96 kg       | rider + bike                |
-| `cda_pull`               | 0.32        | CdA on the front            |
-| `cda_draft`              | 0.21        | CdA drafting (~34 % lower)  |
-| `crr`                    | 0.0045      | rolling resistance          |
-| `eta`                    | 0.97        | drivetrain                  |
-| `g`                      | 9.81        | gravity                     |
-| `pull_seconds`           | 45          | pull length                 |
-| `pull_cap_mult`          | 1.3         | hard cap = mult · ftp       |
-| `max_plan_speed_kmh`     | 50          | spin-out / planning ceiling |
-| `sustain_if_warn`        | 0.75        | IF warning threshold        |
-| `climb_threshold`        | 0.03        | flat/climb boundary         |
-| `k_yaw`                  | 0.04        | yaw-CdA sensitivity         |
-| `neutral_speed_kmh`      | 20          | neutralized km 0–1          |
-| `max_grade`              | 0.18        | grade clip                  |
-| `ele_smooth_window`      | 5           | elevation smoothing         |
-| `band_pct`               | 0.05        | power band ±5 %             |
-| `ftp`                    | 272 (input) | threshold power             |
-| `n_riders`               | 12 (input)  | group size                  |
-| Derived: `pull_cap_hard` | 354         | = round(1.3·272)            |
-| Derived: `pull_cap_soft` | 250         | = round(0.92·272)           |
-| Derived: `solo`          | false       | n_riders === 1              |
+| Parameter                      | Default     | Role                                            |
+| ------------------------------ | ----------- | ----------------------------------------------- |
+| `m`                            | 96 kg       | rider + bike                                    |
+| `cda_pull`                     | 0.32        | CdA on the front                                |
+| `cda_draft`                    | 0.21        | CdA drafting (~34 % lower)                      |
+| `crr`                          | 0.0045      | rolling resistance                              |
+| `eta`                          | 0.97        | drivetrain                                      |
+| `g`                            | 9.81        | gravity                                         |
+| `pull_seconds`                 | 45          | pull length                                     |
+| `pull_cap_mult`                | 1.3         | hard cap = mult · ftp                           |
+| `max_plan_speed_kmh`           | 50          | spin-out / planning ceiling                     |
+| `sustain_if_warn`              | 0.75        | IF warning threshold                            |
+| `climb_threshold`              | 0.03        | flat/climb boundary                             |
+| `k_yaw`                        | 0.04        | yaw-CdA sensitivity                             |
+| `neutral_speed_kmh`            | 20          | neutralized km 0–1                              |
+| `max_grade`                    | 0.18        | grade clip                                      |
+| `ele_smooth_window`            | 5           | elevation smoothing                             |
+| `band_pct`                     | 0.05        | power band ±5 %                                 |
+| `rider_wind_height_m`          | 1.2         | height cyclist feels wind at (m)                |
+| `forecast_wind_height_m`       | 10          | height forecast wind is given at (m)            |
+| `exposure_terrain`             | `mixed`     | coarse terrain selector (open/mixed/sheltered)  |
+| `wind_roughness_z0`            | (none)      | explicit z0 override; bypasses terrain selector |
+| `apply_wind_height_correction` | `true`      | false = treat wind as already at rider level    |
+| `ftp`                          | 272 (input) | threshold power                                 |
+| `n_riders`                     | 12 (input)  | group size                                      |
+| Derived: `pull_cap_hard`       | 354         | = round(1.3·272)                                |
+| Derived: `pull_cap_soft`       | 250         | = round(0.92·272)                               |
+| Derived: `solo`                | false       | n_riders === 1                                  |
 
 The anchor `np_target` (FIT, or 0.60·FTP fallback, `ingest/fit.ts`) is informational; the time-driven solver bisects NP regardless.
 
@@ -301,6 +384,9 @@ For the reviewer, these are deliberate simplifications:
 7. **Optimistic/pessimistic** captures wind-speed uncertainty (p10/p90) + net direction, not full per-cell direction uncertainty.
 8. **Grade clamped ±18 %**, elevation smoothed (window 5). GPX elevation noise would otherwise produce spurious steep segments.
 9. **NP across segments**: ride NP is approximated as the time-weighted fourth-power mean of the per-segment NPs (30 s boundary effects between segments are ignored).
+10. **Wind height correction uses a neutral log profile.** Stability corrections (Monin-Obukhov) are omitted. The neutral profile is a reasonable daytime assumption for a race day but may under-correct in strongly unstable conditions.
+11. **z0 values are literature starting points, not calibrated.** Exposure classification sharpens where on the route wind is attenuated, not the exact magnitude. See `docs/validation.md` for the calibration roadmap.
+12. **The uncertainty interval captures wind-speed uncertainty only.** Direction uncertainty, rider performance variability, and mechanical factors are not modelled.
 
 ---
 
@@ -346,16 +432,24 @@ Run the same route/config across the wind speeds and review:
 
 ## 12. File reference
 
-| Area                                             | File                                    |
-| ------------------------------------------------ | --------------------------------------- |
-| Physics (forces, density, yaw, wind, NP)         | `packages/core/src/physics.ts`          |
-| Group model (pull/draft, NP closed form)         | `packages/core/src/chaingang.ts`        |
-| Pacing solver (inner/outer, caps, IF, scenarios) | `packages/core/src/planner.ts`          |
-| Configuration and defaults                       | `packages/core/src/config.ts`           |
-| Types                                            | `packages/core/src/types.ts`            |
-| Ingest GPX → microsegment                        | `packages/core/src/ingest/gpx.ts`       |
-| Geo (haversine, bearing)                         | `packages/core/src/util/geo.ts`         |
-| Weather ensemble + WeatherFn                     | `packages/core/src/weather/ensemble.ts` |
-| Manual/hourly wind                               | `packages/core/src/weather/hourly.ts`   |
-| Segmentation (tempokort rows)                    | `packages/core/src/segmentation.ts`     |
-| Tests                                            | `packages/core/tests/*.test.ts`         |
+| Area                                             | File                                     |
+| ------------------------------------------------ | ---------------------------------------- |
+| Physics (forces, density, yaw, wind, NP)         | `packages/core/src/physics.ts`           |
+| Group model (pull/draft, NP closed form)         | `packages/core/src/chaingang.ts`         |
+| Pacing solver (inner/outer, caps, IF, scenarios) | `packages/core/src/planner.ts`           |
+| Configuration and defaults                       | `packages/core/src/config.ts`            |
+| Types                                            | `packages/core/src/types.ts`             |
+| Ingest GPX → microsegment                        | `packages/core/src/ingest/gpx.ts`        |
+| Geo (haversine, bearing)                         | `packages/core/src/util/geo.ts`          |
+| Weather ensemble + WeatherFn                     | `packages/core/src/weather/ensemble.ts`  |
+| Manual/hourly wind                               | `packages/core/src/weather/hourly.ts`    |
+| Effective wind (height correction, z0, CLASS_Z0) | `packages/core/src/weather/effective.ts` |
+| Per-segment exposure (apply, coverage)           | `packages/core/src/weather/exposure.ts`  |
+| Exposure bake script                             | `scripts/bake-exposure.mjs`              |
+| Baked exposure data (Vatternrundan)              | `data/vatternrundan-exposure.json`       |
+| Segmentation (tempokort rows)                    | `packages/core/src/segmentation.ts`      |
+| Tests                                            | `packages/core/tests/*.test.ts`          |
+| Wind model detail                                | `docs/wind-model.md`                     |
+| Aero model detail                                | `docs/aero-model.md`                     |
+| Exposure model detail                            | `docs/exposure-model.md`                 |
+| Validation and before/after figures              | `docs/validation.md`                     |

@@ -60,6 +60,14 @@ Arrival and departure clocks come straight out of the time march. For each segme
 
 The per-depot split table is built by `buildSplitTable` in `packages/core/src/output/splits.ts`. For each control it computes arrival as the rolling segment time at the nearest segment boundary plus the duration of stops at controls strictly before this one (`s.km < km`). The strict inequality is what prevents double counting: a control's own stop is added on departure, not on arrival, so a stop is never counted both before and at the same control. Each split row carries the leg distance, the leg rolling time, the arrival and departure clocks, the stop minutes, and the cumulative time. The km-0 start is treated as the implicit origin (cum 0, elapsed 0) so the opening leg includes the first segment.
 
+## 4a. Effektiv vind, exponering och osakekerhetsspann
+
+Prognosvind ges pa 10 m hojd (WMO-standard), men cyklisten sitter pa ungefar 1.2 m. Med logaritmisk vindprofil skalar modellen ned vindhastigheten till rytternivan med faktorn `k = ln(1.2/z0) / ln(10/z0)`, dar `z0` ar terrangens aerodynamiska kastrighet. Over blandad mark (z0 = 0.05, standard) reduceras en 6 m/s-prognos till ungefar 3.6 m/s pa rytternivan. Pa Vatternrundan 315 km ger det en skillnad pa knappt 19 W i krav-NP for att na samma maltid, allt annat lika.
+
+Kastrighet (z0) kan sattes globalt via `exposure_terrain` (open 0.03, mixed 0.05, sheltered 0.30) eller per segment via inbakad exponeringsdata fran OpenStreetMap. Sju klasser anvands: Vattennara, Bro, Oppet, Halvoppet, Skog, Bebyggt och Skyddat, med z0-varden fran litteraturen. For Vatternrundans rutt ar exponeringsdata inbakad offline (se `scripts/bake-exposure.mjs`) och lagrad i `data/vatternrundan-exposure.json`. Denna data gar att ta bort och beraknas om nar terrangkartor uppdateras. Observera att z0-vardena ar litteratur-startpunkter, inte kalibrerade mot verkliga akter; exponeringsklassificeringen talar om var pa rutten vinden dampar mer eller mindre, men inte exakt hur mycket.
+
+Osakekerhetsspanet i tempokort-rubriken ("rimligt spann H:MM-H:MM") visar skillnaden i total tid nar forarvens NP halls fast pa forvantat scenario och rutten beraknas om under optimistisk respektive pessimistisk vindprofil. Spannet aterspeglar vindosakekerhet, inte rytterprestation, och kollapsar till "spann saknas" nar spridningen understiger en minut (t.ex. vid manuell vind eller lugnt).
+
 ## 5. Validation numbers
 
 All figures below come from the repository's own test suite or its build report. The source file is named for each.
