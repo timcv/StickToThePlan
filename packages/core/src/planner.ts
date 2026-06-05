@@ -385,6 +385,12 @@ export interface ThreeScenarios {
   expected: PlanResult;
   optimistic: PlanResult;
   pessimistic: PlanResult;
+  /**
+   * Honest finish-time interval: the expected anchor NP is held fixed and the
+   * route is re-marched under optimistic/pessimistic wind to reveal the actual
+   * time spread due to weather uncertainty. `source` is always 'scenario'.
+   */
+  time_uncertainty_s: { expected: number; low: number; high: number; source: 'scenario' };
 }
 
 /**
@@ -447,9 +453,40 @@ export function solveThreeScenarios(
     return solveForTargetTime(microsegments, weather, cfg);
   };
 
+  const expected = solveScenario('expected');
+  const optimistic = solveScenario('optimistic');
+  const pessimistic = solveScenario('pessimistic');
+
+  // Time interval: hold the expected anchor NP fixed and re-march under the
+  // optimistic / pessimistic wind. (The three scenarios above all hit the same
+  // target time and differ in NP, so their times are equal; the honest time
+  // spread comes from fixing effort and varying wind luck.)
+  const np = expected.np_target_used;
+  const lowTime = runInnerSolve(
+    microsegments,
+    np,
+    makeWeatherFn(field, 'optimistic', startClockS, favorableWind),
+    cfg,
+    startClockS,
+  ).total_time_s;
+  const highTime = runInnerSolve(
+    microsegments,
+    np,
+    makeWeatherFn(field, 'pessimistic', startClockS, favorableWind),
+    cfg,
+    startClockS,
+  ).total_time_s;
+  const expTime = expected.total_time_s;
+
   return {
-    expected: solveScenario('expected'),
-    optimistic: solveScenario('optimistic'),
-    pessimistic: solveScenario('pessimistic'),
+    expected,
+    optimistic,
+    pessimistic,
+    time_uncertainty_s: {
+      expected: expTime,
+      low: Math.min(lowTime, expTime),
+      high: Math.max(highTime, expTime),
+      source: 'scenario',
+    },
   };
 }

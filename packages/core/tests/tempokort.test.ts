@@ -28,6 +28,8 @@ const scenarios: ThreeScenarios = {
   optimistic: makePlanResult(42300, 150),
   expected: makePlanResult(42300, 160),
   pessimistic: makePlanResult(42300, 175),
+  // 11:32 low, 11:45 expected, 11:58 high (1560 s spread)
+  time_uncertainty_s: { expected: 42300, low: 41520, high: 43080, source: 'scenario' },
 };
 
 // DisplaySegments: two normal segments + one depot
@@ -201,6 +203,14 @@ describe('renderMarkdown', () => {
     expect(md).toContain('11:45:00');
   });
 
+  it('contains the Beräknad tid estimate line with the span', () => {
+    const md = renderMarkdown(scenarios, displaySegments, cfg);
+    // expected=42300=11:45, low=41520=11:32, high=43080=11:58
+    expect(md).toContain('Beräknad tid 11:45');
+    expect(md).toContain('rimligt spann 11:32');
+    expect(md).toContain('11:58');
+  });
+
   it('does NOT contain an em dash (U+2014)', () => {
     const md = renderMarkdown(scenarios, displaySegments, cfg);
     expect(md).not.toContain(String.fromCharCode(0x2014));
@@ -263,5 +273,12 @@ describe('renderHtml', () => {
   it('contains the total time H:MM:SS for scenarios', () => {
     const html = renderHtml(scenarios, displaySegments, cfg);
     expect(html).toContain('11:45:00');
+  });
+
+  it('contains the Beräknad tid estimate paragraph', () => {
+    const html = renderHtml(scenarios, displaySegments, cfg);
+    expect(html).toContain('class="estimate"');
+    expect(html).toContain('Beräknad tid 11:45');
+    expect(html).toContain('rimligt spann 11:32');
   });
 });

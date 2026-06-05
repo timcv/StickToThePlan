@@ -74,7 +74,19 @@ export interface PipelineResult {
  * reuse the result in all three slots (mirrors cli.ts calmThreeScenarios).
  */
 function calmThreeScenarios(plan: PlanResult): ThreeScenarios {
-  return { expected: plan, optimistic: plan, pessimistic: plan };
+  return {
+    expected: plan,
+    optimistic: plan,
+    pessimistic: plan,
+    // No wind data: all three scenarios are identical, so the interval collapses
+    // to a point (high - low < 60 s) and the UI shows "spann saknas".
+    time_uncertainty_s: {
+      expected: plan.total_time_s,
+      low: plan.total_time_s,
+      high: plan.total_time_s,
+      source: 'scenario',
+    },
+  };
 }
 
 /**
@@ -155,5 +167,15 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
   });
   const splits = buildSplitTable(scenarios.expected, cfg, controls);
 
-  return { scenarios, displaySegments, styrkortSegments, splits, anchor, npTargetUsed, cfg, micro, controls };
+  return {
+    scenarios,
+    displaySegments,
+    styrkortSegments,
+    splits,
+    anchor,
+    npTargetUsed,
+    cfg,
+    micro,
+    controls,
+  };
 }
