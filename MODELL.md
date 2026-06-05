@@ -1,6 +1,6 @@
 # The model
 
-This document explains, end to end, how StickToThePlan turns a route, a stop schedule, and a target finish time into per-depot split times and watch files. It is written for a skeptical reader who wants to judge the calculation rather than trust it. Every concrete number cited here comes from the repository's own test suite or its build report, and the source is named inline. Nothing is invented.
+This document explains, end to end, how StickToThePlan turns a route, a stop schedule, and a target finish time into per-depot split times and watch files. It is written for a skeptical reader who wants to judge the calculation rather than trust it. Every concrete number cited here comes from the repository's own test suite or its build report, and the source is named inline. Nothing is invented. A fuller Swedish-language reference, with every formula, sign convention, default, and file reference laid out for an external reviewer, is in [docs/berakningsmodell.md](docs/berakningsmodell.md).
 
 The whole model is one idea: hold the rider's effort constant (a fixed normalized power) and let ground speed vary with gradient and wind, then adjust that single effort number until the predicted total time equals the target. Speed, not effort, absorbs the terrain.
 
@@ -47,11 +47,12 @@ Given `np_target`, the ground speed for a segment is found by an inner bisection
 Once each microsegment has a ground speed, its time is `distance / speed`, and the route is time-marched segment by segment (`runInnerSolve` in `packages/core/src/planner.ts`). The march accumulates elapsed seconds from the start.
 
 - **Neutral start block.** The first kilometre (segments flagged `neutral`) is ridden at a fixed neutral speed (`neutral_speed_kmh`, default 20 km/h) and is excluded from the NP accounting entirely. The planner test asserts neutral segments carry `rider_np_w === 0`.
-- **Power caps.** On the front, the pull power can spike on climbs. Two caps apply. The hard cap is `pull_cap_hard = FTP`; if the uncapped pull would exceed it, the speed is reduced so the pull sits at FTP. The soft cap is `pull_cap_soft = 0.92 x FTP` (rounded) and applies only on climbs steeper than `climb_threshold` (default 3 percent) when `climb_discount` is on. Caps lower the segment speed (and add time), which the outer solver then compensates for elsewhere on the route.
+- **Power caps.** On the front the pull power can spike on climbs and in headwind. Three caps apply. The hard cap is `pull_cap_hard = round(pull_cap_mult x FTP)`, `pull_cap_mult` default 1.3, so the front may run a short 45-second pull up to about 1.3x FTP; if the uncapped pull would exceed it the speed is reduced so the pull sits at the cap. (Earlier the hard cap was FTP itself, which throttled most headwind segments and bounded sustainability twice. Sustainability is bounded by the rider's NP, not by holding every individual pull under FTP, so the cap was raised and the two concerns separated.) The soft cap is `pull_cap_soft = round(0.92 x FTP)` and applies only on climbs steeper than `climb_threshold` (default 3 percent) when `climb_discount` is on. The spin-out cap is a planning ceiling: no effort segment is planned faster than `max_plan_speed_kmh` (default 50 km/h); above it the rider eases (the steady pull/draft power is clamped at zero on descents) and the extra tailwind or descent is buffer, not banked time. Caps adjust the segment speed (and time), which the outer solver then rebalances elsewhere on the route.
 - **Stops.** Each stop sits at the first segment boundary whose cumulative distance reaches the stop's km marker. The stop adds `minutes * 60` seconds to that segment's ETA and to every later segment's ETA. The planner test asserts a stop's `depart_s - arrive_s` equals exactly `minutes * 60`, and that `rolling_time_s === total_time_s - stop_time_s`.
 - **Outer bisection.** The total time is monotone decreasing in `np_target` (more power, more speed, less time). `solveForTargetTime` first checks the fastest sustainable plan at `np = FTP`; if even that is slower than the target, the target is unreachable and the fastest plan is returned with `reachable = false`. Otherwise it bisects `np_target` in `[60, FTP]`, up to 45 iterations, to a tolerance of 20 s on the total, and returns the plan that hits the target finish time.
+- **Sustainability check.** After the march the ride-level rider NP is the time-weighted fourth-power mean of the per-segment rider NPs, and the intensity factor is `IF = ride_NP / FTP` (both carried on `PlanResult`, surfaced in the UI and `plan.json`). When `IF` exceeds `sustain_if_warn` (default 0.75) the plan adds a note flagging the time as a hard day's effort. This lets a plan be reachable yet honestly labelled hard: with a 10 m/s wind the 315 km target hits 11:45 at rider NP about 219 W (IF 0.80) rather than being reported unreachable, while the spin-out cap keeps the tailwind splits near 46 km/h instead of 52 to 54.
 
-The three time scenarios (optimistic, expected, pessimistic) re-run this whole solve against the same weather ensemble at different wind percentiles (`solveThreeScenarios`). Each scenario hits the same target total time, so they differ in the NP they required: less headwind needs less NP.
+The three time scenarios (optimistic, expected, pessimistic) re-run this whole solve against the same weather ensemble at different wind percentiles (`solveThreeScenarios`). Each scenario hits the same target total time, so they differ in the NP they required: less headwind needs less NP. The percentile-to-scenario mapping depends on the route's net exposure to the mean wind direction: on a net-headwind route or a balanced loop more wind is slower, so pessimistic uses the high percentile (p90) and optimistic the low (p10); on a net-downwind route more wind is faster, so the mapping inverts. `routeIsNetDownwind` decides this by projecting each segment's travel onto the mean wind direction and summing the signed headwind exposure, with a 5-percent-of-distance deadband that keeps a balanced loop (such as Vätternrundan) on the convex default. Manual constant wind has p10 = p90, so the mapping is moot.
 
 ## 4. Depot ETAs and splits
 
@@ -83,45 +84,48 @@ On a synthetic 20 km flat route into three wind percentiles (a pure headwind), a
 
 The planner test carries a soft control-clock reference table (report-only, except the finish, which is a hard gate). It is the constant-speed reference from the design doc, not the model's target. Because the model holds constant rider NP, it rides the southern climbs slower and the flats faster than a constant-speed table, so mid-course controls drift while the total and finish stay pinned. The build report records the largest drift as +11.6 min at Fagerhult (km 134), right after the climbing sector, with the finish at 16:07 exact. The reference table, summarized:
 
-| Control km | Reference clock |
-|---|---|
-| 40 | 05:45 |
-| 77 (Gränna) | 07:12 |
-| 105 | 08:10 |
-| 134 (Fagerhult) | 09:20 |
-| 173 | 10:41 |
-| 204 | 11:46 |
-| 226 (Boviken) | 12:47 |
-| 256 (Askersund) | 14:04 |
-| 284 | 15:02 |
-| 315 (finish) | 16:07 |
+| Control km      | Reference clock |
+| --------------- | --------------- |
+| 40              | 05:45           |
+| 77 (Gränna)     | 07:12           |
+| 105             | 08:10           |
+| 134 (Fagerhult) | 09:20           |
+| 173             | 10:41           |
+| 204             | 11:46           |
+| 226 (Boviken)   | 12:47           |
+| 256 (Askersund) | 14:04           |
+| 284             | 15:02           |
+| 315 (finish)    | 16:07           |
 
 The finish clock 16:07 (42300 s after the 04:22 start) is the only hard gate in this table, asserted within +/- 3 min. Source: `packages/core/tests/planner.test.ts` (control clock table and finish gate); drift commentary from `docs/build-report.md`.
 
 ### Test suite scope
 
-The full Vätternrundan build reported 252 passed and 1 skipped, with `tsc --noEmit` clean. The skipped test is the three-scenario real-course solve, gated behind `SLOW_TESTS=1` because one full solve over roughly 4760 microsegments is compute-heavy. Source: `docs/build-report.md`.
+The full Vätternrundan build reported 252 passed and 1 skipped, with `tsc --noEmit` clean (`docs/build-report.md`). After the wind-realism work the suite is 309 passed and 10 skipped, with `tsc` and `eslint` clean; the skipped tests are the slow real-course solves, gated behind `SLOW_TESTS=1` or a committed-GPX guard because one full solve over roughly 4760 microsegments is compute-heavy. The added coverage exercises the spin-out ceiling, supra-FTP pulls, the IF sustainability warning, and the net-downwind scenario inversion (`packages/core/tests/headwind-caps.test.ts`, `packages/core/tests/scenarios.test.ts`).
 
 ## 6. References and default assumptions
 
 These are the default parameter values from `packages/core/src/config.ts` (overridable via config). They are the assumptions the numbers above rest on.
 
-| Parameter | Default | Meaning |
-|---|---|---|
-| `m` | 96 kg | total system mass (rider plus bike plus kit) |
-| `cda_pull` | 0.32 m^2 | drag area on the front (pulling) |
-| `cda_draft` | 0.21 m^2 | drag area while drafting |
-| `crr` | 0.0045 | coefficient of rolling resistance |
-| `eta` | 0.97 | drivetrain efficiency |
-| `g` | 9.81 m/s^2 | gravity |
-| `rho_fallback` | 1.2 kg/m^3 | air density fallback when no weather is available |
-| `pull_seconds` | 45 s | length of one front pull |
-| `climb_threshold` | 0.03 | grade above which the soft climb cap applies |
-| `climb_discount` | true | whether the soft climb cap is active |
-| `k_yaw` | 0.04 | yaw drag coefficient (about 8 percent CdA rise at 20 deg yaw) |
-| `neutral_speed_kmh` | 20 | fixed speed through the neutral start |
-| `neutral_distance_km` | 1 | length of the neutral start block |
-| `max_grade` | 0.18 | gradient clip during ingest |
-| `ele_smooth_window` | 5 | elevation smoothing window |
+| Parameter             | Default    | Meaning                                                           |
+| --------------------- | ---------- | ----------------------------------------------------------------- |
+| `m`                   | 96 kg      | total system mass (rider plus bike plus kit)                      |
+| `cda_pull`            | 0.32 m^2   | drag area on the front (pulling)                                  |
+| `cda_draft`           | 0.21 m^2   | drag area while drafting                                          |
+| `crr`                 | 0.0045     | coefficient of rolling resistance                                 |
+| `eta`                 | 0.97       | drivetrain efficiency                                             |
+| `g`                   | 9.81 m/s^2 | gravity                                                           |
+| `rho_fallback`        | 1.2 kg/m^3 | air density fallback when no weather is available                 |
+| `pull_seconds`        | 45 s       | length of one front pull                                          |
+| `pull_cap_mult`       | 1.3        | hard pull cap as a multiple of FTP (a short supra-threshold pull) |
+| `max_plan_speed_kmh`  | 50         | planning / spin-out speed ceiling for tailwind and descents       |
+| `sustain_if_warn`     | 0.75       | intensity factor above which a sustainability note fires          |
+| `climb_threshold`     | 0.03       | grade above which the soft climb cap applies                      |
+| `climb_discount`      | true       | whether the soft climb cap is active                              |
+| `k_yaw`               | 0.04       | yaw drag coefficient (about 8 percent CdA rise at 20 deg yaw)     |
+| `neutral_speed_kmh`   | 20         | fixed speed through the neutral start                             |
+| `neutral_distance_km` | 1          | length of the neutral start block                                 |
+| `max_grade`           | 0.18       | gradient clip during ingest                                       |
+| `ele_smooth_window`   | 5          | elevation smoothing window                                        |
 
-Two derived defaults are not in this table because they come from FTP: `pull_cap_hard = FTP` and `pull_cap_soft = round(0.92 x FTP)`. The example race uses `FTP = 272 W`, `n_riders = 12`, start 04:22, target 11:45, and the four stops in `config.json`. Where a number above is not stated as a config default or a named test/report figure, it should be treated as run-specific (for example, the live-forecast scenario watts vary every time the forecast is fetched).
+Two derived defaults are not in this table because they come from FTP: `pull_cap_hard = round(pull_cap_mult x FTP)` (1.3 x FTP by default, so 354 W at FTP 272) and `pull_cap_soft = round(0.92 x FTP)`. The example race uses `FTP = 272 W`, `n_riders = 12`, start 04:22, target 11:45, and the four stops in `config.json`. Where a number above is not stated as a config default or a named test/report figure, it should be treated as run-specific (for example, the live-forecast scenario watts vary every time the forecast is fetched).
