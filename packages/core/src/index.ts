@@ -82,6 +82,12 @@ export {
   terrainToZ0,
   exposureClassToZ0,
 } from './weather/effective.js';
+export {
+  applyExposure,
+  exposureCoveragePct,
+  type ExposureRun,
+  type ExposureRuns,
+} from './weather/exposure.js';
 
 // Connect IQ data-field source generation (pure).
 export { buildLookupTable, generatePlanDeltaSource, type LookupEntry } from './ciq/generate.js';

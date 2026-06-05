@@ -22,6 +22,7 @@ import type { EnsembleField } from './weather/ensemble.js';
 import { makeWeatherFn } from './weather/ensemble.js';
 import { airDensity, decomposeWind, solveSpeedForPower, yawCdaFactor } from './physics.js';
 import { adjustWindForHeight, terrainToZ0 } from './weather/effective.js';
+import { exposureCoveragePct } from './weather/exposure.js';
 import {
   pullPower,
   draftPower,
@@ -391,6 +392,11 @@ export interface ThreeScenarios {
    * time spread due to weather uncertainty. `source` is always 'scenario'.
    */
   time_uncertainty_s: { expected: number; low: number; high: number; source: 'scenario' };
+  data_quality?: {
+    exposureCoveragePct: number;
+    exposureSource: 'baked' | 'fetched' | 'terrain' | 'none';
+    weatherSource: 'manual' | 'forecast' | 'ensemble';
+  };
 }
 
 /**
@@ -487,6 +493,11 @@ export function solveThreeScenarios(
       low: Math.min(lowTime, expTime),
       high: Math.max(highTime, expTime),
       source: 'scenario',
+    },
+    data_quality: {
+      exposureCoveragePct: exposureCoveragePct(microsegments),
+      exposureSource: microsegments.some((m) => m.exposure_class) ? 'baked' : 'terrain',
+      weatherSource: field.sources.includes('manual') ? 'manual' : 'forecast',
     },
   };
 }
