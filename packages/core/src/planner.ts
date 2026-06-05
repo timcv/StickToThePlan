@@ -119,6 +119,8 @@ export function runInnerSolve(
   let capTimeMovedS = 0;
 
   for (const micro of microsegments) {
+    const z0 = resolveZ0(micro, cfg);
+
     if (micro.neutral) {
       // Fixed neutral segment, excluded from the effort model and NP (spec 4.4).
       const v = cfg.neutral_speed_kmh / 3.6;
@@ -140,7 +142,7 @@ export function runInnerSolve(
         cap_binding: 'none',
         raw_windspeed_ms: 0,
         eff_windspeed_ms: 0,
-        z0_used: resolveZ0(micro, cfg),
+        z0_used: z0,
         exposure_class: micro.exposure_class,
       });
       continue;
@@ -149,7 +151,6 @@ export function runInnerSolve(
     // Effort segment.
     const w: WindCond = weather(micro.lat, micro.lon, startClockS + elapsed);
     const rho = airDensity(w.temp_c, w.pressure_pa);
-    const z0 = resolveZ0(micro, cfg);
     const rawW = w.windspeed_ms;
     const effW = cfg.apply_wind_height_correction
       ? adjustWindForHeight(rawW, z0, cfg.rider_wind_height_m, cfg.forecast_wind_height_m)

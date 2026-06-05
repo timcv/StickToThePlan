@@ -70,4 +70,14 @@ describe('effective wind in the planner', () => {
     expect(plan.segments[0].eff_windspeed_ms).toBe(0);
     expect(plan.segments[0].headwind_ms).toBeCloseTo(0, 9);
   });
+
+  it('per-segment z0_used overrides the global roughness', () => {
+    const water = flatMicros(3).map((m) => ({ ...m, z0_used: 0.001 }));
+    const urban = flatMicros(3).map((m) => ({ ...m, z0_used: 0.5 }));
+    const wPlan = runInnerSolve(water, 150, headwind6, cfg, 0);
+    const uPlan = runInnerSolve(urban, 150, headwind6, cfg, 0);
+    // smooth water keeps more wind at rider level than rough urban
+    expect(wPlan.segments[0].eff_windspeed_ms).toBeGreaterThan(uPlan.segments[0].eff_windspeed_ms);
+    expect(wPlan.segments[0].z0_used).toBe(0.001);
+  });
 });
