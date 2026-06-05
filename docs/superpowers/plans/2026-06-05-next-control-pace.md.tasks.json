@@ -1,0 +1,46 @@
+{
+  "planPath": "docs/superpowers/plans/2026-06-05-next-control-pace.md",
+  "tasks": [
+    {
+      "id": 10,
+      "subject": "Task 1: course.fit exporter (pure core)",
+      "status": "completed",
+      "description": "**Goal:** A pure `buildCourseFit` that encodes a FIT Course (track records + one named course_point per control), proven by a round-trip decode test.\n\n**Verify:** `npm test -- fitCourse`\n\n```json:metadata\n{\"files\": [\"packages/core/src/output/fitCourse.ts\", \"packages/core/src/output/course.ts\", \"packages/core/src/index.ts\", \"packages/cli/tests/fitCourse.test.ts\"], \"verifyCommand\": \"npm test -- fitCourse\", \"acceptanceCriteria\": [\"buildCourseFit returns Uint8Array\", \"decoded file type is course named Vatternrundan cycling\", \"one named course_point per control with planned HH:MM\", \"record count equals microsegment count and distance monotonic\", \"course_point positions round-trip within 0.0002 deg\"]}\n```"
+    },
+    {
+      "id": 11,
+      "subject": "Task 2: Write course.fit from the CLI",
+      "status": "completed",
+      "blockedBy": [10],
+      "description": "**Goal:** The CLI writes `output/course.fit` alongside `course.gpx`, and the end-to-end test asserts it is a decodable course file.\n\n**Verify:** `npm test -- cli.test`\n\n```json:metadata\n{\"files\": [\"packages/cli/src/fileIo.ts\", \"packages/cli/src/cli.ts\", \"packages/cli/tests/cli.test.ts\"], \"verifyCommand\": \"npm test -- cli.test\", \"acceptanceCriteria\": [\"writeCourseFit writes decodable FIT bytes\", \"runPlan writes course.fit and lists it in artifacts (six)\", \"cli.test asserts course.fit decodes as a course file\"]}\n```"
+    },
+    {
+      "id": 12,
+      "subject": "Task 3: Web Downloads course.fit + install card",
+      "status": "completed",
+      "blockedBy": [10],
+      "description": "**Goal:** The web app downloads `course.fit` and shows install instructions instead of emitting the per-plan `PlanDelta.mc` source.\n\n**Verify:** `npm run typecheck && npm test -- web`\n\n```json:metadata\n{\"files\": [\"apps/web/src/components/Downloads.tsx\"], \"verifyCommand\": \"npm run typecheck && npm test -- web\", \"acceptanceCriteria\": [\"no generatePlanDeltaSource import or call\", \"course.fit download button calls buildCourseFit\", \"Garmin group shows install steps\", \"typecheck passes\"]}\n```"
+    },
+    {
+      "id": 13,
+      "subject": "Task 4: Static Next Control Pace field + build:ciq",
+      "status": "completed",
+      "description": "**Goal:** A committed, generic Monkey C data field and a `npm run build:ciq` that compiles it to a sideloadable `.prg`.\n\n**Verify:** `npm run build:ciq && npm run typecheck`\n\n```json:metadata\n{\"files\": [\"ciq/source/NextControlPace.mc\", \"ciq/resources/settings/settings.xml\", \"ciq/resources/settings/properties.xml\", \"ciq/manifest.xml\", \"ciq/monkey.jungle\", \"ciq/resources/strings/strings.xml\", \".gitignore\", \"packages/cli/src/buildCiq.ts\", \"package.json\"], \"verifyCommand\": \"npm run build:ciq && npm run typecheck\", \"acceptanceCriteria\": [\"NextControlPace.mc custom DataField with segment detection, smoothing, per-control delta, 4 layouts, passed screen, fallbacks\", \"settings expose layoutMode/units/showPlanDelta\", \"gitignore tracks static .mc\", \"build:ciq compiles or exits 0 when SDK absent\"]}\n```"
+    },
+    {
+      "id": 14,
+      "subject": "Task 5: Retire the per-plan PlanDelta generator",
+      "status": "completed",
+      "blockedBy": [11, 12, 13],
+      "description": "**Goal:** Delete the old generator, template, its test, and all references, keeping the build green.\n\n**Verify:** `npm test && npm run typecheck`\n\n```json:metadata\n{\"files\": [\"packages/core/src/ciq/generate.ts\", \"packages/core/src/ciq/template.ts\", \"packages/core/src/ciq/PlanDelta.mc.tmpl\", \"packages/core/tests/ciq.test.ts\", \"packages/cli/src/ciqCompile.ts\", \"packages/core/src/index.ts\", \"packages/cli/src/cli.ts\", \"packages/cli/tests/cli.test.ts\"], \"verifyCommand\": \"npm test && npm run typecheck\", \"acceptanceCriteria\": [\"no source references PlanDelta/generatePlanDeltaSource/buildLookupTable/generateCiq/noCiqCompile\", \"RunSummary has no ciq field and runPlan does no per-plan compile\", \"full suite and typecheck pass\"]}\n```"
+    },
+    {
+      "id": 15,
+      "subject": "Task 6: Docs, install guide and references",
+      "status": "completed",
+      "blockedBy": [13],
+      "description": "**Goal:** A short install guide for the field and updated mentions of the old per-plan source across the docs.\n\n**Verify:** `npm run format:check`\n\n```json:metadata\n{\"files\": [\"docs/garmin-next-control-pace.md\", \"README.md\", \"docs/UX_REVIEW_BRIEF.md\", \"docs/build-report.md\"], \"verifyCommand\": \"npm run format:check\", \"acceptanceCriteria\": [\"install guide covers course.fit + build:ciq + add-to-activity + settings\", \"no doc claims per-plan PlanDelta.mc watch source\", \"format:check passes\"]}\n```"
+    }
+  ],
+  "lastUpdated": "2026-06-05T18:40:00Z"
+}

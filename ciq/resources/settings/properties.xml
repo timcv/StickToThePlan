@@ -1,0 +1,5 @@
+<properties>
+    <property id="layoutMode" type="number">0</property>
+    <property id="units" type="number">0</property>
+    <property id="showPlanDelta" type="boolean">true</property>
+</properties>

@@ -8,16 +8,15 @@
  *   workout.fit   distance-based structured FIT workout (encodeWorkout).
  *   course.gpx    route track + ETA waypoints (buildCourseGpx).
  *   plan.json     full machine-readable plan (buildPlanJson).
- *   PlanDelta.mc  Connect IQ data-field source (generatePlanDeltaSource). The
- *                 .prg watch file is compiled locally with the Garmin Connect IQ
- *                 SDK (monkeyc); this button only emits the source.
+ *   course.fit    FIT Course with named control points (buildCourseFit) for the
+ *                 Next Control Pace watch field.
  */
 import {
   buildCourseGpx,
+  buildCourseFit,
   buildPlanJson,
   buildStyrkortHtml,
   encodeWorkout,
-  generatePlanDeltaSource,
   type PlanJsonMeta,
 } from '@stp/core';
 import type { PipelineResult } from '../worker/solve.worker';
@@ -54,9 +53,9 @@ export function Downloads({ result, sources, reduced }: Props) {
     downloadBlob('plan.json', JSON.stringify(plan, null, 2), 'application/json');
   };
 
-  const onPlanDelta = () => {
-    const source = generatePlanDeltaSource(displaySegments, scenarios.expected, cfg);
-    downloadBlob('PlanDelta.mc', source, 'text/plain');
+  const onCourseFit = () => {
+    const bytes = buildCourseFit(micro, scenarios.expected, cfg, controls);
+    downloadBlob('course.fit', bytes, 'application/octet-stream');
   };
 
   const onStyrkort = () => {
@@ -83,13 +82,26 @@ export function Downloads({ result, sources, reduced }: Props) {
       </div>
 
       <div className="download-group">
-        <h3>Garmin-klocka</h3>
+        <h3>Garmin-klocka (Next Control Pace)</h3>
         <div className="download-row">
-          <button type="button" className="download-btn" onClick={onPlanDelta}>
-            <span className="download-title">Connect IQ-källa</span>
-            <span className="download-desc">Datafält att kompilera (PlanDelta.mc)</span>
+          <button type="button" className="download-btn" onClick={onCourseFit}>
+            <span className="download-title">Course för klockan</span>
+            <span className="download-desc">
+              Rutt med kontroller som course points (course.fit)
+            </span>
           </button>
         </div>
+        <ol className="install-steps">
+          <li>
+            Ladda ner <code>course.fit</code> och lägg in den som en bana på din Fenix 7X.
+          </li>
+          <li>
+            Installera datafältet <strong>Next Control Pace</strong> (sideload av <code>.prg</code>
+            ).
+          </li>
+          <li>Lägg till fältet i cykelprofilens dataskärmar (Connect IQ-fält).</li>
+          <li>Starta bannavigeringen innan du börjar cykla.</li>
+        </ol>
       </div>
 
       <div className="download-group">
@@ -97,7 +109,9 @@ export function Downloads({ result, sources, reduced }: Props) {
         <div className="download-row">
           <button type="button" className="download-btn" onClick={onStyrkort}>
             <span className="download-title">Utskrivbart styrkort</span>
-            <span className="download-desc">Att skriva ut och tejpa på styret (styrkortet.html)</span>
+            <span className="download-desc">
+              Att skriva ut och tejpa på styret (styrkortet.html)
+            </span>
           </button>
           <button type="button" className="download-btn" onClick={onPlanJson}>
             <span className="download-title">Plan som JSON</span>
@@ -105,10 +119,6 @@ export function Downloads({ result, sources, reduced }: Props) {
           </button>
         </div>
       </div>
-
-      <p className="note">
-        .prg-filen för klockan måste kompileras lokalt med Garmin Connect IQ SDK (monkeyc); se CLI:t.
-      </p>
     </section>
   );
 }

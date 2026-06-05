@@ -1,6 +1,6 @@
-# Connect IQ build configuration for the Vatternrundan plan-delta data field.
-# The source is generated per run into ciq/source/PlanDelta.mc by
-# src/ciq/generate.ts; point the build there.
+# Connect IQ build configuration for the Next Control Pace data field.
+# The source is a static, committed file in ciq/source; the field is generic
+# and reads course points live, so it is built once and sideloaded.
 project.manifest = manifest.xml
 base.sourcePath = source
 base.resourcePath = resources
