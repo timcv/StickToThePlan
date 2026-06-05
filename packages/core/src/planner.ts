@@ -107,6 +107,7 @@ export function runInnerSolve(
 
   let hardCount = 0;
   let softCount = 0;
+  let spinoutCount = 0;
   // Time added by caps relative to the uncapped (np-target) speed, in seconds.
   let capTimeMovedS = 0;
 
@@ -165,6 +166,21 @@ export function runInnerSolve(
       softCount++;
     }
 
+    // Spin-out / planning-speed ceiling. A rotating group will not (and for
+    // safety should not) plan a paceline faster than max_plan_speed_kmh in a
+    // strong tailwind or descent: above it the rider eases, and the extra wind /
+    // gravity is buffer, not banked time. Capping here keeps tailwind splits
+    // realistic for a tempokort and forces the outer solver to find the target
+    // time from real effort rather than from implausible 50+ km/h medvind splits.
+    // It overrides any (higher-speed) hard/soft classification: it is the binding
+    // constraint on the final speed.
+    const vMax = cfg.max_plan_speed_kmh / 3.6;
+    if (v > vMax) {
+      v = vMax;
+      cap_binding = 'spinout';
+      spinoutCount++;
+    }
+
     let p_pull_w: number;
     let rider_np_w: number;
     if (cap_binding === 'none') {
@@ -174,14 +190,18 @@ export function runInnerSolve(
       p_pull_w = pPull;
       rider_np_w = npTarget;
     } else {
-      // Cap lowered the speed; recompute exactly at the final v.
+      // Cap moved the speed; recompute exactly at the final v.
       capTimeMovedS += micro.distance_m / v - micro.distance_m / vUncapped;
       p_pull_w = pullPower(v, micro.grade, headwind, crosswind, rho, cfg);
       rider_np_w = riderNpAtSpeed(v, micro.grade, headwind, crosswind, rho, cfg);
     }
-    const p_draft_w = cfg.solo
-      ? p_pull_w
-      : draftPower(v, micro.grade, headwind, crosswind, rho, cfg);
+    let p_draft_w = cfg.solo ? p_pull_w : draftPower(v, micro.grade, headwind, crosswind, rho, cfg);
+    // A spin-out cap over a descent can drive the steady pull/draft power below
+    // zero (freewheeling); a plan cannot show negative pedal power, so clamp.
+    if (cap_binding === 'spinout') {
+      p_pull_w = Math.max(0, p_pull_w);
+      p_draft_w = Math.max(0, p_draft_w);
+    }
     const p_mean_w = cfg.solo ? p_pull_w : meanPower(p_pull_w, p_draft_w, fFrontVal);
 
     const time_s = micro.distance_m / v;
@@ -232,16 +252,36 @@ export function runInnerSolve(
   const total_time_s = elapsed; // includes neutral + stops
   const rolling_time_s = total_time_s - stopTimeS;
 
+  // Ride-level rider normalized power and intensity factor (sustainability).
+  // NP^4 averages over time; each effort segment's rider_np_w is already its
+  // local NP, so the ride NP is the time-weighted quartic mean of the segment NPs
+  // (30 s cross-segment boundary effects are negligible at this resolution).
+  const effortSegs = segments.filter((s) => !s.micro.neutral);
+  const effortTime = effortSegs.reduce((a, s) => a + s.time_s, 0);
+  const rider_np_ride_w =
+    effortTime > 0
+      ? (effortSegs.reduce((a, s) => a + s.rider_np_w ** 4 * s.time_s, 0) / effortTime) ** 0.25
+      : 0;
+  const intensity_factor = cfg.ftp > 0 ? rider_np_ride_w / cfg.ftp : 0;
+
   const notes: string[] = [];
-  if (hardCount > 0 || softCount > 0) {
+  if (hardCount > 0 || softCount > 0 || spinoutCount > 0) {
     notes.push(
-      `Caps bound on ${hardCount} hard and ${softCount} soft segment(s); ` +
-        `caps added ${(capTimeMovedS / 60).toFixed(1)} min (speed lowered, time banked elsewhere by the outer solver).`,
+      `Caps bound on ${hardCount} hard, ${softCount} soft and ${spinoutCount} spin-out segment(s); ` +
+        `caps moved ${(capTimeMovedS / 60).toFixed(1)} min (speed adjusted, time rebalanced by the outer solver).`,
+    );
+  }
+  if (intensity_factor > cfg.sustain_if_warn) {
+    notes.push(
+      `Planen kräver IF ${intensity_factor.toFixed(2)} (förar-NP ${Math.round(rider_np_ride_w)} W av FTP ` +
+        `${cfg.ftp} W). Det är en hård dagsinsats; kontrollera att gruppen håller den uthålligt.`,
     );
   }
 
   return {
     np_target_used: npTarget,
+    rider_np_ride_w,
+    intensity_factor,
     total_time_s,
     rolling_time_s,
     stop_time_s: stopTimeS,
@@ -338,15 +378,49 @@ export interface ThreeScenarios {
  * @param field          The aggregated weather ensemble (cells + percentile spread).
  * @param cfg            Config.
  */
+/**
+ * Decide whether the route is net downwind for the field's mean wind. Projects
+ * each effort segment's travel onto the dominant (speed-weighted vector-mean)
+ * wind direction and sums the signed headwind exposure
+ * (cos(dir_from - bearing) * distance): positive = into the wind, negative =
+ * downwind. Net negative beyond a 5%-of-distance deadband means the route gains
+ * more from tailwind than it loses to headwind, so MORE wind is FASTER and the
+ * optimistic/pessimistic percentile mapping must invert (see makeWeatherFn). The
+ * deadband keeps a balanced loop (exposure ~ 0, e.g. Vatternrundan) on the convex
+ * default where more wind is slightly slower, so pessimistic = windier.
+ */
+function routeIsNetDownwind(microsegments: MicroSegment[], field: EnsembleField): boolean {
+  if (field.cells.length === 0) return false;
+  let u = 0;
+  let v = 0;
+  for (const c of field.cells) {
+    const rad = (c.winddir_from_deg * Math.PI) / 180;
+    u += -c.windspeed_mean_ms * Math.sin(rad);
+    v += -c.windspeed_mean_ms * Math.cos(rad);
+  }
+  if (u === 0 && v === 0) return false;
+  const dirFrom = (Math.atan2(-u, -v) * 180) / Math.PI;
+  let exposure = 0;
+  let total = 0;
+  for (const m of microsegments) {
+    if (m.neutral) continue;
+    const delta = ((dirFrom - m.bearing_deg) * Math.PI) / 180;
+    exposure += Math.cos(delta) * m.distance_m; // + into wind, - downwind
+    total += m.distance_m;
+  }
+  return total > 0 && exposure < -0.05 * total;
+}
+
 export function solveThreeScenarios(
   microsegments: MicroSegment[],
   field: EnsembleField,
   cfg: Config,
 ): ThreeScenarios {
   const startClockS = clockToSeconds(cfg.start_time);
+  const favorableWind = routeIsNetDownwind(microsegments, field);
 
   const solveScenario = (scenario: Scenario): PlanResult => {
-    const weather = makeWeatherFn(field, scenario, startClockS);
+    const weather = makeWeatherFn(field, scenario, startClockS, favorableWind);
     return solveForTargetTime(microsegments, weather, cfg);
   };
 

@@ -29,6 +29,8 @@ export function ScenarioSummary({ scenarios }: Props) {
             <th>Scenario</th>
             <th>Total tid</th>
             <th>Effektmål (NP, W)</th>
+            <th>Förar-NP (W)</th>
+            <th>IF</th>
           </tr>
         </thead>
         <tbody>
@@ -39,6 +41,8 @@ export function ScenarioSummary({ scenarios }: Props) {
                 <td>{label}</td>
                 <td>{secondsToHMM(plan.total_time_s)}</td>
                 <td>{Math.round(plan.np_target_used)}</td>
+                <td>{Math.round(plan.rider_np_ride_w)}</td>
+                <td>{plan.intensity_factor.toFixed(2)}</td>
               </tr>
             );
           })}
@@ -49,6 +53,11 @@ export function ScenarioSummary({ scenarios }: Props) {
           Måltiden går inte att hålla uthålligt. Visar den snabbaste hållbara planen.
         </p>
       )}
+      {scenarios.expected.notes.map((note, i) => (
+        <p className="warn" key={i}>
+          {note}
+        </p>
+      ))}
     </section>
   );
 }

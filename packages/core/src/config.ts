@@ -13,6 +13,9 @@ const DEFAULTS = {
   g: 9.81,
   rho_fallback: 1.2,
   pull_seconds: 45,
+  pull_cap_mult: 1.3,
+  max_plan_speed_kmh: 50,
+  sustain_if_warn: 0.75,
   climb_threshold: 0.03,
   climb_discount: true,
   k_yaw: 0.04,
@@ -65,10 +68,18 @@ export function applyDefaults(raw: RawConfig): Config {
   const watch_target: 'pull' | 'avg' =
     raw.watch_target !== undefined ? raw.watch_target : solo ? 'avg' : 'pull';
 
-  // Derive pull caps from ftp if not overridden
+  // Derive pull caps from ftp if not overridden. The hard cap is a multiple of
+  // ftp (pull_cap_mult): a 45 s paceline pull is a short supra-threshold effort,
+  // so capping every pull at ftp wrongly throttles flat/headwind speed and leaves
+  // sustainable rider-NP headroom unused. Sustainability is bounded by rider NP
+  // (the outer solver's [60, ftp] range), not by the per-pull cap. The soft cap
+  // (0.92*ftp) still discounts climbs so the group does not redline every ramp.
   const ftp = raw.ftp ?? 272;
-  const pull_cap_hard = raw.pull_cap_hard !== undefined ? raw.pull_cap_hard : ftp;
-  const pull_cap_soft = raw.pull_cap_soft !== undefined ? raw.pull_cap_soft : Math.round(0.92 * ftp);
+  const pull_cap_mult = raw.pull_cap_mult ?? DEFAULTS.pull_cap_mult;
+  const pull_cap_hard =
+    raw.pull_cap_hard !== undefined ? raw.pull_cap_hard : Math.round(pull_cap_mult * ftp);
+  const pull_cap_soft =
+    raw.pull_cap_soft !== undefined ? raw.pull_cap_soft : Math.round(0.92 * ftp);
 
   // np_target is left undefined here: resolved later from FIT or fallback
   const np_target = raw.np_target; // may be undefined

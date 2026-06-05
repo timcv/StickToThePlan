@@ -32,6 +32,8 @@ export interface PlanJsonMeta {
 function scenarioSummary(plan: PlanResult): Record<string, unknown> {
   return {
     np_target_used: plan.np_target_used,
+    rider_np_ride_w: plan.rider_np_ride_w,
+    intensity_factor: plan.intensity_factor,
     total_time_s: plan.total_time_s,
     rolling_time_s: plan.rolling_time_s,
     stop_time_s: plan.stop_time_s,

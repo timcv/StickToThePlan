@@ -7,10 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  buildLookupTable,
-  generatePlanDeltaSource,
-} from '../src/ciq/generate.js';
+import { buildLookupTable, generatePlanDeltaSource } from '../src/ciq/generate.js';
 import type { DisplaySegment, PlanResult, Config } from '../src/types.js';
 
 // ---------------------------------------------------------------------------
@@ -54,6 +51,8 @@ function makeDisplaySegments(): DisplaySegment[] {
 function makePlan(): PlanResult {
   return {
     np_target_used: 165,
+    rider_np_ride_w: 165,
+    intensity_factor: 165 / 272,
     total_time_s: 42300,
     rolling_time_s: 39300,
     stop_time_s: 3000,
@@ -82,8 +81,11 @@ function makeConfig(): Config {
     g: 9.81,
     rho_fallback: 1.2,
     pull_seconds: 45,
-    pull_cap_hard: 272,
+    pull_cap_hard: 354,
     pull_cap_soft: 250,
+    pull_cap_mult: 1.3,
+    max_plan_speed_kmh: 50,
+    sustain_if_warn: 0.75,
     climb_threshold: 0.03,
     climb_discount: true,
     watch_target: 'pull',

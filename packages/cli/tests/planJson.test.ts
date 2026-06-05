@@ -60,11 +60,7 @@ function makeSegmentPlan(micro: MicroSegment, eta_s: number): SegmentPlan {
   };
 }
 
-const micros: MicroSegment[] = [
-  makeMicro(0, 1000),
-  makeMicro(1, 2000),
-  makeMicro(2, 3000),
-];
+const micros: MicroSegment[] = [makeMicro(0, 1000), makeMicro(1, 2000), makeMicro(2, 3000)];
 
 const segs: SegmentPlan[] = [
   makeSegmentPlan(micros[0], 180),
@@ -72,13 +68,13 @@ const segs: SegmentPlan[] = [
   makeSegmentPlan(micros[2], 540),
 ];
 
-const stops: StopPlan[] = [
-  { control: 'Granna', km: 2, minutes: 10, arrive_s: 360, depart_s: 960 },
-];
+const stops: StopPlan[] = [{ control: 'Granna', km: 2, minutes: 10, arrive_s: 360, depart_s: 960 }];
 
 function makePlan(np: number, totalS: number, reachable: boolean): PlanResult {
   return {
     np_target_used: np,
+    rider_np_ride_w: np,
+    intensity_factor: np / 272,
     total_time_s: totalS,
     rolling_time_s: totalS - 600,
     stop_time_s: 600,
@@ -111,7 +107,8 @@ const displaySegments: DisplaySegment[] = [
     note: 'JÄMN FART',
     stop_minutes: 10,
     depart_s: 1140,
-    avg_speed_kmh: 0, micro_indices: [0, 1, 2],
+    avg_speed_kmh: 0,
+    micro_indices: [0, 1, 2],
   },
 ];
 
@@ -152,7 +149,15 @@ describe('buildPlanJson', () => {
   >;
 
   it('has the documented top-level keys', () => {
-    for (const key of ['config', 'anchor', 'scenarios', 'segments', 'stops', 'displaySegments', 'meta']) {
+    for (const key of [
+      'config',
+      'anchor',
+      'scenarios',
+      'segments',
+      'stops',
+      'displaySegments',
+      'meta',
+    ]) {
       expect(obj).toHaveProperty(key);
     }
   });

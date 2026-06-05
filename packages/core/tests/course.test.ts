@@ -15,7 +15,13 @@ import { buildCourseGpx } from '../src/output/course.js';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeMicro(index: number, cumDist: number, lat: number, lon: number, ele: number): MicroSegment {
+function makeMicro(
+  index: number,
+  cumDist: number,
+  lat: number,
+  lon: number,
+  ele: number,
+): MicroSegment {
   return {
     index,
     distance_m: index === 0 ? cumDist : 1000,
@@ -55,16 +61,16 @@ function makeSegmentPlan(micro: MicroSegment, eta_s: number): SegmentPlan {
 // 5 microsegments at 0,1000,2000,3000,4000 m
 const microsegments: MicroSegment[] = [
   makeMicro(0, 1000, 58.5327, 15.0444, 82.0),
-  makeMicro(1, 2000, 58.5200, 15.0600, 85.5),
-  makeMicro(2, 3000, 58.5100, 15.0750, 88.0),
-  makeMicro(3, 4000, 58.5000, 15.0900, 90.0),
-  makeMicro(4, 5000, 58.4900, 15.1050, 87.0),
+  makeMicro(1, 2000, 58.52, 15.06, 85.5),
+  makeMicro(2, 3000, 58.51, 15.075, 88.0),
+  makeMicro(3, 4000, 58.5, 15.09, 90.0),
+  makeMicro(4, 5000, 58.49, 15.105, 87.0),
 ];
 
 // Matching SegmentPlan entries with increasing eta_s
 const segmentPlans: SegmentPlan[] = [
   makeSegmentPlan(microsegments[0], 120),
-  makeSegmentPlan(microsegments[1], 360),  // at 2 km = control 'Granna' (km:2)
+  makeSegmentPlan(microsegments[1], 360), // at 2 km = control 'Granna' (km:2)
   makeSegmentPlan(microsegments[2], 600),
   makeSegmentPlan(microsegments[3], 840),
   makeSegmentPlan(microsegments[4], 1080),
@@ -72,6 +78,8 @@ const segmentPlans: SegmentPlan[] = [
 
 const plan: PlanResult = {
   np_target_used: 163,
+  rider_np_ride_w: 163,
+  intensity_factor: 163 / 272,
   total_time_s: 1080,
   rolling_time_s: 1080,
   stop_time_s: 0,
@@ -139,15 +147,15 @@ describe('buildCourseGpx (synthetic)', () => {
     const clockPattern = /\d{2}:\d{2}/;
     // Extract wpt section
     const wptSection = gpx.match(/<wpt[\s\S]*?<\/wpt>/g) ?? [];
-    const allNames = wptSection.map(w => {
+    const allNames = wptSection.map((w) => {
       const m = w.match(/<name>([\s\S]*?)<\/name>/);
       return m ? m[1] : '';
     });
-    expect(allNames.some(n => clockPattern.test(n))).toBe(true);
+    expect(allNames.some((n) => clockPattern.test(n))).toBe(true);
   });
 
   it('Gränna depot waypoint name contains stop duration annotation', () => {
-    const granna = gpx.match(/<wpt[\s\S]*?<\/wpt>/g)?.find(w => w.includes('nn'));
+    const granna = gpx.match(/<wpt[\s\S]*?<\/wpt>/g)?.find((w) => w.includes('nn'));
     expect(granna).toBeDefined();
     expect(granna).toContain('(10 min)');
   });
@@ -202,6 +210,8 @@ describe.skipIf(!existsSync('data/vatternrundan-315km.gpx'))(
       const segs: SegmentPlan[] = micros.map((m, i) => makeSegmentPlan(m, (i + 1) * 10));
       const realPlan: PlanResult = {
         np_target_used: 163,
+        rider_np_ride_w: 163,
+        intensity_factor: 163 / 272,
         total_time_s: segs[segs.length - 1]?.eta_s ?? 0,
         rolling_time_s: segs[segs.length - 1]?.eta_s ?? 0,
         stop_time_s: 0,
