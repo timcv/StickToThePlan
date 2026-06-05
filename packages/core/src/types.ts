@@ -4,6 +4,14 @@ export interface Stop {
   km: number;
   minutes: number;
 }
+export type ExposureClass =
+  | 'open'
+  | 'semi_open'
+  | 'sheltered'
+  | 'forest'
+  | 'urban'
+  | 'water'
+  | 'bridge';
 export interface Config {
   race_date: string; // "2026-06-13"
   start_time: string; // "04:22" local race-day time
@@ -45,6 +53,11 @@ export interface Config {
   grade_merge_pct: number; // 0.003 merge adjacent segments whose grade differs by less (0 disables)
   styrkort_max_rows: number; // 20 max rows in the compact handlebar card
   solo: boolean; // derived: n_riders === 1
+  rider_wind_height_m: number; // 1.2: height the cyclist feels wind at
+  forecast_wind_height_m: number; // 10: height the forecast wind is given at
+  wind_roughness_z0?: number; // optional raw roughness override; else derived from exposure_terrain / per-segment exposure
+  exposure_terrain: 'open' | 'mixed' | 'sheltered'; // coarse global openness when no per-segment exposure data
+  apply_wind_height_correction: boolean; // false = treat wind as already at rider level (manual "felt" wind)
 }
 
 // physics
@@ -80,6 +93,8 @@ export interface MicroSegment {
   ele_start_m: number;
   ele_end_m: number;
   neutral: boolean; // true for km 0..1 neutral block
+  z0_used?: number; // roughness length applied to this segment's wind (set when exposure data present)
+  exposure_class?: ExposureClass; // landscape class if known
 }
 export interface FitPassMetrics {
   duration_s: number;
@@ -106,6 +121,10 @@ export interface SegmentPlan {
   crosswind_ms: number;
   rho: number;
   cap_binding: 'none' | 'hard' | 'soft' | 'spinout';
+  raw_windspeed_ms: number; // forecast wind magnitude before height/exposure correction
+  eff_windspeed_ms: number; // wind magnitude used after correction
+  z0_used: number; // roughness applied
+  exposure_class?: ExposureClass;
 }
 export interface StopPlan {
   control: string;

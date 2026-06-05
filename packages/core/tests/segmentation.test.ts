@@ -21,6 +21,9 @@ function makeSeg(micro: MicroSegment, overrides: Partial<SegmentPlan> = {}): Seg
     crosswind_ms: 0,
     rho: 1.2,
     cap_binding: 'none',
+    raw_windspeed_ms: 0,
+    eff_windspeed_ms: 0,
+    z0_used: 0,
     ...overrides,
   };
 }

@@ -131,6 +131,9 @@ export function runInnerSolve(
         crosswind_ms: 0,
         rho: cfg.rho_fallback,
         cap_binding: 'none',
+        raw_windspeed_ms: 0,
+        eff_windspeed_ms: 0,
+        z0_used: 0,
       });
       continue;
     }
@@ -221,6 +224,9 @@ export function runInnerSolve(
       crosswind_ms: crosswind,
       rho,
       cap_binding,
+      raw_windspeed_ms: w.windspeed_ms,
+      eff_windspeed_ms: w.windspeed_ms,
+      z0_used: 0,
     });
   }
 

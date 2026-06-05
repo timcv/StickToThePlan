@@ -20,13 +20,19 @@ export type {
   Scenario,
   WeatherFn,
   DisplaySegment,
+  ExposureClass,
 } from './types.js';
 
 // Physics, chaingang, planner, segmentation.
 export * from './physics.js';
 export * from './chaingang.js';
 export * from './planner.js';
-export { segment, VATTERN_CONTROLS, type ControlPoint, type SegmentOptions } from './segmentation.js';
+export {
+  segment,
+  VATTERN_CONTROLS,
+  type ControlPoint,
+  type SegmentOptions,
+} from './segmentation.js';
 
 // Config: pure defaults.
 export { applyDefaults, type RawConfig } from './config.js';
@@ -48,11 +54,7 @@ export { analyzePass, readFitPowerBytes, determineAnchorFromPower } from './inge
 // Output builders.
 export { renderMarkdown, renderHtml, buildStyrkortHtml } from './output/tempokort.js';
 export { buildCourseGpx } from './output/course.js';
-export {
-  buildSteps,
-  encodeWorkout,
-  type WorkoutStepTarget,
-} from './output/fitWorkout.js';
+export { buildSteps, encodeWorkout, type WorkoutStepTarget } from './output/fitWorkout.js';
 export { buildPlanJson, type PlanJsonMeta } from './output/planJson.js';
 export { buildSplitTable, type SplitRow } from './output/splits.js';
 

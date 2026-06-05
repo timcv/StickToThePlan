@@ -100,6 +100,10 @@ function makeConfig(): Config {
     grade_merge_pct: 0.003,
     styrkort_max_rows: 20,
     solo: false,
+    rider_wind_height_m: 1.2,
+    forecast_wind_height_m: 10,
+    exposure_terrain: 'mixed',
+    apply_wind_height_correction: true,
   };
 }
 
