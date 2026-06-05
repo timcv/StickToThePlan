@@ -1,0 +1,11 @@
+{
+  "route_id": "test-route",
+  "generated_note": "fixture",
+  "total_km": 4,
+  "runs": [
+    { "from_km": 0, "to_km": 1, "class": "open" },
+    { "from_km": 1, "to_km": 2, "class": "forest" },
+    { "from_km": 2, "to_km": 3, "class": "bridge" },
+    { "from_km": 3, "to_km": 4, "class": "water" }
+  ]
+}

@@ -1,0 +1,587 @@
+{
+  "route_id": "vatternrundan-315km",
+  "generated_note": "OSM/Overpass bake; classes literature-mapped to z0 in core/weather/effective.ts",
+  "total_km": 314.892,
+  "runs": [
+    {
+      "from_km": 0,
+      "to_km": 0.505,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 0.505,
+      "to_km": 0.544,
+      "class": "water"
+    },
+    {
+      "from_km": 0.544,
+      "to_km": 9.771,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 9.771,
+      "to_km": 9.97,
+      "class": "forest"
+    },
+    {
+      "from_km": 9.97,
+      "to_km": 30.383,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 30.383,
+      "to_km": 30.479,
+      "class": "forest"
+    },
+    {
+      "from_km": 30.479,
+      "to_km": 46.36,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 46.36,
+      "to_km": 47.39,
+      "class": "urban"
+    },
+    {
+      "from_km": 47.39,
+      "to_km": 59.626,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 59.626,
+      "to_km": 60.749,
+      "class": "forest"
+    },
+    {
+      "from_km": 60.749,
+      "to_km": 62.178,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 62.178,
+      "to_km": 62.347,
+      "class": "forest"
+    },
+    {
+      "from_km": 62.347,
+      "to_km": 62.619,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 62.619,
+      "to_km": 62.753,
+      "class": "forest"
+    },
+    {
+      "from_km": 62.753,
+      "to_km": 63.284,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 63.284,
+      "to_km": 63.426,
+      "class": "forest"
+    },
+    {
+      "from_km": 63.426,
+      "to_km": 64.829,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 64.829,
+      "to_km": 64.952,
+      "class": "forest"
+    },
+    {
+      "from_km": 64.952,
+      "to_km": 65.982,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 65.982,
+      "to_km": 67.026,
+      "class": "forest"
+    },
+    {
+      "from_km": 67.026,
+      "to_km": 67.404,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 67.404,
+      "to_km": 67.532,
+      "class": "forest"
+    },
+    {
+      "from_km": 67.532,
+      "to_km": 71.873,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 71.873,
+      "to_km": 74.172,
+      "class": "urban"
+    },
+    {
+      "from_km": 74.172,
+      "to_km": 74.44,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 74.44,
+      "to_km": 74.607,
+      "class": "urban"
+    },
+    {
+      "from_km": 74.607,
+      "to_km": 74.689,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 74.689,
+      "to_km": 74.864,
+      "class": "urban"
+    },
+    {
+      "from_km": 74.864,
+      "to_km": 84.7,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 84.7,
+      "to_km": 84.768,
+      "class": "urban"
+    },
+    {
+      "from_km": 84.768,
+      "to_km": 87.428,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 87.428,
+      "to_km": 87.569,
+      "class": "forest"
+    },
+    {
+      "from_km": 87.569,
+      "to_km": 102.734,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 102.734,
+      "to_km": 102.741,
+      "class": "bridge"
+    },
+    {
+      "from_km": 102.741,
+      "to_km": 114.56,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 114.56,
+      "to_km": 114.71,
+      "class": "forest"
+    },
+    {
+      "from_km": 114.71,
+      "to_km": 119.058,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 119.058,
+      "to_km": 119.224,
+      "class": "urban"
+    },
+    {
+      "from_km": 119.224,
+      "to_km": 119.407,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 119.407,
+      "to_km": 120.005,
+      "class": "urban"
+    },
+    {
+      "from_km": 120.005,
+      "to_km": 120.026,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 120.026,
+      "to_km": 120.707,
+      "class": "urban"
+    },
+    {
+      "from_km": 120.707,
+      "to_km": 120.821,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 120.821,
+      "to_km": 121.102,
+      "class": "forest"
+    },
+    {
+      "from_km": 121.102,
+      "to_km": 121.559,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 121.559,
+      "to_km": 121.836,
+      "class": "forest"
+    },
+    {
+      "from_km": 121.836,
+      "to_km": 121.889,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 121.889,
+      "to_km": 122.037,
+      "class": "urban"
+    },
+    {
+      "from_km": 122.037,
+      "to_km": 122.346,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 122.346,
+      "to_km": 122.396,
+      "class": "forest"
+    },
+    {
+      "from_km": 122.396,
+      "to_km": 122.951,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 122.951,
+      "to_km": 123.108,
+      "class": "forest"
+    },
+    {
+      "from_km": 123.108,
+      "to_km": 124.172,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 124.172,
+      "to_km": 124.9,
+      "class": "forest"
+    },
+    {
+      "from_km": 124.9,
+      "to_km": 125.256,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 125.256,
+      "to_km": 125.729,
+      "class": "forest"
+    },
+    {
+      "from_km": 125.729,
+      "to_km": 126.564,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 126.564,
+      "to_km": 126.681,
+      "class": "forest"
+    },
+    {
+      "from_km": 126.681,
+      "to_km": 126.757,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 126.757,
+      "to_km": 126.854,
+      "class": "forest"
+    },
+    {
+      "from_km": 126.854,
+      "to_km": 126.866,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 126.866,
+      "to_km": 127.31,
+      "class": "forest"
+    },
+    {
+      "from_km": 127.31,
+      "to_km": 127.671,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 127.671,
+      "to_km": 127.887,
+      "class": "forest"
+    },
+    {
+      "from_km": 127.887,
+      "to_km": 135.156,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 135.156,
+      "to_km": 135.243,
+      "class": "urban"
+    },
+    {
+      "from_km": 135.243,
+      "to_km": 135.322,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 135.322,
+      "to_km": 135.621,
+      "class": "urban"
+    },
+    {
+      "from_km": 135.621,
+      "to_km": 135.785,
+      "class": "forest"
+    },
+    {
+      "from_km": 135.785,
+      "to_km": 136.092,
+      "class": "urban"
+    },
+    {
+      "from_km": 136.092,
+      "to_km": 136.22,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 136.22,
+      "to_km": 137.048,
+      "class": "forest"
+    },
+    {
+      "from_km": 137.048,
+      "to_km": 137.139,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 137.139,
+      "to_km": 137.72,
+      "class": "forest"
+    },
+    {
+      "from_km": 137.72,
+      "to_km": 138.001,
+      "class": "urban"
+    },
+    {
+      "from_km": 138.001,
+      "to_km": 146.846,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 146.846,
+      "to_km": 146.984,
+      "class": "forest"
+    },
+    {
+      "from_km": 146.984,
+      "to_km": 162.934,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 162.934,
+      "to_km": 163.019,
+      "class": "forest"
+    },
+    {
+      "from_km": 163.019,
+      "to_km": 164.651,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 164.651,
+      "to_km": 165.111,
+      "class": "forest"
+    },
+    {
+      "from_km": 165.111,
+      "to_km": 166.964,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 166.964,
+      "to_km": 167.209,
+      "class": "forest"
+    },
+    {
+      "from_km": 167.209,
+      "to_km": 167.62,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 167.62,
+      "to_km": 167.728,
+      "class": "forest"
+    },
+    {
+      "from_km": 167.728,
+      "to_km": 172.478,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 172.478,
+      "to_km": 172.645,
+      "class": "urban"
+    },
+    {
+      "from_km": 172.645,
+      "to_km": 177.674,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 177.674,
+      "to_km": 178.101,
+      "class": "forest"
+    },
+    {
+      "from_km": 178.101,
+      "to_km": 178.286,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 178.286,
+      "to_km": 178.367,
+      "class": "forest"
+    },
+    {
+      "from_km": 178.367,
+      "to_km": 191.04,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 191.04,
+      "to_km": 191.229,
+      "class": "forest"
+    },
+    {
+      "from_km": 191.229,
+      "to_km": 200.679,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 200.679,
+      "to_km": 200.976,
+      "class": "forest"
+    },
+    {
+      "from_km": 200.976,
+      "to_km": 201.243,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 201.243,
+      "to_km": 202.68,
+      "class": "forest"
+    },
+    {
+      "from_km": 202.68,
+      "to_km": 205.901,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 205.901,
+      "to_km": 206.271,
+      "class": "urban"
+    },
+    {
+      "from_km": 206.271,
+      "to_km": 207.658,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 207.658,
+      "to_km": 207.823,
+      "class": "urban"
+    },
+    {
+      "from_km": 207.823,
+      "to_km": 246.529,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 246.529,
+      "to_km": 246.615,
+      "class": "forest"
+    },
+    {
+      "from_km": 246.615,
+      "to_km": 262.451,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 262.451,
+      "to_km": 262.865,
+      "class": "forest"
+    },
+    {
+      "from_km": 262.865,
+      "to_km": 263.554,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 263.554,
+      "to_km": 263.836,
+      "class": "forest"
+    },
+    {
+      "from_km": 263.836,
+      "to_km": 264.344,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 264.344,
+      "to_km": 264.938,
+      "class": "urban"
+    },
+    {
+      "from_km": 264.938,
+      "to_km": 290.384,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 290.384,
+      "to_km": 290.488,
+      "class": "forest"
+    },
+    {
+      "from_km": 290.488,
+      "to_km": 297.727,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 297.727,
+      "to_km": 298.054,
+      "class": "forest"
+    },
+    {
+      "from_km": 298.054,
+      "to_km": 312.664,
+      "class": "semi_open"
+    },
+    {
+      "from_km": 312.664,
+      "to_km": 313.682,
+      "class": "urban"
+    },
+    {
+      "from_km": 313.682,
+      "to_km": 314.892,
+      "class": "semi_open"
+    }
+  ]
+}
