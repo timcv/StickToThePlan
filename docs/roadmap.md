@@ -33,3 +33,12 @@ modes). Candidates for a later version:
 - **Vibration / alerts** at waypoint passage and at deviation thresholds, off by
   default, used sparingly so the field stays supportive rather than stressful.
 - **Expanded Connect IQ settings** surface for the above.
+
+## Repository: Prettier formatting drift
+
+`main` is not fully Prettier-clean: running `npm run format` reformats roughly 40 files
+that were committed without the formatting hook (multi-line function signatures collapsed,
+aligned whitespace in `config.json`, and similar). The lefthook pre-commit only formats
+_staged_ files, so files that are never re-touched drift out of Prettier style. Clean it up
+in a dedicated `chore: prettier-format repo` PR, kept separate so feature diffs stay
+focused, then let the hook keep new commits clean.

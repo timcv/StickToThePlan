@@ -14,13 +14,23 @@ activity; it reads whatever StickToThePlan course you load.
 
 ## 2. Install the data field
 
-The field ships as a sideloadable `.prg`:
+The field ships as a sideloadable `.prg`. Building it once needs the Garmin Connect
+IQ SDK with the `fenix7x` device installed:
 
-```bash
-npm run build:ciq      # needs the Garmin Connect IQ SDK (monkeyc) installed
-```
+1. Install the Connect IQ SDK and the SDK Manager (developer.garmin.com). In the SDK
+   Manager, sign in with your Garmin account and download the **fenix7x** device.
+   `monkeyc` cannot compile for a device whose data has not been downloaded (it fails
+   with `Invalid device id: 'fenix7x'`).
+2. Build the watch file:
 
-Copy `output/NextControlPace.prg` to `GARMIN/Apps` on the watch.
+   ```bash
+   npm run build:ciq
+   ```
+
+   If the SDK or the fenix7x device is missing, the script prints a clear message and
+   skips the build instead of failing.
+
+3. Copy `output/NextControlPace.prg` to `GARMIN/Apps` on the watch.
 
 ## 3. Add it to your activity
 
