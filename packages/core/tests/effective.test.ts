@@ -31,12 +31,20 @@ describe('heightFactor', () => {
     expect(() => heightFactor(0.05, 0, 10)).toThrow();
     expect(() => heightFactor(0.05, 1.2, 0)).toThrow();
   });
+
+  it('caps at 1 when rider height exceeds forecast height', () => {
+    expect(heightFactor(0.05, 10, 1.2)).toBe(1);
+  });
 });
 
 describe('adjustWindForHeight', () => {
   it('scales wind and never goes negative', () => {
     expect(adjustWindForHeight(6, 0.05, 1.2, 10)).toBeCloseTo(6 * heightFactor(0.05, 1.2, 10), 10);
     expect(adjustWindForHeight(0, 0.05, 1.2, 10)).toBe(0);
+  });
+
+  it('clamps negative input wind to zero', () => {
+    expect(adjustWindForHeight(-3, 0.05, 1.2, 10)).toBe(0);
   });
 });
 
