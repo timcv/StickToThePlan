@@ -12,6 +12,7 @@ import type { PipelineForm } from '../worker/solve.worker';
 import type { SolverStatus } from '../useSolver';
 import { defaultRouteGpx, DEFAULT_ROUTE_NAME } from '../lib/defaultRoute';
 import { VATTERN_CONTROLS } from '@stp/core';
+import type { ExposureTerrain } from '@stp/core';
 import { InfoTip } from './InfoTip';
 import { FIELD_HELP } from '../lib/strings';
 
@@ -34,6 +35,8 @@ export interface FormSubmit {
   gpxText: string;
   fitBytes: Uint8Array | null;
   form: PipelineForm;
+  /** Whether the user wants the finish time shown as a range (UI-only). */
+  showInterval: boolean;
 }
 
 interface Props {
@@ -72,6 +75,8 @@ const FORM_DEFAULTS: PersistedForm = {
   startTime: '04:22',
   stops: DEFAULT_STOPS,
   styrkortMaxRows: 20,
+  exposureTerrain: 'mixed',
+  showInterval: true,
 };
 
 interface PersistedForm {
@@ -84,6 +89,8 @@ interface PersistedForm {
   startTime: string;
   stops: StopRow[];
   styrkortMaxRows: number;
+  exposureTerrain: ExposureTerrain;
+  showInterval: boolean;
 }
 
 function loadFromStorage(): Partial<PersistedForm> {
@@ -133,6 +140,12 @@ export function UploadForm({ onRun, status }: Props) {
   const [styrkortMaxRows, setStyrkortMaxRows] = useState(
     saved.styrkortMaxRows ?? FORM_DEFAULTS.styrkortMaxRows,
   );
+  const [exposureTerrain, setExposureTerrain] = useState<ExposureTerrain>(
+    saved.exposureTerrain ?? FORM_DEFAULTS.exposureTerrain,
+  );
+  const [showInterval, setShowInterval] = useState(
+    saved.showInterval ?? FORM_DEFAULTS.showInterval,
+  );
 
   // Stops.
   const [stops, setStops] = useState<StopRow[]>(saved.stops ?? FORM_DEFAULTS.stops);
@@ -151,12 +164,18 @@ export function UploadForm({ onRun, status }: Props) {
       startTime,
       stops,
       styrkortMaxRows,
+      exposureTerrain,
+      showInterval,
       ...patch,
     });
   };
 
   const running = status === 'running';
   const canRun = !running && gpxText.trim().length > 0;
+  // The baked exposure file only covers the bundled route. For an uploaded GPX
+  // we would have to fetch exposure (see fetchExposureForRoute), which is not
+  // implemented yet, so we surface a disabled affordance instead.
+  const isDefaultRoute = gpxText === defaultRouteGpx;
 
   const onGpxChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -220,10 +239,14 @@ export function UploadForm({ onRun, status }: Props) {
       startTime,
       stops,
       styrkortMaxRows,
+      exposureTerrain,
+      showInterval,
     };
+    const resolvedGpx = snapshot?.gpxText ?? gpxText;
     return {
-      gpxText: snapshot?.gpxText ?? gpxText,
+      gpxText: resolvedGpx,
       fitBytes: snapshot ? snapshot.fitBytes : fitBytes,
+      showInterval: v.showInterval,
       form: {
         target_total_hm: v.targetTotalHm,
         ftp: v.ftp,
@@ -234,6 +257,10 @@ export function UploadForm({ onRun, status }: Props) {
         race_date: v.raceDate,
         start_time: v.startTime,
         styrkort_max_rows: v.styrkortMaxRows,
+        exposure_terrain: v.exposureTerrain,
+        // The baked exposure file only matches the bundled route; once the user
+        // picks their own GPX this is false and we fall back to coarse terrain.
+        is_default_route: resolvedGpx === defaultRouteGpx,
       },
     };
   };
@@ -253,6 +280,8 @@ export function UploadForm({ onRun, status }: Props) {
     setRaceDate(FORM_DEFAULTS.raceDate);
     setStartTime(FORM_DEFAULTS.startTime);
     setStyrkortMaxRows(FORM_DEFAULTS.styrkortMaxRows);
+    setExposureTerrain(FORM_DEFAULTS.exposureTerrain);
+    setShowInterval(FORM_DEFAULTS.showInterval);
     setStops(FORM_DEFAULTS.stops);
     setGpxText(defaultRouteGpx);
     setGpxName(DEFAULT_ROUTE_NAME);
@@ -429,6 +458,57 @@ export function UploadForm({ onRun, status }: Props) {
                 <input type="file" accept=".fit,application/octet-stream" onChange={onFitChange} />
                 {fitName && <small className="hint">Inläst: {fitName}</small>}
               </label>
+            </div>
+          </fieldset>
+
+          <fieldset className="form-section">
+            <legend>Vind &amp; terräng</legend>
+            <div className="field-grid">
+              <label className="field">
+                <FieldLabel text="Hur öppen är rutten?" helpKey="terrain" />
+                <select
+                  value={exposureTerrain}
+                  onChange={(e) => {
+                    const v = e.target.value as ExposureTerrain;
+                    setExposureTerrain(v);
+                    persist({ exposureTerrain: v });
+                  }}
+                >
+                  <option value="open">Öppet</option>
+                  <option value="mixed">Blandat</option>
+                  <option value="sheltered">Skyddat</option>
+                </select>
+                <small className="hint">{FIELD_HELP.terrain.help}</small>
+              </label>
+
+              <label className="field field-check">
+                <span>
+                  <input
+                    type="checkbox"
+                    checked={showInterval}
+                    onChange={(e) => {
+                      setShowInterval(e.target.checked);
+                      persist({ showInterval: e.target.checked });
+                    }}
+                  />{' '}
+                  Visa spann
+                </span>
+                <small className="hint">
+                  Visar sluttiden som ett intervall när vindosäkerheten är minst en minut.
+                </small>
+              </label>
+
+              {!isDefaultRoute && (
+                <label className="field">
+                  <span>Exponering för rutten</span>
+                  <button type="button" className="ghost" disabled title="Inte tillgängligt ännu">
+                    Hämta exponering för rutten
+                  </button>
+                  <small className="hint">
+                    Kommer snart. Egna rutter använder tills vidare öppenhetsvalet ovan.
+                  </small>
+                </label>
+              )}
             </div>
           </fieldset>
         </>

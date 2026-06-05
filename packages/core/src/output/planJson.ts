@@ -89,6 +89,15 @@ export function buildPlanJson(
       optimistic: scenarioSummary(scenarios.optimistic),
       pessimistic: scenarioSummary(scenarios.pessimistic),
     },
+    time_uncertainty_s: scenarios.time_uncertainty_s,
+    assumptions: {
+      rider_wind_height_m: cfg.rider_wind_height_m,
+      forecast_wind_height_m: cfg.forecast_wind_height_m,
+      exposure_terrain: cfg.exposure_terrain,
+      wind_roughness_z0: cfg.wind_roughness_z0 ?? null,
+      apply_wind_height_correction: cfg.apply_wind_height_correction,
+      aero: 'vector',
+    },
     // Full per-segment detail for the expected scenario.
     segments: scenarios.expected.segments.map(segmentRecord),
     stops: scenarios.expected.stops,

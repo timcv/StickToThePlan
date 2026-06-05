@@ -6,28 +6,33 @@
 import type { PhysicsParams } from './types.js';
 
 /**
- * Steady-state pedal power for a given speed, grade, and headwind.
+ * Steady-state pedal power for a given speed, grade, headwind, and crosswind.
  *
- * Implements spec section 6 verbatim:
+ * Implements spec section 6 with vector apparent-wind aero:
  *   theta   = atan(grade)
  *   F_grav  = m * g * sin(theta)
  *   F_roll  = m * g * cos(theta) * crr
- *   v_air   = v_ground + headwind   // positive headwind, negative tailwind
- *   F_aero  = 0.5 * rho * CdA * v_air * |v_air|  // signed, handles tailwind > ground speed
+ *   u       = v_ground + headwind       // axial apparent wind, + into wind
+ *   v_app   = hypot(u, crosswind)       // true apparent-wind magnitude
+ *   F_aero  = 0.5 * rho * CdA * v_app * u  // magnitude v_app, projected on travel axis, sign from u
  *   P_wheel = (F_grav + F_roll + F_aero) * v_ground
  *   P_pedal = P_wheel / eta
+ *
+ * crosswind=0 is byte-identical to the legacy axial formula (v_app = |u|, F_aero = 0.5*rho*CdA*|u|*u).
  */
 export function pedalPower(
   v: number,
   grade: number,
   headwind: number,
   p: PhysicsParams,
+  crosswind = 0,
 ): number {
   const theta = Math.atan(grade);
   const fGrav = p.m * p.g * Math.sin(theta);
   const fRoll = p.m * p.g * Math.cos(theta) * p.crr;
-  const vAir = v + headwind;
-  const fAero = 0.5 * p.rho * p.cda * vAir * Math.abs(vAir);
+  const u = v + headwind; // axial apparent wind, + into wind
+  const vApp = Math.hypot(u, crosswind); // true apparent-wind magnitude
+  const fAero = 0.5 * p.rho * p.cda * vApp * u; // magnitude vApp, projected on travel axis, sign from u
   const pWheel = (fGrav + fRoll + fAero) * v;
   return pWheel / p.eta;
 }
@@ -42,12 +47,13 @@ export function solveSpeedForPower(
   grade: number,
   headwind: number,
   p: PhysicsParams,
+  crosswind = 0,
 ): number {
   let lo = 0.5;
   let hi = 25;
   for (let i = 0; i < 100; i++) {
     const mid = (lo + hi) / 2;
-    const pm = pedalPower(mid, grade, headwind, p);
+    const pm = pedalPower(mid, grade, headwind, p, crosswind);
     if (Math.abs(pm - target) < 0.01) return mid;
     if (pm < target) lo = mid;
     else hi = mid;
@@ -88,11 +94,7 @@ export function decomposeWind(
  * Saturation vapor pressure (Tetens approximation): es = 611.2 * exp(17.67*(T-273.15)/(T-29.65)) Pa.
  * This correction reduces density by up to ~0.5% at typical race conditions (15 C, 60% RH).
  */
-export function airDensity(
-  tempC: number,
-  pressurePa: number,
-  relHumidity = 0,
-): number {
+export function airDensity(tempC: number, pressurePa: number, relHumidity = 0): number {
   const Rd = 287.058; // J/(kg*K)
   const T = tempC + 273.15; // kelvin
 
@@ -122,14 +124,12 @@ export function airDensity(
  * @param kYaw       Yaw drag coefficient (e.g. 0.04 gives ~8% rise at 20 deg yaw)
  * @returns Multiplicative CdA factor (>= 1.0)
  */
-export function yawCdaFactor(
-  crosswind: number,
-  vAir: number,
-  kYaw: number,
-): number {
+export function yawCdaFactor(crosswind: number, vAir: number, kYaw: number): number {
   const yawRad = Math.atan2(crosswind, vAir);
-  const yawDeg = (yawRad * 180) / Math.PI;
-  return 1 + kYaw * Math.abs(yawDeg) / 10;
+  let yawDeg = (yawRad * 180) / Math.PI;
+  const MAX_YAW_DEG = 50; // wind-tunnel-valid range; clamps the u<0 ~180deg blow-up
+  yawDeg = Math.max(-MAX_YAW_DEG, Math.min(MAX_YAW_DEG, yawDeg));
+  return 1 + (kYaw * Math.abs(yawDeg)) / 10;
 }
 
 /**
@@ -158,7 +158,6 @@ export function normalizedPower(samples: number[], hz = 1): number {
   }
 
   // Mean of (rolling^4), then take the fourth root
-  const meanFourthPow =
-    rolling.reduce((a, v) => a + v ** 4, 0) / rolling.length;
+  const meanFourthPow = rolling.reduce((a, v) => a + v ** 4, 0) / rolling.length;
   return meanFourthPow ** 0.25;
 }

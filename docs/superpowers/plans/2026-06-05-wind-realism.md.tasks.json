@@ -1,0 +1,67 @@
+{
+  "planPath": "docs/superpowers/plans/2026-06-05-wind-realism.md",
+  "tasks": [
+    {
+      "id": 1,
+      "subject": "Task 1: Config + types for the wind model",
+      "status": "completed",
+      "description": "**Goal:** Add config fields, ExposureClass type, optional segment/micro fields. Behavior unchanged.\n\n**Verify:** npx vitest run packages/core/tests/config.wind.test.ts\n\n```json:metadata\n{\"files\":[\"packages/core/src/types.ts\",\"packages/core/src/config.ts\",\"packages/core/src/index.ts\",\"packages/core/tests/config.wind.test.ts\"],\"verifyCommand\":\"npx vitest run packages/core/tests/config.wind.test.ts\",\"acceptanceCriteria\":[\"new Config fields + defaults\",\"ExposureClass exported\",\"MicroSegment/SegmentPlan fields\",\"wind_roughness_z0 optional\"]}\n```"
+    },
+    {
+      "id": 2,
+      "subject": "Task 2: Height-correction engine (effective.ts)",
+      "status": "completed",
+      "blockedBy": [1],
+      "description": "**Goal:** Pure module converting forecast wind to rider-level via log profile + roughness lookups.\n\n**Verify:** npx vitest run packages/core/tests/effective.test.ts\n\n```json:metadata\n{\"files\":[\"packages/core/src/weather/effective.ts\",\"packages/core/src/index.ts\",\"packages/core/tests/effective.test.ts\"],\"verifyCommand\":\"npx vitest run packages/core/tests/effective.test.ts\",\"acceptanceCriteria\":[\"log-profile factor clamped [0.15,1]\",\"escape hatch k=1\",\"throws on non-positive\",\"terrain+class z0 ordered\"]}\n```"
+    },
+    {
+      "id": 3,
+      "subject": "Task 3: Wire height correction into the planner",
+      "status": "completed",
+      "blockedBy": [1, 2],
+      "description": "**Goal:** Apply effective-wind correction per effort segment; store raw/eff wind; re-baseline shifted tests.\n\n**Verify:** npx vitest run packages/core\n\n```json:metadata\n{\"files\":[\"packages/core/src/planner.ts\",\"packages/core/tests/planner.effectivewind.test.ts\",\"packages/core/tests/scenarios.test.ts\",\"packages/core/tests/planner.test.ts\"],\"verifyCommand\":\"npx vitest run packages/core\",\"acceptanceCriteria\":[\"effective wind per segment\",\"resolveZ0 precedence\",\"raw/eff/z0/class on segment\",\"calm unchanged\",\"escape hatch\",\"suites re-baselined\"]}\n```"
+    },
+    {
+      "id": 4,
+      "subject": "Task 4: Vector apparent wind + tailwind clamp",
+      "status": "completed",
+      "blockedBy": [3],
+      "description": "**Goal:** Replace axial aero magnitude with apparent-wind vector; clamp yaw. Head/tailwind unchanged.\n\n**Verify:** npx vitest run packages/core\n\n```json:metadata\n{\"files\":[\"packages/core/src/physics.ts\",\"packages/core/src/chaingang.ts\",\"packages/core/src/planner.ts\",\"packages/core/tests/physics.apparent.test.ts\"],\"verifyCommand\":\"npx vitest run packages/core\",\"acceptanceCriteria\":[\"vector vApp aero\",\"c=0 == legacy\",\"yaw clamp 50deg\",\"crosswind adds drag\",\"u<0 finite bounded\",\"monotone in v\"]}\n```"
+    },
+    {
+      "id": 5,
+      "subject": "Task 5: Finish-time uncertainty interval + outputs",
+      "status": "completed",
+      "blockedBy": [4],
+      "description": "**Goal:** Interval by holding expected NP fixed and re-marching under optimistic/pessimistic wind; surface in tempokort + plan.json.\n\n**Verify:** npx vitest run packages/core\n\n```json:metadata\n{\"files\":[\"packages/core/src/planner.ts\",\"packages/core/src/output/tempokort.ts\",\"packages/core/src/output/planJson.ts\",\"packages/core/tests/uncertainty.test.ts\"],\"verifyCommand\":\"npx vitest run packages/core\",\"acceptanceCriteria\":[\"time_uncertainty_s on ThreeScenarios\",\"fixed-NP re-march\",\"tempokort interval+footnote\",\"plan.json interval+assumptions\",\"expected in [low,high]\"]}\n```"
+    },
+    {
+      "id": 6,
+      "subject": "Task 6: OSM exposure bake script + committed data",
+      "status": "completed",
+      "description": "**Goal:** Dev-only Node script classifying built-in route microsegments from OSM; commit static exposure file.\n\n**Verify:** node scripts/bake-exposure.mjs\n\n```json:metadata\n{\"files\":[\"scripts/bake-exposure.mjs\",\"data/vatternrundan-exposure.json\",\"packages/core/tests/fixtures/exposure-sample.json\"],\"verifyCommand\":\"node scripts/bake-exposure.mjs\",\"acceptanceCriteria\":[\"reads built-in GPX\",\"Overpass classify\",\"RLE runs cover route\",\"\\u22651 bridge run\",\"fixture written\"]}\n```"
+    },
+    {
+      "id": 7,
+      "subject": "Task 7: Exposure loader, apply-to-microsegments, data quality",
+      "status": "completed",
+      "blockedBy": [2, 5, 6],
+      "description": "**Goal:** Pure core functions to load baked runs, stamp class+z0 per micro, report coverage.\n\n**Verify:** npx vitest run packages/core\n\n```json:metadata\n{\"files\":[\"packages/core/src/weather/exposure.ts\",\"packages/core/src/index.ts\",\"packages/core/src/planner.ts\",\"packages/core/tests/exposure.test.ts\"],\"verifyCommand\":\"npx vitest run packages/core\",\"acceptanceCriteria\":[\"applyExposure stamps class+z0\",\"coverage%\",\"empty runs no-op\",\"data_quality on ThreeScenarios\"]}\n```"
+    },
+    {
+      "id": 8,
+      "subject": "Task 8: Web UX honesty",
+      "status": "completed",
+      "blockedBy": [3, 5, 7],
+      "description": "**Goal:** Surface effective wind, exposure, interval, manual-wind toggle, tooltips, advanced settings. Swedish copy.\n\n**Verify:** npx vitest run apps/web ; npm run dev -w @stp/web manual check\n\n```json:metadata\n{\"files\":[\"apps/web/src/components/SummaryCard.tsx\",\"apps/web/src/components/WeatherPanel.tsx\",\"apps/web/src/components/TempokortTable.tsx\",\"apps/web/src/components/UploadForm.tsx\",\"apps/web/src/lib/pipeline.ts\",\"apps/web/tests/SummaryCard.interval.test.tsx\",\"apps/web/tests/WeatherPanel.toggle.test.tsx\"],\"verifyCommand\":\"npx vitest run apps/web\",\"acceptanceCriteria\":[\"time range in summary\",\"effective wind+exposure shown\",\"manual toggle sets flag\",\"tooltips\",\"advanced terrain+fetch+spann\"]}\n```"
+    },
+    {
+      "id": 9,
+      "subject": "Task 9: Docs, final re-baseline, validation replay, DoD",
+      "status": "completed",
+      "blockedBy": [4, 5, 7, 8],
+      "description": "**Goal:** Update docs to match implementation; finish re-baselining; optional reference replay; close DoD.\n\n**Verify:** npm run test && npm run typecheck\n\n```json:metadata\n{\"files\":[\"docs/calculation-model.md\",\"MODELL.md\",\"docs/build-report.md\",\"docs/wind-model.md\",\"docs/aero-model.md\",\"docs/exposure-model.md\",\"docs/ux-copy.md\",\"docs/validation.md\",\"packages/core/tests/replay.reference.test.ts\"],\"verifyCommand\":\"npm run test && npm run typecheck\",\"acceptanceCriteria\":[\"docs updated incl non-goals\",\"build-report re-baselined\",\"windy before/after\",\"optional replay\",\"ux-copy label table\"]}\n```"
+    }
+  ],
+  "lastUpdated": "2026-06-05T00:01:00Z"
+}

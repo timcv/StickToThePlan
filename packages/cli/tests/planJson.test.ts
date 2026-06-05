@@ -57,6 +57,9 @@ function makeSegmentPlan(micro: MicroSegment, eta_s: number): SegmentPlan {
     crosswind_ms: 1.0,
     rho: 1.2,
     cap_binding: 'none',
+    raw_windspeed_ms: 0,
+    eff_windspeed_ms: 0,
+    z0_used: 0,
   };
 }
 
@@ -89,6 +92,7 @@ const scenarios: ThreeScenarios = {
   expected: makePlan(165, 1140, true),
   optimistic: makePlan(150, 1140, true),
   pessimistic: makePlan(182, 1140, true),
+  time_uncertainty_s: { expected: 1140, low: 1080, high: 1200, source: 'scenario' },
 };
 
 const displaySegments: DisplaySegment[] = [
@@ -153,6 +157,8 @@ describe('buildPlanJson', () => {
       'config',
       'anchor',
       'scenarios',
+      'time_uncertainty_s',
+      'assumptions',
       'segments',
       'stops',
       'displaySegments',
@@ -179,6 +185,23 @@ describe('buildPlanJson', () => {
       expect(e).toHaveProperty('reachable');
       expect(e).toHaveProperty('notes');
     }
+  });
+
+  it('has time_uncertainty_s with the correct shape', () => {
+    const u = obj.time_uncertainty_s as Record<string, unknown>;
+    expect(u).toHaveProperty('expected', 1140);
+    expect(u).toHaveProperty('low', 1080);
+    expect(u).toHaveProperty('high', 1200);
+    expect(u).toHaveProperty('source', 'scenario');
+  });
+
+  it('has an assumptions block with wind correction fields', () => {
+    const a = obj.assumptions as Record<string, unknown>;
+    expect(a).toHaveProperty('rider_wind_height_m');
+    expect(a).toHaveProperty('forecast_wind_height_m');
+    expect(a).toHaveProperty('exposure_terrain');
+    expect(a).toHaveProperty('apply_wind_height_correction');
+    expect(a).toHaveProperty('aero', 'vector');
   });
 
   it('the expected scenario summary uses the expected plan values', () => {

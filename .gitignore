@@ -4,7 +4,10 @@ node_modules/
 pnpm-lock.yaml
 pnpm-workspace.yaml
 # personal input data (GPX course, FIT rides) - not committed
-data/
+# Note: data/ itself is not ignored so that specific files can be whitelisted below
+data/*
+# generated baked static assets are committed
+!data/vatternrundan-exposure.json
 *.fit
 *.gpx
 # synthetic example route is safe to commit despite the *.gpx rule

@@ -80,7 +80,19 @@ function calmThreeScenarios(
   cfg: ReturnType<typeof loadConfig>,
 ): ThreeScenarios {
   const plan = solveForTargetTime(micro, calmWeather, cfg);
-  return { expected: plan, optimistic: plan, pessimistic: plan };
+  return {
+    expected: plan,
+    optimistic: plan,
+    pessimistic: plan,
+    // No wind data: all three scenarios are identical, so the interval collapses
+    // to a point (high - low < 60 s) and the UI shows "spann saknas".
+    time_uncertainty_s: {
+      expected: plan.total_time_s,
+      low: plan.total_time_s,
+      high: plan.total_time_s,
+      source: 'scenario',
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------

@@ -13,6 +13,28 @@ export function secondsToHMM(totalSeconds: number): string {
   return `${h}:${String(m).padStart(2, '0')}`;
 }
 
+/**
+ * Render a finish-time uncertainty interval. Returns the point value as H:MM
+ * when the spread is under `minSpreadS` (default 60 s, i.e. sub-minute noise
+ * we should not dress up as a range), otherwise "H:MM  ·  spann L–H". Reuses
+ * secondsToHMM so the durations match the rest of the UI.
+ */
+export function formatFinishInterval(
+  expectedS: number,
+  lowS: number,
+  highS: number,
+  minSpreadS = 60,
+): string {
+  const point = secondsToHMM(expectedS);
+  if (highS - lowS < minSpreadS) return point;
+  return `${point}  ·  spann ${secondsToHMM(lowS)}–${secondsToHMM(highS)}`;
+}
+
+/** Wind speed in m/s rounded to one decimal with a Swedish decimal comma. */
+export function windMs1(ms: number): string {
+  return (Math.round(ms * 10) / 10).toFixed(1).replace('.', ',');
+}
+
 /** Metres to kilometres, fixed to one decimal (e.g. 40123 -> "40.1"). */
 export function metersToKm1(m: number): string {
   return (m / 1000).toFixed(1);

@@ -21,6 +21,8 @@ import type {
 import type { EnsembleField } from './weather/ensemble.js';
 import { makeWeatherFn } from './weather/ensemble.js';
 import { airDensity, decomposeWind, solveSpeedForPower, yawCdaFactor } from './physics.js';
+import { adjustWindForHeight, terrainToZ0 } from './weather/effective.js';
+import { exposureCoveragePct } from './weather/exposure.js';
 import {
   pullPower,
   draftPower,
@@ -66,14 +68,26 @@ function speedAtPull(
   cfg: Config,
 ): number {
   const cda = yawCdaFactor(crosswind, vRef + headwind, cfg.k_yaw) * cfg.cda_pull;
-  return solveSpeedForPower(capW, grade, headwind, {
-    m: cfg.m,
-    g: cfg.g,
-    crr: cfg.crr,
-    eta: cfg.eta,
-    rho,
-    cda,
-  });
+  return solveSpeedForPower(
+    capW,
+    grade,
+    headwind,
+    {
+      m: cfg.m,
+      g: cfg.g,
+      crr: cfg.crr,
+      eta: cfg.eta,
+      rho,
+      cda,
+    },
+    crosswind,
+  );
+}
+
+/** Roughness length for a segment: per-segment exposure if present, else an
+ *  explicit override, else the coarse terrain default. */
+function resolveZ0(micro: MicroSegment, cfg: Config): number {
+  return micro.z0_used ?? cfg.wind_roughness_z0 ?? terrainToZ0(cfg.exposure_terrain);
 }
 
 /**
@@ -112,6 +126,8 @@ export function runInnerSolve(
   let capTimeMovedS = 0;
 
   for (const micro of microsegments) {
+    const z0 = resolveZ0(micro, cfg);
+
     if (micro.neutral) {
       // Fixed neutral segment, excluded from the effort model and NP (spec 4.4).
       const v = cfg.neutral_speed_kmh / 3.6;
@@ -131,6 +147,10 @@ export function runInnerSolve(
         crosswind_ms: 0,
         rho: cfg.rho_fallback,
         cap_binding: 'none',
+        raw_windspeed_ms: 0,
+        eff_windspeed_ms: 0,
+        z0_used: z0,
+        exposure_class: micro.exposure_class,
       });
       continue;
     }
@@ -138,11 +158,11 @@ export function runInnerSolve(
     // Effort segment.
     const w: WindCond = weather(micro.lat, micro.lon, startClockS + elapsed);
     const rho = airDensity(w.temp_c, w.pressure_pa);
-    const { headwind, crosswind } = decomposeWind(
-      w.windspeed_ms,
-      w.winddir_from_deg,
-      micro.bearing_deg,
-    );
+    const rawW = w.windspeed_ms;
+    const effW = cfg.apply_wind_height_correction
+      ? adjustWindForHeight(rawW, z0, cfg.rider_wind_height_m, cfg.forecast_wind_height_m)
+      : rawW;
+    const { headwind, crosswind } = decomposeWind(effW, w.winddir_from_deg, micro.bearing_deg);
 
     // Uncapped speed that yields rider NP == npTarget.
     let v = solveSpeedForRiderNp(npTarget, micro.grade, headwind, crosswind, rho, cfg);
@@ -221,6 +241,10 @@ export function runInnerSolve(
       crosswind_ms: crosswind,
       rho,
       cap_binding,
+      raw_windspeed_ms: rawW,
+      eff_windspeed_ms: effW,
+      z0_used: z0,
+      exposure_class: micro.exposure_class,
     });
   }
 
@@ -362,6 +386,26 @@ export interface ThreeScenarios {
   expected: PlanResult;
   optimistic: PlanResult;
   pessimistic: PlanResult;
+  /**
+   * Honest finish-time interval: the expected anchor NP is held fixed and the
+   * route is re-marched under optimistic/pessimistic wind to reveal the actual
+   * time spread due to weather uncertainty. `source` is always 'scenario'.
+   */
+  time_uncertainty_s: { expected: number; low: number; high: number; source: 'scenario' };
+  /**
+   * Plan-level data-quality summary. exposureCoveragePct/exposureSource reflect
+   * whatever exposure was stamped on `microsegments` BEFORE this call: callers
+   * must run `applyExposure(microsegments, runs)` first for baked data to register
+   * (otherwise coverage reads 0% and source reads 'terrain'). The 'fetched' source
+   * and 'ensemble'/'none' variants are set by the app layer (web/CLI) which knows
+   * the provenance; the core only distinguishes 'baked' vs 'terrain' and
+   * 'manual' vs 'forecast'.
+   */
+  data_quality?: {
+    exposureCoveragePct: number;
+    exposureSource: 'baked' | 'fetched' | 'terrain' | 'none';
+    weatherSource: 'manual' | 'forecast' | 'ensemble';
+  };
 }
 
 /**
@@ -424,9 +468,45 @@ export function solveThreeScenarios(
     return solveForTargetTime(microsegments, weather, cfg);
   };
 
+  const expected = solveScenario('expected');
+  const optimistic = solveScenario('optimistic');
+  const pessimistic = solveScenario('pessimistic');
+
+  // Time interval: hold the expected anchor NP fixed and re-march under the
+  // optimistic / pessimistic wind. (The three scenarios above all hit the same
+  // target time and differ in NP, so their times are equal; the honest time
+  // spread comes from fixing effort and varying wind luck.)
+  const np = expected.np_target_used;
+  const lowTime = runInnerSolve(
+    microsegments,
+    np,
+    makeWeatherFn(field, 'optimistic', startClockS, favorableWind),
+    cfg,
+    startClockS,
+  ).total_time_s;
+  const highTime = runInnerSolve(
+    microsegments,
+    np,
+    makeWeatherFn(field, 'pessimistic', startClockS, favorableWind),
+    cfg,
+    startClockS,
+  ).total_time_s;
+  const expTime = expected.total_time_s;
+
   return {
-    expected: solveScenario('expected'),
-    optimistic: solveScenario('optimistic'),
-    pessimistic: solveScenario('pessimistic'),
+    expected,
+    optimistic,
+    pessimistic,
+    time_uncertainty_s: {
+      expected: expTime,
+      low: Math.min(lowTime, expTime),
+      high: Math.max(highTime, expTime),
+      source: 'scenario',
+    },
+    data_quality: {
+      exposureCoveragePct: exposureCoveragePct(microsegments),
+      exposureSource: microsegments.some((m) => m.exposure_class) ? 'baked' : 'terrain',
+      weatherSource: field.sources.includes('manual') ? 'manual' : 'forecast',
+    },
   };
 }

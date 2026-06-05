@@ -51,4 +51,27 @@ export const FIELD_HELP: Record<string, FieldHelp> = {
   weather: {
     tip: 'Välj lugnt väder för en förenklad plan eller väderprognos för vindjusterad pacing.',
   },
+  terrain: {
+    tip: 'Hur öppet landskapet är längs rutten. Öppna fält ger mer vind vid marken, skog och bebyggelse bromsar den. Påverkar hur mycket 10 m-prognosen räknas ned till vad du faktiskt möter.',
+    help: 'Används när detaljerad exponering saknas för rutten.',
+  },
+};
+
+/**
+ * Tooltip copy for terms that show up in the result tables and summary (not
+ * form fields). Same shape as FIELD_HELP so the InfoTip component is reused.
+ */
+export const TERM_HELP: Record<string, FieldHelp> = {
+  effectiveWind: {
+    tip: 'Vinden modellen tror att du faktiskt möter vid marken, lägre än 10 m-prognosen, justerad för hur öppet landskapet är.',
+  },
+  np: {
+    tip: 'Normalized Power: ett viktat effektsnitt som speglar den fysiologiska belastningen bättre än rena medeleffekten. Mål-NP är effekten planen siktar på.',
+  },
+  if: {
+    tip: 'Intensitetsfaktor: förar-NP delat med din FTP. 1,0 betyder att du kör på tröskeln. Lägre är mer uthålligt.',
+  },
+  spann: {
+    tip: 'Tiden är ingen exakt prognos. Spannet visar rimlig variation från vind och exponering.',
+  },
 };

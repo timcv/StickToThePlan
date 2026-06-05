@@ -62,6 +62,9 @@ function makePlan(micro: MicroSegment[]): PlanResult {
     crosswind_ms: 0,
     rho: 1.2,
     cap_binding: 'none' as const,
+    raw_windspeed_ms: 0,
+    eff_windspeed_ms: 0,
+    z0_used: 0,
   }));
   return {
     np_target_used: 165,

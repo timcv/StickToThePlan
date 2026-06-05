@@ -28,6 +28,10 @@ const DEFAULTS = {
   min_segment_km: 2,
   grade_merge_pct: 0.003,
   styrkort_max_rows: 20,
+  rider_wind_height_m: 1.2,
+  forecast_wind_height_m: 10,
+  exposure_terrain: 'mixed' as const,
+  apply_wind_height_correction: true,
 } as const;
 
 /**

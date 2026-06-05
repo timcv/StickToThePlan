@@ -24,6 +24,22 @@ function secondsToHms(s: number): string {
   return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 }
 
+/** Duration as H:MM (floored to the minute), for the headline interval. */
+function secondsToHm(s: number): string {
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return `${h}:${String(m).padStart(2, '0')}`;
+}
+
+/** Headline estimate + interval, or a point value when the spread is sub-minute. */
+function buildEstimateLine(scenarios: ThreeScenarios): string {
+  const u = scenarios.time_uncertainty_s;
+  if (u.high - u.low < 60) {
+    return `Beräknad tid ${secondsToHm(u.expected)} (spann saknas, ett väderscenario)`;
+  }
+  return `Beräknad tid ${secondsToHm(u.expected)} (rimligt spann ${secondsToHm(u.low)}–${secondsToHm(u.high)})`;
+}
+
 /**
  * Build the three-scenario summary line.
  * Format: "Optimistisk H:MM:SS vid X W, Förväntad H:MM:SS vid Y W, Pessimistisk H:MM:SS vid Z W"
@@ -134,6 +150,10 @@ export function renderMarkdown(
   lines.push(`Start: ${cfg.start_time}  |  Mål: ${cfg.target_total_hm}`);
   lines.push('');
   lines.push(buildScenarioLine(scenarios));
+  lines.push('');
+  lines.push(buildEstimateLine(scenarios));
+  lines.push('');
+  lines.push('_Vind i planen avser effektiv vind vid cyklisten, inte rå prognosvind._');
   lines.push('');
 
   // Table header
@@ -319,6 +339,7 @@ export function renderHtml(
   cfg: Config,
 ): string {
   const scenarioLine = escHtml(buildScenarioLine(scenarios));
+  const estimateLine = escHtml(buildEstimateLine(scenarios));
   const startInfo = escHtml(`Start: ${cfg.start_time}  |  Mål: ${cfg.target_total_hm}`);
 
   const thCells = COLUMNS.map(c => `<th>${escHtml(c)}</th>`).join('\n        ');
@@ -345,6 +366,8 @@ export function renderHtml(
   <h2>${escHtml(cfg.race_date)}</h2>
   <p>${startInfo}</p>
   <p class="scenarios">${scenarioLine}</p>
+  <p class="estimate">${estimateLine}</p>
+  <p class="footnote">Vind i planen avser effektiv vind vid cyklisten, inte rå prognosvind.</p>
   <table>
     <thead>
       <tr>

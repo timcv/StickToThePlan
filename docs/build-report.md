@@ -12,7 +12,9 @@ Records the numbers the model is validated against, from the M1–M8 build run o
 - `plan.json` (full machine-readable plan)
 - `course.fit` (FIT Course with named control points for the Next Control Pace watch field)
 
-Test suite at that run: **252 passed, 1 skipped** (the skipped one is the three-scenario real-course solve, gated behind `SLOW_TESTS=1`; one full solve over ~4760 microsegments is compute-heavy). `tsc --noEmit` clean.
+Test suite at the original M1–M8 build run: **252 passed, 1 skipped** (the skipped one is the three-scenario real-course solve, gated behind `SLOW_TESTS=1`; one full solve over ~4760 microsegments is compute-heavy). `tsc --noEmit` clean.
+
+After the wind-realism implementation (Tasks 1–8, see below): **354 passed, 4 skipped**, `tsc` and `eslint` clean. The calm-wind validation result (11:45:00 at 145.9 W) is unchanged: the height correction scales 0 wind to 0 wind, so all calm-air checks are bit-identical. The existing tests were written as orderings and inequalities and required no re-baselining.
 
 ## Validation results
 
@@ -40,6 +42,18 @@ The plan holds constant rider NP, so it rides the southern climbs slower and the
 ### Required NP vs forecast
 
 Calm wind needs 145.9 W to hit 11:45. A favorable live forecast on the build run let the expected scenario need only 124 W; the forecast is volatile far out, so rerun the evening before the race for the binding number. With a synthetic westerly headwind in the scenario unit test, expected NP rose to 160 W, near the 164 W anchor, the more representative stress case.
+
+### Wind height correction: before/after at 6 m/s westerly
+
+Computed on the real 315 km route with a constant 6 m/s westerly wind (270 deg), baked OSM exposure, standard stops. Both runs target 11:45. This isolates the effect of `apply_wind_height_correction`:
+
+| Setting                                | Required NP | Total time  |
+| -------------------------------------- | ----------- | ----------- |
+| Correction ON (default, mixed z0=0.05) | 159.0 W     | 11h 44m 49s |
+| Correction OFF (raw 10 m wind)         | 177.8 W     | 11h 45m 01s |
+| Delta (OFF minus ON)                   | +18.8 W     | ~12 s       |
+
+Without correction the solver must find 18.8 W more NP to hit the same target, because the raw 10 m wind (6 m/s) is used directly rather than the physically appropriate rider-level effective wind (~3.6 m/s at 1.2 m over mixed terrain). The 12-second time difference between the two runs is a rounding artifact of the bisection tolerance (20 s); the two plans are equally fast at their respective NP. Source: throwaway script `/tmp/windy-demo3.mjs` using `packages/core/src` directly via `tsx`. See `docs/validation.md` for interpretation.
 
 ## How to reproduce
 

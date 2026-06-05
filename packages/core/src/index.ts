@@ -20,6 +20,8 @@ export type {
   Scenario,
   WeatherFn,
   DisplaySegment,
+  ExposureClass,
+  ExposureTerrain,
 } from './types.js';
 
 // Physics, chaingang, planner, segmentation.
@@ -76,3 +78,15 @@ export {
   buildManualField,
   type HourlyWind,
 } from './weather/hourly.js';
+export {
+  heightFactor,
+  adjustWindForHeight,
+  terrainToZ0,
+  exposureClassToZ0,
+} from './weather/effective.js';
+export {
+  applyExposure,
+  exposureCoveragePct,
+  type ExposureRun,
+  type ExposureRuns,
+} from './weather/exposure.js';

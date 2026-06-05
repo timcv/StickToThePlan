@@ -9,13 +9,18 @@
  */
 import { useState } from 'react';
 import {
-  applyDefaults, ingestGpxString, sampleCellPoints,
-  summarizeHourly, applyHourlyOverrides, buildManualField,
-  type EnsembleField, type HourlyWind,
+  applyDefaults,
+  ingestGpxString,
+  sampleCellPoints,
+  summarizeHourly,
+  applyHourlyOverrides,
+  buildManualField,
+  type EnsembleField,
+  type HourlyWind,
 } from '@stp/core';
 import { useSolver } from './useSolver';
 import { UploadForm, type FormSubmit } from './components/UploadForm';
-import { WeatherPanel, type WeatherMode } from './components/WeatherPanel';
+import { WeatherPanel, type WeatherMode, type ManualWindRef } from './components/WeatherPanel';
 import { ScenarioSummary } from './components/ScenarioSummary';
 import { SummaryCard } from './components/SummaryCard';
 import { SplitTable } from './components/SplitTable';
@@ -32,6 +37,13 @@ export function App() {
 
   // Weather state.
   const [mode, setMode] = useState<WeatherMode>('calm');
+  // Manual mode only: whether the entered wind is a 10 m forecast or felt wind.
+  // Default 'felt' so a hand-entered number is taken at face value (no height
+  // scaling) unless the user says it came from a forecast.
+  const [windRef, setWindRef] = useState<ManualWindRef>('felt');
+  // Mirrors the form's "Visa spann" checkbox so the SummaryCard can suppress the
+  // range. Seeded from the form's submit (defaults true).
+  const [showInterval, setShowInterval] = useState(true);
   const [field, setField] = useState<EnsembleField | null>(null);
   const [baseRows, setBaseRows] = useState<HourlyWind[]>([]);
   const [overrides, setOverrides] = useState<Map<number, HourlyWind>>(new Map());
@@ -52,9 +64,15 @@ export function App() {
     setFetchStatus('loading');
     try {
       const cfg = applyDefaults({
-        gpx_path: 'web.gpx', race_date: form.form.race_date, start_time: form.form.start_time,
-        ftp: form.form.ftp, n_riders: form.form.n_riders, target_total_hm: form.form.target_total_hm,
-        stops: form.form.stops, m: form.form.m, watch_target: form.form.watch_target,
+        gpx_path: 'web.gpx',
+        race_date: form.form.race_date,
+        start_time: form.form.start_time,
+        ftp: form.form.ftp,
+        n_riders: form.form.n_riders,
+        target_total_hm: form.form.target_total_hm,
+        stops: form.form.stops,
+        m: form.form.m,
+        watch_target: form.form.watch_target,
       });
       const micro = ingestGpxString(form.gpxText, cfg);
       const points = sampleCellPoints(micro);
@@ -74,14 +92,19 @@ export function App() {
   const editHour = (hour: number, patch: Partial<Omit<HourlyWind, 'hour'>>) => {
     setOverrides((prev) => {
       const next = new Map(prev);
-      const current = next.get(hour) ?? baseRows.find((r) => r.hour === hour) ?? { hour, dir_from_deg: 0, speed_ms: 0 };
+      const current = next.get(hour) ??
+        baseRows.find((r) => r.hour === hour) ?? { hour, dir_from_deg: 0, speed_ms: 0 };
       next.set(hour, { ...current, ...patch, hour });
       return next;
     });
   };
 
   const resetHour = (hour: number) => {
-    setOverrides((prev) => { const next = new Map(prev); next.delete(hour); return next; });
+    setOverrides((prev) => {
+      const next = new Map(prev);
+      next.delete(hour);
+      return next;
+    });
   };
 
   const applyConstant = (dir: number, speed: number) => {
@@ -110,10 +133,19 @@ export function App() {
   };
 
   const handleRun = (form: FormSubmit) => {
+    // Height correction: a fetched ensemble is a 10 m forecast, so always scale
+    // it down to rider level. In manual mode the user tells us via windRef
+    // whether their number is a 10 m forecast (scale) or felt wind (take as-is).
+    // Calm mode has no wind, so the flag is inert.
+    const applyHeight = mode === 'manual' ? windRef === 'forecast10m' : true;
     const input: PipelineInput = {
-      gpxText: form.gpxText, fitBytes: form.fitBytes, form: form.form,
-      weatherMode: mode, field: buildFinalField(),
+      gpxText: form.gpxText,
+      fitBytes: form.fitBytes,
+      form: { ...form.form, apply_wind_height_correction: applyHeight },
+      weatherMode: mode,
+      field: buildFinalField(),
     };
+    setShowInterval(form.showInterval);
     setRanInput(input);
     solver.run(input);
   };
@@ -156,19 +188,23 @@ export function App() {
       </header>
 
       <p className="intro">
-        Ställ in ditt mål och få ett detaljerat körschema för Vätternrundan. Rutten är redan
-        inläst, så du kan börja direkt: justera måltid och starttid, kör planen och ladda ner
-        ditt styrkort.
+        Ställ in ditt mål och få ett detaljerat körschema för Vätternrundan. Rutten är redan inläst,
+        så du kan börja direkt: justera måltid och starttid, kör planen och ladda ner ditt styrkort.
       </p>
 
       <p className="privacy">
-        Uppladdade GPX- och FIT-filer behandlas helt i din webbläsare och laddas aldrig upp.
-        I läget <strong>Hämta</strong> skickas endast ruttens avrundade punkter och datumet till
-        vår väderfunktion, som frågar SMHI, MET Norway och Open-Meteo. Lugnt och manuellt läge
-        skickar ingenting.
+        Uppladdade GPX- och FIT-filer behandlas helt i din webbläsare och laddas aldrig upp. I läget{' '}
+        <strong>Hämta</strong> skickas endast ruttens avrundade punkter och datumet till vår
+        väderfunktion, som frågar SMHI, MET Norway och Open-Meteo. Lugnt och manuellt läge skickar
+        ingenting.
       </p>
 
-      <UploadForm onRun={(f) => { setLastForm(f); }} status={status} />
+      <UploadForm
+        onRun={(f) => {
+          setLastForm(f);
+        }}
+        status={status}
+      />
 
       <WeatherPanel
         mode={mode}
@@ -178,10 +214,12 @@ export function App() {
         fetchStatus={fetchStatus}
         sources={sources}
         reduced={reduced}
+        windRef={windRef}
         onFetch={() => lastForm && doFetch(lastForm)}
         onEdit={editHour}
         onResetHour={resetHour}
         onApplyConstant={applyConstant}
+        onWindRefChange={setWindRef}
       />
 
       <div className="run-row">
@@ -205,12 +243,18 @@ export function App() {
       {status === 'done' && result && (
         <>
           <p className="done-banner">Planen är klar! Se sammanfattningen nedan.</p>
-          <SummaryCard scenarios={result.scenarios} splits={result.splits} cfg={result.cfg} />
+          <SummaryCard
+            scenarios={result.scenarios}
+            splits={result.splits}
+            cfg={result.cfg}
+            showInterval={showInterval}
+          />
           <SplitTable splits={result.splits} startTime={startTime} />
           <TempokortTable
             segments={result.displaySegments}
             compactSegments={result.styrkortSegments}
             startTime={startTime}
+            segmentPlans={result.scenarios.expected.segments}
           />
           {result.scenarios.optimistic !== result.scenarios.expected ||
           result.scenarios.pessimistic !== result.scenarios.expected ? (
