@@ -19,7 +19,7 @@ const MAX_RETRIES = 6;
 // Downsample route for tiled queries — one sample per ~5 km avoids
 // querying tens-of-thousands of tiny boxes while still covering the route.
 const TILE_STEP_KM = 5;
-const TILE_PAD_DEG = 0.015; // ~1.5 km padding around each sample point
+const TILE_PAD_DEG = 0.015; // ~1.67 km N-S, ~0.88 km E-W at 58°N; keep TILE_STEP_KM <= ~2x the smaller (E-W) value or tiles leave gaps
 
 function parsePoints(xml) {
   const pts = [];
@@ -30,7 +30,7 @@ function parsePoints(xml) {
 }
 
 function haversine(a, b) {
-  const R = 6371000;
+  const R = 6371000; // Earth mean radius (m)
   const toR = (d) => (d * Math.PI) / 180;
   const dLat = toR(b.lat - a.lat);
   const dLon = toR(b.lon - a.lon);
