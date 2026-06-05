@@ -29,6 +29,7 @@ function buildPullParams(
   cfg: Config,
 ): PhysicsParams {
   const vAir = v + headwind;
+  // yawCdaFactor raises CdA here; pedalPower additionally raises the apparent-wind magnitude (vApp). Both crosswind effects intentionally compound (spec C1).
   const cda = yawCdaFactor(crosswind, vAir, cfg.k_yaw) * cfg.cda_pull;
   return { m: cfg.m, g: cfg.g, crr: cfg.crr, eta: cfg.eta, rho, cda };
 }
@@ -45,6 +46,7 @@ function buildDraftParams(
   cfg: Config,
 ): PhysicsParams {
   const vAir = v + headwind;
+  // yawCdaFactor raises CdA here; pedalPower additionally raises the apparent-wind magnitude (vApp). Both crosswind effects intentionally compound (spec C1).
   const cda = yawCdaFactor(crosswind, vAir, cfg.k_yaw) * cfg.cda_draft;
   return { m: cfg.m, g: cfg.g, crr: cfg.crr, eta: cfg.eta, rho, cda };
 }

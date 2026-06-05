@@ -21,9 +21,11 @@ describe('apparent-wind aero', () => {
     expect(cross).toBeGreaterThan(calm);
   });
 
-  it('strong tailwind with crosswind is finite and not NaN', () => {
+  it('strong tailwind with crosswind is finite and reduces power below calm', () => {
     const power = pedalPower(10, 0, -14, p, 3);
+    const calm = pedalPower(10, 0, 0, p, 0);
     expect(Number.isFinite(power)).toBe(true);
+    expect(power).toBeLessThan(calm);
   });
 
   it('is strictly increasing in v even with crosswind', () => {
