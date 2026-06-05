@@ -21,6 +21,7 @@ import type {
 import type { EnsembleField } from './weather/ensemble.js';
 import { makeWeatherFn } from './weather/ensemble.js';
 import { airDensity, decomposeWind, solveSpeedForPower, yawCdaFactor } from './physics.js';
+import { adjustWindForHeight, terrainToZ0 } from './weather/effective.js';
 import {
   pullPower,
   draftPower,
@@ -74,6 +75,12 @@ function speedAtPull(
     rho,
     cda,
   });
+}
+
+/** Roughness length for a segment: per-segment exposure if present, else an
+ *  explicit override, else the coarse terrain default. */
+function resolveZ0(micro: MicroSegment, cfg: Config): number {
+  return micro.z0_used ?? cfg.wind_roughness_z0 ?? terrainToZ0(cfg.exposure_terrain);
 }
 
 /**
@@ -133,7 +140,8 @@ export function runInnerSolve(
         cap_binding: 'none',
         raw_windspeed_ms: 0,
         eff_windspeed_ms: 0,
-        z0_used: 0,
+        z0_used: resolveZ0(micro, cfg),
+        exposure_class: micro.exposure_class,
       });
       continue;
     }
@@ -141,11 +149,12 @@ export function runInnerSolve(
     // Effort segment.
     const w: WindCond = weather(micro.lat, micro.lon, startClockS + elapsed);
     const rho = airDensity(w.temp_c, w.pressure_pa);
-    const { headwind, crosswind } = decomposeWind(
-      w.windspeed_ms,
-      w.winddir_from_deg,
-      micro.bearing_deg,
-    );
+    const z0 = resolveZ0(micro, cfg);
+    const rawW = w.windspeed_ms;
+    const effW = cfg.apply_wind_height_correction
+      ? adjustWindForHeight(rawW, z0, cfg.rider_wind_height_m, cfg.forecast_wind_height_m)
+      : rawW;
+    const { headwind, crosswind } = decomposeWind(effW, w.winddir_from_deg, micro.bearing_deg);
 
     // Uncapped speed that yields rider NP == npTarget.
     let v = solveSpeedForRiderNp(npTarget, micro.grade, headwind, crosswind, rho, cfg);
@@ -224,9 +233,10 @@ export function runInnerSolve(
       crosswind_ms: crosswind,
       rho,
       cap_binding,
-      raw_windspeed_ms: w.windspeed_ms,
-      eff_windspeed_ms: w.windspeed_ms,
-      z0_used: 0,
+      raw_windspeed_ms: rawW,
+      eff_windspeed_ms: effW,
+      z0_used: z0,
+      exposure_class: micro.exposure_class,
     });
   }
 
