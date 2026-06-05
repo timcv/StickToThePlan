@@ -47,11 +47,11 @@ Used in the exposure selector and in data-quality tooltips.
 
 ## Effective wind
 
-| Context                       | Label / copy                                                                                                                                                     |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Effective wind tooltip        | "Effektiv vind: prognosen ges på 10 m höjd; cyklisten känner vinden på ca 1.2 m. Modellen skalar ned med logaritmisk vindprofil och terrängens råstrighet (z0)." |
-| Wind correction disabled note | "Vindkorrektion avstängd: vinden behandlas som redan på rytternivå (t.ex. egen uppskattad känsla)."                                                              |
-| Roughness / terrain           | "Terrangklass" or "Exponering"                                                                                                                                   |
+| Context                       | Label / copy                                                                                                                                                      |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Effective wind tooltip        | "Effektiv vind: prognosen ges på 10 m höjd; cyklisten känner vinden på ca 1.2 m. Modellen skalar ned med logaritmisk vindprofil och terrängens skrovlighet (z0)." |
+| Wind correction disabled note | "Vindkorrektion avstängd: vinden behandlas som redan på rytternivå (t.ex. egen uppskattad känsla)."                                                               |
+| Roughness / terrain           | "Terrängklass" or "Exponering"                                                                                                                                    |
 
 ---
 

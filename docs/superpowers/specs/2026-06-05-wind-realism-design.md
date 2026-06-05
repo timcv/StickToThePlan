@@ -11,11 +11,11 @@
 
 Make the pacing model's wind handling meaningfully more realistic without adding false precision or a runtime data pipeline. Four grounded changes, plus a pragmatic per-segment exposure layer that is **baked offline** for the built-in Vätternrundan route and available as an opt-in setting for other routes:
 
-1. **Effective wind** — convert 10m forecast wind to rider level with a single log-profile factor.
-2. **Per-segment exposure** — vary the roughness (and thus the factor) per segment from real land-cover data, baked offline so the core stays network-free.
-3. **Vector apparent wind + tailwind clamp** — replace the axial aero magnitude with the true apparent-wind vector; this only changes crosswind behaviour, pure head/tailwind is unchanged.
-4. **Uncertainty interval** — present finish time as a range derived from the three scenario solves the model already computes.
-5. **UX honesty** — explain effective wind, exposure, NP, IF, cap, and the interval; never present the result as an exact forecast.
+1. **Effective wind**, convert 10m forecast wind to rider level with a single log-profile factor.
+2. **Per-segment exposure**, vary the roughness (and thus the factor) per segment from real land-cover data, baked offline so the core stays network-free.
+3. **Vector apparent wind + tailwind clamp**, replace the axial aero magnitude with the true apparent-wind vector; this only changes crosswind behaviour, pure head/tailwind is unchanged.
+4. **Uncertainty interval**, present finish time as a range derived from the three scenario solves the model already computes.
+5. **UX honesty**, explain effective wind, exposure, NP, IF, cap, and the interval; never present the result as an exact forecast.
 
 The work is intentionally scoped below the reports' full roadmap. Group-mode/echelon modelling, route-time rotation simulation, W'bal, Crr-per-surface, FIT auto-calibration, and coherent ensemble members are explicitly **deferred** (§4).
 
@@ -64,13 +64,13 @@ The reports are high quality and largely accurate. Cross-checked by reading `phy
 
 ### Out of scope (deferred, with reasons)
 
-- **Group-mode / echelon / sidewind-dependent draft** — speculative for a single route; no calibration data.
-- **Route-time rotation simulation (`riderTimeSeriesValidation`)** — the closed-form NP is adequate for group mean tempo; high effort.
-- **W'bal / durability** — IF warning already covers the practical case.
-- **Crr per surface, post-stop accelerations** — minutes-level effect, dominated by wind.
-- **FIT auto-calibration of CdA/Crr/draft/exposure** — valuable later; needs a calibration harness and more ride data. A manual calibration path is documented but not built.
-- **Coherent ensemble members** — per-cell p10/p90 stays; the reference ride showed near-uniform wind over the area, so the gain is small.
-- **GPX fixed-distance resampling** — the built-in route is uniformly ~66m sampled; low payoff now. Revisit if a sparsely-sampled route misbehaves.
+- **Group-mode / echelon / sidewind-dependent draft**, speculative for a single route; no calibration data.
+- **Route-time rotation simulation (`riderTimeSeriesValidation`)**, the closed-form NP is adequate for group mean tempo; high effort.
+- **W'bal / durability**, IF warning already covers the practical case.
+- **Crr per surface, post-stop accelerations**, minutes-level effect, dominated by wind.
+- **FIT auto-calibration of CdA/Crr/draft/exposure**, valuable later; needs a calibration harness and more ride data. A manual calibration path is documented but not built.
+- **Coherent ensemble members**, per-cell p10/p90 stays; the reference ride showed near-uniform wind over the area, so the gain is small.
+- **GPX fixed-distance resampling**, the built-in route is uniformly ~66m sampled; low payoff now. Revisit if a sparsely-sampled route misbehaves.
 
 ---
 
@@ -81,7 +81,7 @@ The reports are high quality and largely accurate. Cross-checked by reading `phy
 | How much of the roadmap | Honest core only, plus the baked exposure layer (added after the core was scoped).                                                                                                                                                  |
 | Legacy handling         | Default-on, light escape hatch. New behaviour is the default; affected windy tests are re-baselined; old wind behaviour recoverable via config (`rider_wind_height_m = 10` ⇒ factor 1). No `wind_model`/`aero_model` version enums. |
 | Manual wind             | Explicit toggle: "this is 10m forecast wind" vs "this is the wind I feel". Default 'felt' (literal). Requires very clear UX copy.                                                                                                   |
-| Structural approach     | A — inline minimal (modify existing files, no speculative module scaffolding).                                                                                                                                                      |
+| Structural approach     | A, inline minimal (modify existing files, no speculative module scaffolding).                                                                                                                                                       |
 | Physics constants       | `z0=0.05` global default, rider height 1.2m, forecast height 10m, yaw clamp ±50°. All configurable.                                                                                                                                 |
 | Exposure source         | OSM/Overpass primary (global, serves bake + other routes). NMD higher-fidelity pass for the Vätternrundan static file as a later upgrade.                                                                                           |
 
@@ -123,7 +123,7 @@ solver → three scenario solves → time_uncertainty_s (C3)
 
 ## 7. Component specs
 
-### C1 — Vector apparent wind + tailwind clamp (physics)
+### C1, Vector apparent wind + tailwind clamp (physics)
 
 **Files:** `packages/core/src/physics.ts` (pedalPower, new `clampYaw`/`apparentWind` helper), `packages/core/src/chaingang.ts` (feed clamped yaw).
 
@@ -152,7 +152,7 @@ Acceptance:
 - [ ] strong tailwind + crosswind ⇒ no NaN, yaw factor bounded.
 - [ ] `k_yaw` stays 0.04.
 
-### C2 — Height-correction engine + manual-wind toggle
+### C2, Height-correction engine + manual-wind toggle
 
 **Files:** `config.ts`, `types.ts`, new `adjustWindForHeight` helper (in the weather→planner path), `planner.ts` wiring.
 
@@ -177,7 +177,7 @@ Acceptance:
 - [ ] manual toggle behaviour verified.
 - [ ] core stays network-free.
 
-### C4 — Per-segment exposure (OSM bake + other-routes setting)
+### C4, Per-segment exposure (OSM bake + other-routes setting)
 
 **Files:** `scripts/bake-exposure.*` (dev-only), `data/vatternrundan-exposure.json` (committed), core class→z0 table + loader, config/types for exposure input, web/CLI opt-in fetch (app layer).
 
@@ -204,7 +204,7 @@ Acceptance:
 
 **Other routes (the setting), in priority order:**
 
-1. **Default:** coarse terrain selector — Öppet (z0 0.03, k≈0.64) / Blandat (z0 0.05, default, k≈0.60) / Skyddat (z0 0.30, k≈0.40). Matches the global `wind_roughness_z0` default. Zero network. (Distinct from the per-segment `semi_open` class, z0 0.08, which only applies when real exposure data is present.)
+1. **Default:** coarse terrain selector, Öppet (z0 0.03, k≈0.64) / Blandat (z0 0.05, default, k≈0.60) / Skyddat (z0 0.30, k≈0.40). Matches the global `wind_roughness_z0` default. Zero network. (Distinct from the per-segment `semi_open` class, z0 0.08, which only applies when real exposure data is present.)
 2. **Opt-in "Hämta exponering för rutten"** at upload: run the same Overpass classifier in the web/CLI layer (not core), cache the result, inject as pre-processed data.
 
 **NMD upgrade (later, not built now):** a higher-fidelity NMD (10m raster) pass for the Vätternrundan static file specifically. OSM remains the general mechanism (global, serves other routes).
@@ -217,13 +217,13 @@ Acceptance:
 - [ ] other-routes default selector + opt-in fetch both work.
 - [ ] `data_quality.exposureCoveragePct` reported.
 
-### C3 — Uncertainty interval + outputs
+### C3, Uncertainty interval + outputs
 
 **Files:** `planner.ts`, `types.ts`, `output/planJson.ts`, `output/tempokort.ts`.
 
-- `PlanResult.time_uncertainty_s?: { expected: number; low: number; high: number; source: 'scenario' }` — built from the optimistic/expected/pessimistic solves already produced by `solveThreeScenarios()`. No new compute. Optional ⇒ back-compat.
+- `PlanResult.time_uncertainty_s?: { expected: number; low: number; high: number; source: 'scenario' }`, built from the optimistic/expected/pessimistic solves already produced by `solveThreeScenarios()`. No new compute. Optional ⇒ back-compat.
 - `plan.json` adds the interval and an `assumptions` block (`rider_wind_height_m`, `wind_roughness_z0` or per-segment note, `k`, wind source, `aero: 'vector'`, exposure source). All existing fields stay.
-- Tempokort headline: `Beräknad tid 11:45 — rimligt spann 11:32–12:04` + footnote "vind = effektiv vind vid cyklisten, ej rå prognos". Single scenario (calm) ⇒ point value + "spann saknas".
+- Tempokort headline: `Beräknad tid 11:45, rimligt spann 11:32–12:04` + footnote "vind = effektiv vind vid cyklisten, ej rå prognos". Single scenario (calm) ⇒ point value + "spann saknas".
 - FIT/GPX exports untouched.
 - Rounding: time → whole minute; effective wind → 0.1 m/s.
 
@@ -233,7 +233,7 @@ Acceptance:
 - [ ] plan.json carries interval + assumptions; old fields intact.
 - [ ] tempokort renders range + footnote; single-scenario fallback works.
 
-### C5 — UX honesty (web)
+### C5, UX honesty (web)
 
 **Files:** `apps/web/src/components/*` (SummaryCard, WeatherPanel, TempokortTable, segment detail), InfoTip extensions, advanced settings.
 
@@ -248,7 +248,7 @@ Acceptance:
 
 Acceptance: see task #13; verified by component tests + a preview screenshot.
 
-### C6 — Tests, re-baseline, docs, DoD
+### C6, Tests, re-baseline, docs, DoD
 
 **Re-baseline (windy cases shift; calm unchanged):** `scenarios.test.ts`, windy `planner.test.ts` cases, `headwind-caps.test.ts`, and the windy numbers in `docs/build-report.md`. Document each delta and why.
 
