@@ -54,8 +54,8 @@ describe('time uncertainty interval', () => {
     const s = solveThreeScenarios(micros(20), field(2, 8), cfg);
     const u = s.time_uncertainty_s;
     expect(u.source).toBe('scenario');
-    expect(u.low).toBeLessThanOrEqual(u.expected + 1);
-    expect(u.high).toBeGreaterThanOrEqual(u.expected - 1);
+    expect(u.low).toBeLessThanOrEqual(u.expected);
+    expect(u.high).toBeGreaterThanOrEqual(u.expected);
   });
 
   it('widens with more wind spread', () => {
