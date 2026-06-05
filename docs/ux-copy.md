@@ -12,10 +12,10 @@ This is the single source of truth for all Swedish UI strings related to wind, e
 | IF (intensity factor)           | "IF" (intensitetsfaktor, NP / FTP)                                                                                              |
 | IF warning                      | "Planen kräver IF X.XX (förar-NP YYY W av FTP ZZZ W). Det är en hård dagsinsats; kontrollera att gruppen håller den uthålligt." |
 | Pull power                      | "Drag" (the power on the front)                                                                                                 |
-| Draft power                     | "Slipstrom" (the power while drafting)                                                                                          |
+| Draft power                     | "Slipström" (the power while drafting)                                                                                          |
 | Mean power (tempokort W column) | "Medel W"                                                                                                                       |
 | Power band                      | "Drag-band" or "+/- 5 %" (the +-5% pull-power range shown in the tempokort)                                                     |
-| FTP                             | "FTP" (troskeleleffekt, threshold power)                                                                                        |
+| FTP                             | "FTP" (tröskeleffekt, threshold power)                                                                                          |
 
 ---
 
