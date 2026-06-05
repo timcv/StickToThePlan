@@ -1,6 +1,6 @@
 # The model
 
-This document explains, end to end, how StickToThePlan turns a route, a stop schedule, and a target finish time into per-depot split times and watch files. It is written for a skeptical reader who wants to judge the calculation rather than trust it. Every concrete number cited here comes from the repository's own test suite or its build report, and the source is named inline. Nothing is invented. A fuller Swedish-language reference, with every formula, sign convention, default, and file reference laid out for an external reviewer, is in [docs/berakningsmodell.md](docs/berakningsmodell.md).
+This document explains, end to end, how StickToThePlan turns a route, a stop schedule, and a target finish time into per-depot split times and watch files. It is written for a skeptical reader who wants to judge the calculation rather than trust it. Every concrete number cited here comes from the repository's own test suite or its build report, and the source is named inline. Nothing is invented. A fuller reference, with every formula, sign convention, default, and file reference laid out for an external reviewer, is in [docs/calculation-model.md](docs/calculation-model.md).
 
 The whole model is one idea: hold the rider's effort constant (a fixed normalized power) and let ground speed vary with gradient and wind, then adjust that single effort number until the predicted total time equals the target. Speed, not effort, absorbs the terrain.
 
