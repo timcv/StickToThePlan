@@ -154,14 +154,16 @@ export function riderNpSquareWaveReference(
   rho: number,
   cfg: Config,
 ): number {
-  const pPull = pullPower(v, grade, headwind, crosswind, rho, cfg);
+  // Clamp braking/coasting power to zero (see riderNpAtSpeed): NP measures
+  // training stress and must not credit negative (braking) power.
+  const pPull = Math.max(0, pullPower(v, grade, headwind, crosswind, rho, cfg));
 
   if (cfg.solo) {
     // Solo: constant power, NP = that power
     return pPull;
   }
 
-  const pDraft = draftPower(v, grade, headwind, crosswind, rho, cfg);
+  const pDraft = Math.max(0, draftPower(v, grade, headwind, crosswind, rho, cfg));
   const cycleLen = cfg.n_riders * cfg.pull_seconds;
 
   // Build per-second power array for one rotation cycle
@@ -285,21 +287,28 @@ export function riderNpAtSpeed(
   rho: number,
   cfg: Config,
 ): number {
-  const pPull = pullPower(v, grade, headwind, crosswind, rho, cfg);
+  // Clamp braking/coasting power to zero: on a descent (or strong tailwind) the
+  // steady-state pedal power goes negative, but normalized power measures
+  // training stress and must not credit braking. Without this clamp the fourth
+  // power in npFromMoments makes riderNpAtSpeed non-monotone in v, so the
+  // bisection in solveSpeedForRiderNp lands on a spurious slow root.
+  const pPull = Math.max(0, pullPower(v, grade, headwind, crosswind, rho, cfg));
 
   if (cfg.solo) {
     // Solo: constant power, NP = that power
     return pPull;
   }
 
-  const pDraft = draftPower(v, grade, headwind, crosswind, rho, cfg);
+  const pDraft = Math.max(0, draftPower(v, grade, headwind, crosswind, rho, cfg));
   return npFromMoments(pPull, pDraft, cfg.n_riders, cfg.pull_seconds);
 }
 
 /**
  * Bisection solver: find ground speed v such that riderNpAtSpeed(v,...) == npTarget.
  * Searches v in [0.5, 25] m/s. Converges within 60 iterations to tolerance
- * of 0.1 W on NP. riderNpAtSpeed is monotone increasing in v under normal conditions.
+ * of 0.1 W on NP. riderNpAtSpeed is monotone non-decreasing in v because the
+ * NP computation clamps braking power to zero (see riderNpAtSpeed), so the
+ * bisection has a single root.
  */
 export function solveSpeedForRiderNp(
   npTarget: number,
