@@ -418,17 +418,28 @@ export function segment(
         const seg = displaySegs[i];
         if (seg.distance_m >= minM) continue;
         if (seg.stop_minutes !== undefined) continue; // hard boundary, skip
-        // Find best neighbour (closest avg_w, not a depot boundary between them).
+        // Find best neighbour (closest avg_w). Never merge across a depot
+        // boundary, nor across a control town: the town sits on the left half's
+        // to_km, and mergeDisplaySegs keeps the right half's town, so merging a
+        // control-ending segment would drop its marker.
         let bestIdx = -1;
         let bestDiff = Infinity;
-        if (i > 0 && displaySegs[i - 1].stop_minutes === undefined) {
+        if (
+          i > 0 &&
+          displaySegs[i - 1].stop_minutes === undefined &&
+          displaySegs[i - 1].town === undefined
+        ) {
           const diff = Math.abs(displaySegs[i - 1].avg_w - seg.avg_w);
           if (diff < bestDiff) {
             bestDiff = diff;
             bestIdx = i - 1;
           }
         }
-        if (i < displaySegs.length - 1 && displaySegs[i + 1].stop_minutes === undefined) {
+        if (
+          i < displaySegs.length - 1 &&
+          displaySegs[i + 1].stop_minutes === undefined &&
+          seg.town === undefined
+        ) {
           const diff = Math.abs(displaySegs[i + 1].avg_w - seg.avg_w);
           if (diff < bestDiff) {
             bestIdx = i + 1;
@@ -487,8 +498,10 @@ export function segment(
     for (let i = 0; i < displaySegs.length - 1; i++) {
       const a = displaySegs[i];
       const b = displaySegs[i + 1];
-      // Do not merge across a depot boundary.
+      // Do not merge across a depot boundary or a control town (a ends on the
+      // control; merging would drop its town marker).
       if (a.stop_minutes !== undefined || b.stop_minutes !== undefined) continue;
+      if (a.town !== undefined) continue;
       const diff = Math.abs(a.avg_w - b.avg_w);
       if (diff < bestDiff) {
         bestDiff = diff;

@@ -513,3 +513,38 @@ describe('segment() gradient merge', () => {
     expect(segs[0].town).toBe('Mid');
   });
 });
+
+// ---------------------------------------------------------------------------
+// SUITE: control towns must survive the short-segment and max-segments merges.
+// mergeDisplaySegs keeps the right half's town, so merging across a
+// control-ending segment would silently drop its town marker.
+// ---------------------------------------------------------------------------
+describe('segment() preserves control towns across merges', () => {
+  const micros = buildMicros(10); // 10 x 1 km flat
+  const plans = micros.map((m) => makeSeg(m));
+  const planResult = buildPlanResult(plans, 0); // no depot stop
+  const controls: ControlPoint[] = [
+    { name: 'Start', km: 0 },
+    { name: 'Mid', km: 1 }, // the 0-1 km segment is shorter than min_segment_km
+    { name: 'End', km: 10 },
+  ];
+  const noStopCfg2: Config = applyDefaults({
+    race_date: '2026-06-13',
+    start_time: '04:22',
+    gpx_path: 'x',
+    ftp: 272,
+    n_riders: 12,
+    target_total_hm: '11:45',
+    stops: [],
+  });
+
+  it('keeps the Mid town when its segment is shorter than min_segment_km', () => {
+    const result = segment(planResult, noStopCfg2, controls);
+    expect(result.some((s) => s.town === 'Mid')).toBe(true);
+  });
+
+  it('keeps the Mid town when capping to maxSegments', () => {
+    const result = segment(planResult, noStopCfg2, controls, { maxSegments: 2 });
+    expect(result.some((s) => s.town === 'Mid')).toBe(true);
+  });
+});

@@ -216,12 +216,11 @@ export function runInnerSolve(
       rider_np_w = riderNpAtSpeed(v, micro.grade, headwind, crosswind, rho, cfg);
     }
     let p_draft_w = cfg.solo ? p_pull_w : draftPower(v, micro.grade, headwind, crosswind, rho, cfg);
-    // A spin-out cap over a descent can drive the steady pull/draft power below
-    // zero (freewheeling); a plan cannot show negative pedal power, so clamp.
-    if (cap_binding === 'spinout') {
-      p_pull_w = Math.max(0, p_pull_w);
-      p_draft_w = Math.max(0, p_draft_w);
-    }
+    // A descent (or spin-out cap) can drive the steady pull/draft power below
+    // zero (freewheeling); a plan cannot show negative pedal power, so clamp all
+    // displayed power to zero (coasting) for every segment.
+    p_pull_w = Math.max(0, p_pull_w);
+    p_draft_w = Math.max(0, p_draft_w);
     const p_mean_w = cfg.solo ? p_pull_w : meanPower(p_pull_w, p_draft_w, fFrontVal);
 
     const time_s = micro.distance_m / v;
