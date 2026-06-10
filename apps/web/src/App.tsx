@@ -7,7 +7,7 @@
  * and edit it before solving. The only network egress is the rounded route
  * coordinates + date sent to /api/weather in fetched mode.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   applyDefaults,
   ingestGpxString,
@@ -26,14 +26,42 @@ import { SummaryCard } from './components/SummaryCard';
 import { SplitTable } from './components/SplitTable';
 import { Downloads } from './components/Downloads';
 import { TempokortTable } from './components/TempokortTable';
+import { HowItWorks } from './components/HowItWorks';
 import { raceHours, centroidOf } from './lib/hours';
 import { fetchEnsemble } from './lib/weatherClient';
 import type { PipelineInput } from './worker/solve.worker';
+
+const HOWTO_HASH = '#sa-funkar-det';
 
 export function App() {
   const solver = useSolver();
   const [ranInput, setRanInput] = useState<PipelineInput | null>(null);
   const [lastForm, setLastForm] = useState<FormSubmit | null>(null);
+
+  // Which view is showing. Seeded from the URL hash so a shared
+  // …/#sa-funkar-det link lands directly on the infographic.
+  const [view, setView] = useState<'calculator' | 'how'>(() =>
+    typeof window !== 'undefined' && window.location.hash === HOWTO_HASH ? 'how' : 'calculator',
+  );
+
+  // Keep the view in sync with browser back/forward and manual hash edits.
+  useEffect(() => {
+    const onHash = () => setView(window.location.hash === HOWTO_HASH ? 'how' : 'calculator');
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
+  const goHowItWorks = () => {
+    window.location.hash = HOWTO_HASH.slice(1);
+    setView('how');
+    window.scrollTo(0, 0);
+  };
+
+  const goCalculator = () => {
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    setView('calculator');
+    window.scrollTo(0, 0);
+  };
 
   // Weather state.
   const [mode, setMode] = useState<WeatherMode>('calm');
@@ -182,85 +210,95 @@ export function App() {
         <span>Forka på GitHub</span>
       </a>
 
-      <header className="app-header">
-        <h1>StickToThePlan</h1>
-        <p className="tagline">Körschema för Vätternrundan</p>
-      </header>
-
-      <p className="intro">
-        Ställ in ditt mål och få ett detaljerat körschema för Vätternrundan. Rutten är redan inläst,
-        så du kan börja direkt: justera måltid och starttid, kör planen och ladda ner ditt styrkort.
-      </p>
-
-      <p className="privacy">
-        Uppladdade GPX- och FIT-filer behandlas helt i din webbläsare och laddas aldrig upp. I läget{' '}
-        <strong>Hämta</strong> skickas endast ruttens avrundade punkter och datumet till vår
-        väderfunktion, som frågar SMHI, MET Norway och Open-Meteo. Lugnt och manuellt läge skickar
-        ingenting.
-      </p>
-
-      <UploadForm
-        onRun={(f) => {
-          setLastForm(f);
-        }}
-        status={status}
-      />
-
-      <WeatherPanel
-        mode={mode}
-        onModeChange={onModeChange}
-        rows={mode === 'calm' ? [] : displayedRows}
-        edited={editedHours}
-        fetchStatus={fetchStatus}
-        sources={sources}
-        reduced={reduced}
-        windRef={windRef}
-        onFetch={() => lastForm && doFetch(lastForm)}
-        onEdit={editHour}
-        onResetHour={resetHour}
-        onApplyConstant={applyConstant}
-        onWindRefChange={setWindRef}
-      />
-
-      <div className="run-row">
-        <button
-          type="button"
-          className="run-button"
-          disabled={status === 'running' || !lastForm?.gpxText.trim()}
-          onClick={() => lastForm && handleRun(lastForm)}
-        >
-          {status === 'running' ? 'Beräknar…' : 'Beräkna plan'}
-        </button>
-      </div>
-
-      {status === 'error' && (
-        <section className="card error-card">
-          <h2>Något gick fel</h2>
-          <p>{error}</p>
-        </section>
-      )}
-
-      {status === 'done' && result && (
+      {view === 'how' ? (
+        <HowItWorks onBack={goCalculator} />
+      ) : (
         <>
-          <p className="done-banner">Planen är klar! Se sammanfattningen nedan.</p>
-          <SummaryCard
-            scenarios={result.scenarios}
-            splits={result.splits}
-            cfg={result.cfg}
-            showInterval={showInterval}
+          <header className="app-header">
+            <h1>StickToThePlan</h1>
+            <p className="tagline">Körschema för Vätternrundan</p>
+            <button type="button" className="howto-nav" onClick={goHowItWorks}>
+              Så funkar det →
+            </button>
+          </header>
+
+          <p className="intro">
+            Ställ in ditt mål och få ett detaljerat körschema för Vätternrundan. Rutten är redan
+            inläst, så du kan börja direkt: justera måltid och starttid, kör planen och ladda ner
+            ditt styrkort.
+          </p>
+
+          <p className="privacy">
+            Uppladdade GPX- och FIT-filer behandlas helt i din webbläsare och laddas aldrig upp. I
+            läget <strong>Hämta</strong> skickas endast ruttens avrundade punkter och datumet till
+            vår väderfunktion, som frågar SMHI, MET Norway och Open-Meteo. Lugnt och manuellt läge
+            skickar ingenting.
+          </p>
+
+          <UploadForm
+            onRun={(f) => {
+              setLastForm(f);
+            }}
+            status={status}
           />
-          <SplitTable splits={result.splits} startTime={startTime} />
-          <TempokortTable
-            segments={result.displaySegments}
-            compactSegments={result.styrkortSegments}
-            startTime={startTime}
-            segmentPlans={result.scenarios.expected.segments}
+
+          <WeatherPanel
+            mode={mode}
+            onModeChange={onModeChange}
+            rows={mode === 'calm' ? [] : displayedRows}
+            edited={editedHours}
+            fetchStatus={fetchStatus}
+            sources={sources}
+            reduced={reduced}
+            windRef={windRef}
+            onFetch={() => lastForm && doFetch(lastForm)}
+            onEdit={editHour}
+            onResetHour={resetHour}
+            onApplyConstant={applyConstant}
+            onWindRefChange={setWindRef}
           />
-          {result.scenarios.optimistic !== result.scenarios.expected ||
-          result.scenarios.pessimistic !== result.scenarios.expected ? (
-            <ScenarioSummary scenarios={result.scenarios} />
-          ) : null}
-          <Downloads result={result} sources={ranSources} reduced={ranReduced} />
+
+          <div className="run-row">
+            <button
+              type="button"
+              className="run-button"
+              disabled={status === 'running' || !lastForm?.gpxText.trim()}
+              onClick={() => lastForm && handleRun(lastForm)}
+            >
+              {status === 'running' ? 'Beräknar…' : 'Beräkna plan'}
+            </button>
+          </div>
+
+          {status === 'error' && (
+            <section className="card error-card">
+              <h2>Något gick fel</h2>
+              <p>{error}</p>
+            </section>
+          )}
+
+          {status === 'done' && result && (
+            <>
+              <p className="done-banner">Planen är klar! Se sammanfattningen nedan.</p>
+              <SummaryCard
+                scenarios={result.scenarios}
+                splits={result.splits}
+                cfg={result.cfg}
+                showInterval={showInterval}
+              />
+              <SplitTable splits={result.splits} startTime={startTime} />
+              <TempokortTable
+                segments={result.displaySegments}
+                compactSegments={result.styrkortSegments}
+                startTime={startTime}
+                segmentPlans={result.scenarios.expected.segments}
+              />
+              {result.scenarios.optimistic !== result.scenarios.expected ||
+              result.scenarios.pessimistic !== result.scenarios.expected ? (
+                <ScenarioSummary scenarios={result.scenarios} />
+              ) : null}
+              <Downloads result={result} sources={ranSources} reduced={ranReduced} />
+            </>
+          )}
         </>
       )}
     </main>

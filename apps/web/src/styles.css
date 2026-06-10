@@ -641,3 +641,124 @@ button.download-btn:hover {
     font-size: 1.3rem;
   }
 }
+
+/* ---- "Så funkar det" infographic page ---- */
+
+.howto-nav {
+  display: inline-block;
+  margin-top: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.howto-nav:hover {
+  text-decoration: underline;
+}
+
+.howto {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.howto-hero {
+  background: #e7f0ff;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  padding: 24px;
+  margin: 8px 0 20px;
+}
+.howto-hero h1 {
+  margin: 0 0 10px;
+  font-size: 1.7rem;
+  line-height: 1.25;
+}
+.howto-hero p {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.howto-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin: 16px 0;
+}
+.howto-section h2 {
+  margin: 0 0 10px;
+  font-size: 1.25rem;
+}
+.howto-section p {
+  margin: 0 0 12px;
+  line-height: 1.6;
+}
+.howto-section p:last-child {
+  margin-bottom: 0;
+}
+
+.howto-figure {
+  margin: 16px 0 4px;
+}
+.howto-figure svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.howto-formula {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  background: var(--zebra);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  font-size: 0.98rem;
+  color: var(--text);
+  overflow-x: auto;
+}
+.howto-caption {
+  margin: 8px 0 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.howto-footer {
+  margin: 20px 0 0;
+  padding: 18px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+.howto-footer p {
+  margin: 0 0 10px;
+  line-height: 1.6;
+}
+.howto-footer strong {
+  color: var(--text);
+}
+.howto-links {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.howto-links a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+.howto-links a:hover {
+  text-decoration: underline;
+}
+.howto-links .link {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
