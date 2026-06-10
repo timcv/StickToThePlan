@@ -10,6 +10,7 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/node_modules/**',
+      '.claude/**',
       'output/**',
       'ciq/**',
       'docs/**',
