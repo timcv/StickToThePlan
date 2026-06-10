@@ -16,7 +16,10 @@ import {
 } from './openMeteo.js';
 import { buildSmhiUrl, parseSmhi } from './smhi.js';
 import { buildMetNorwayUrl, metNorwayHeaders, parseMetNorway } from './metNorway.js';
+import { fetchWithTimeout, FETCH_TIMEOUT_MS } from './http.js';
 import type { WindSample } from '../types.js';
+
+export { fetchWithTimeout, FETCH_TIMEOUT_MS } from './http.js';
 
 /** Run `fn` over `items` with at most `limit` concurrent in-flight calls. */
 export async function mapLimit<T, R>(
@@ -40,9 +43,12 @@ export async function mapLimit<T, R>(
 
 const CONCURRENCY = 10;
 
-export async function fetchSmhi(point: GeoPoint): Promise<WindSample[]> {
+export async function fetchSmhi(
+  point: GeoPoint,
+  timeoutMs: number = FETCH_TIMEOUT_MS,
+): Promise<WindSample[]> {
   try {
-    const res = await fetch(buildSmhiUrl(point));
+    const res = await fetchWithTimeout(buildSmhiUrl(point), {}, timeoutMs);
     if (!res.ok) return [];
     return parseSmhi(await res.json(), point);
   } catch {
@@ -50,9 +56,16 @@ export async function fetchSmhi(point: GeoPoint): Promise<WindSample[]> {
   }
 }
 
-export async function fetchMetNorway(point: GeoPoint): Promise<WindSample[]> {
+export async function fetchMetNorway(
+  point: GeoPoint,
+  timeoutMs: number = FETCH_TIMEOUT_MS,
+): Promise<WindSample[]> {
   try {
-    const res = await fetch(buildMetNorwayUrl(point), { headers: metNorwayHeaders() });
+    const res = await fetchWithTimeout(
+      buildMetNorwayUrl(point),
+      { headers: metNorwayHeaders() },
+      timeoutMs,
+    );
     if (!res.ok) return [];
     return parseMetNorway(await res.json(), point);
   } catch {
@@ -62,7 +75,7 @@ export async function fetchMetNorway(point: GeoPoint): Promise<WindSample[]> {
 
 async function fetchOpenMeteoEnsemblePoint(point: GeoPoint, date: string): Promise<WindSample[]> {
   try {
-    const res = await fetch(buildEnsembleUrl(point, date));
+    const res = await fetchWithTimeout(buildEnsembleUrl(point, date));
     if (!res.ok) return [];
     return parseOpenMeteo(await res.json(), point, 'open-meteo-ensemble');
   } catch {

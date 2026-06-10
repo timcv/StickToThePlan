@@ -60,6 +60,9 @@ const POWER_OFFSET = 1000;
 /** Workout name written to the FIT file and shown on the watch. */
 const WORKOUT_NAME = 'Vatternrundan';
 
+/** Fixed creation epoch so encoded workout bytes are deterministic (mirrors fitCourse BASE_MS). */
+const WORKOUT_BASE_MS = Date.UTC(2026, 0, 1, 0, 0, 0);
+
 /** Garmin caps a structured workout at 50 steps; segmentation already enforces this upstream. */
 const MAX_STEPS = 50;
 
@@ -152,7 +155,9 @@ export function encodeWorkout(
     type: 'workout',
     manufacturer: 'development',
     product: 0,
-    timeCreated: new Date(),
+    // Fixed epoch (never new Date()) keeps the encoded bytes deterministic, so
+    // the same plan always produces the same .fit (mirrors fitCourse BASE_MS).
+    timeCreated: new Date(WORKOUT_BASE_MS),
     serialNumber: 1234,
   });
 

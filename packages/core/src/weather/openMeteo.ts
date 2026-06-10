@@ -6,6 +6,7 @@
  * ensemble), so 10 points = 20 requests, each returning 24 hourly entries.
  */
 
+import { fetchWithTimeout } from './http.js';
 import type { WindSample } from '../types.js';
 
 export interface GeoPoint {
@@ -148,7 +149,7 @@ export async function fetchOpenMeteoForecastBatched(
 ): Promise<WindSample[]> {
   if (points.length === 0) return [];
   try {
-    const res = await fetch(buildForecastUrlMulti(points, date));
+    const res = await fetchWithTimeout(buildForecastUrlMulti(points, date));
     if (!res.ok) return [];
     const json = await res.json();
     return parseOpenMeteoBatch(json, points, 'open-meteo-forecast');
