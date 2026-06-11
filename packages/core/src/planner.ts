@@ -242,6 +242,12 @@ export function runInnerSolve(
     applyStopsAtBoundary(micro.cum_distance_m);
   }
 
+  // Stops the march never reached (km beyond the route end) must be surfaced:
+  // silently dropping them would make the plan look faster than the rider's day.
+  const lastCumM =
+    microsegments.length > 0 ? microsegments[microsegments.length - 1].cum_distance_m : 0;
+  const missedStops = stopsSorted.slice(stopIdx);
+
   // ---- Totals ----
   const total_time_s = elapsed; // includes neutral + stops
   const rolling_time_s = total_time_s - stopTimeS;
@@ -259,6 +265,12 @@ export function runInnerSolve(
   const intensity_factor = cfg.ftp > 0 ? rider_np_ride_w / cfg.ftp : 0;
 
   const notes: string[] = [];
+  for (const missed of missedStops) {
+    notes.push(
+      `Stop "${missed.control}" at km ${missed.km} lies beyond the route end ` +
+        `(${(lastCumM / 1000).toFixed(1)} km) and was NOT applied.`,
+    );
+  }
   if (hardCount > 0 || softCount > 0 || spinoutCount > 0) {
     notes.push(
       `Caps bound on ${hardCount} hard, ${softCount} soft and ${spinoutCount} spin-out segment(s); ` +

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { MicroSegment, Config } from '../src/types.js';
 import { applyDefaults } from '../src/config.js';
-import { calmWeather, solveForTargetTime } from '../src/planner.js';
+import { calmWeather, runInnerSolve, solveForTargetTime } from '../src/planner.js';
 import type { ControlPoint } from '../src/segmentation.js';
 import { buildSplitTable } from '../src/output/splits.js';
 
@@ -95,5 +95,19 @@ describe('buildSplitTable – synthetic 60 km route', () => {
     const alphaRow = rows.find((r) => r.toControl === 'Alpha');
     expect(alphaRow).toBeDefined();
     expect(alphaRow!.stop_minutes).toBe(5);
+  });
+
+  it('matches a stop to its control by km even when the control name differs', () => {
+    // Stop named differently from the control; km 20 still equals Alpha's km.
+    const cfgRenamed: Config = {
+      ...cfg,
+      stops: [{ control: 'Helt Annat Namn', km: 20, minutes: 5 }],
+    };
+    const npTarget = plan.np_target_used;
+    const renamedPlan = runInnerSolve(micro, npTarget, calmWeather, cfgRenamed);
+    const rows = buildSplitTable(renamedPlan, cfgRenamed, CONTROLS);
+    const alphaRow = rows.find((r) => r.toControl === 'Alpha')!;
+    expect(alphaRow.stop_minutes).toBe(5);
+    expect(alphaRow.depart_s).toBe(alphaRow.arrive_s + 300);
   });
 });

@@ -258,4 +258,21 @@ describe('stop boundary eta_s semantics', () => {
     const next = plan.segments.find((s) => s.micro.cum_distance_m === 3000)!;
     expect(next.eta_s).toBeCloseTo(stop.depart_s + next.time_s, 6);
   });
+
+  it('notes a stop whose km is beyond the route end instead of dropping it silently', () => {
+    const cfg = applyDefaults({
+      gpx_path: 'x.gpx',
+      race_date: '2026-06-13',
+      start_time: '04:22',
+      ftp: 272,
+      n_riders: 12,
+      target_total_hm: '11:45',
+      stops: [{ control: 'Spöke', km: 99, minutes: 10 }],
+      neutral_distance_km: 0,
+    });
+    const plan = runInnerSolve(flatMicros(4, 1000), 200, calmWeather, cfg); // 4 km route
+    expect(plan.stops).toHaveLength(0);
+    expect(plan.stop_time_s).toBe(0);
+    expect(plan.notes.some((n) => n.includes('Spöke') && n.includes('99'))).toBe(true);
+  });
 });
