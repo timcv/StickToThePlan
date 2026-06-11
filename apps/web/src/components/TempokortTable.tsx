@@ -75,6 +75,11 @@ export function TempokortTable({ segments, compactSegments, startTime, segmentPl
 
   const activeSegs = compact && compactSegments ? compactSegments : segments;
 
+  // The "Not" column only earns its place on routes that actually produce
+  // terrain/effort cues. On flat, calm plans every note is "JÄMN FART" (and
+  // depots already show in the Stopp column), so hide the column entirely.
+  const showNote = activeSegs.some((s) => s.note && s.note !== 'JÄMN FART' && s.note !== 'DEPÅ');
+
   return (
     <section className="card">
       <div className="tempokort-head">
@@ -135,6 +140,7 @@ export function TempokortTable({ segments, compactSegments, startTime, segmentPl
               <tr>
                 <th>Sektion (km)</th>
                 <th>Ort</th>
+                <th className="num">km/h</th>
                 <th className="num">Distans (km)</th>
                 <th className="num col-secondary">Höjd (m)</th>
                 <th className="num col-secondary">Lutning</th>
@@ -144,7 +150,7 @@ export function TempokortTable({ segments, compactSegments, startTime, segmentPl
                 {segmentPlans && <th className="col-secondary">Exponering</th>}
                 <th className="num col-secondary">Drageffekt (W)</th>
                 <th className="num">Snitt (W)</th>
-                <th className="col-secondary">Not</th>
+                {showNote && <th className="col-secondary">Not</th>}
                 <th>Stopp</th>
               </tr>
             </thead>
@@ -162,6 +168,9 @@ export function TempokortTable({ segments, compactSegments, startTime, segmentPl
                     <td>
                       {seg.stop_minutes ? '☕ ' : ''}
                       {seg.town ?? ''}
+                    </td>
+                    <td className="num">
+                      {seg.avg_speed_kmh > 0 ? Math.round(seg.avg_speed_kmh) : ''}
                     </td>
                     <td className="num">{metersToKm1(seg.distance_m)}</td>
                     <td className="num col-secondary">{Math.round(seg.net_height_m)}</td>
@@ -183,7 +192,7 @@ export function TempokortTable({ segments, compactSegments, startTime, segmentPl
                         : `${seg.pull_w_low}–${seg.pull_w_high}`}
                     </td>
                     <td className="num">{seg.avg_w > 0 ? seg.avg_w : ''}</td>
-                    <td className="col-secondary">{seg.note}</td>
+                    {showNote && <td className="col-secondary">{seg.note}</td>}
                     <td>
                       {seg.stop_minutes !== undefined && seg.stop_minutes > 0
                         ? `${seg.stop_minutes} min${

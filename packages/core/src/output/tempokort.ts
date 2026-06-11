@@ -59,6 +59,7 @@ function buildScenarioLine(scenarios: ThreeScenarios): string {
 interface RowData {
   fromTo: string;
   town: string;
+  kmh: string;
   eta: string;
   distance: string;
   height: string;
@@ -73,6 +74,7 @@ interface RowData {
 function buildRow(seg: DisplaySegment, startTime: string): RowData {
   const fromTo = `${seg.from_km}-${seg.to_km}`;
   const town = seg.town ?? '';
+  const kmh = seg.avg_speed_kmh > 0 ? String(Math.round(seg.avg_speed_kmh)) : '';
   const eta = secondsToClock(seg.eta_s, startTime);
   const distance = (seg.distance_m / 1000).toFixed(1);
   const netH = Math.round(seg.net_height_m);
@@ -89,31 +91,45 @@ function buildRow(seg: DisplaySegment, startTime: string): RowData {
     stop = `${seg.stop_minutes} min, avg ${departClock}`;
   }
 
-  return { fromTo, town, eta, distance, height, gradient, wind, pullW, avgW, note, stop };
+  return { fromTo, town, kmh, eta, distance, height, gradient, wind, pullW, avgW, note, stop };
 }
 
 // ---------------------------------------------------------------------------
 // Column definitions
 // ---------------------------------------------------------------------------
 
-const COLUMNS = [
-  'From-to (km)',
-  'Town',
-  'ETA',
-  'Distance (km)',
-  'Height (m)',
-  'Gradient',
-  'Wind',
-  'Pull W',
-  'Avg W',
-  'Note',
-  'Stop',
-] as const;
+/**
+ * The Note column only earns its place on routes that produce terrain/effort
+ * cues. On flat, calm plans every note is "JÄMN FART" (and depots already show
+ * in the Stop column), so it is dropped entirely. Mirrors the web full view.
+ */
+function hasMeaningfulNotes(segs: DisplaySegment[]): boolean {
+  return segs.some((s) => s.note && s.note !== 'JÄMN FART' && s.note !== 'DEPÅ');
+}
 
-function rowToArray(row: RowData): string[] {
-  return [
+function buildColumns(showNote: boolean): string[] {
+  const cols = [
+    'From-to (km)',
+    'Town',
+    'km/h',
+    'ETA',
+    'Distance (km)',
+    'Height (m)',
+    'Gradient',
+    'Wind',
+    'Pull W',
+    'Avg W',
+  ];
+  if (showNote) cols.push('Note');
+  cols.push('Stop');
+  return cols;
+}
+
+function rowToArray(row: RowData, showNote: boolean): string[] {
+  const cells = [
     row.fromTo,
     row.town,
+    row.kmh,
     row.eta,
     row.distance,
     row.height,
@@ -121,9 +137,10 @@ function rowToArray(row: RowData): string[] {
     row.wind,
     row.pullW,
     row.avgW,
-    row.note,
-    row.stop,
   ];
+  if (showNote) cells.push(row.note);
+  cells.push(row.stop);
+  return cells;
 }
 
 // ---------------------------------------------------------------------------
@@ -157,15 +174,17 @@ export function renderMarkdown(
   lines.push('');
 
   // Table header
-  const header = `| ${COLUMNS.join(' | ')} |`;
-  const separator = `| ${COLUMNS.map(() => '---').join(' | ')} |`;
+  const showNote = hasMeaningfulNotes(displaySegments);
+  const columns = buildColumns(showNote);
+  const header = `| ${columns.join(' | ')} |`;
+  const separator = `| ${columns.map(() => '---').join(' | ')} |`;
   lines.push(header);
   lines.push(separator);
 
   // Table rows
   for (const seg of displaySegments) {
     const row = buildRow(seg, cfg.start_time);
-    const cells = rowToArray(row);
+    const cells = rowToArray(row, showNote);
     lines.push(`| ${cells.join(' | ')} |`);
   }
 
@@ -342,11 +361,13 @@ export function renderHtml(
   const estimateLine = escHtml(buildEstimateLine(scenarios));
   const startInfo = escHtml(`Start: ${cfg.start_time}  |  Mål: ${cfg.target_total_hm}`);
 
-  const thCells = COLUMNS.map(c => `<th>${escHtml(c)}</th>`).join('\n        ');
+  const showNote = hasMeaningfulNotes(displaySegments);
+  const columns = buildColumns(showNote);
+  const thCells = columns.map(c => `<th>${escHtml(c)}</th>`).join('\n        ');
 
   const tdRows = displaySegments.map(seg => {
     const row = buildRow(seg, cfg.start_time);
-    const cells = rowToArray(row);
+    const cells = rowToArray(row, showNote);
     const tds = cells.map(c => `<td>${escHtml(c)}</td>`).join('\n        ');
     return `    <tr>\n        ${tds}\n    </tr>`;
   }).join('\n');
