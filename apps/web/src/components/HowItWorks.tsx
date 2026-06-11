@@ -232,8 +232,8 @@ function WindFigure() {
           viewBox="0 0 10 10"
           refX="8"
           refY="5"
-          markerWidth="7"
-          markerHeight="7"
+          markerWidth="6"
+          markerHeight="6"
           orient="auto-start-reverse"
         >
           <path
@@ -328,8 +328,8 @@ function PacelineFigure() {
           viewBox="0 0 10 10"
           refX="8"
           refY="5"
-          markerWidth="7"
-          markerHeight="7"
+          markerWidth="6"
+          markerHeight="6"
           orient="auto-start-reverse"
         >
           <path
@@ -579,8 +579,8 @@ function SegmentFigure() {
           viewBox="0 0 10 10"
           refX="8"
           refY="5"
-          markerWidth="7"
-          markerHeight="7"
+          markerWidth="6"
+          markerHeight="6"
           orient="auto-start-reverse"
         >
           <path
@@ -628,6 +628,10 @@ function SegmentFigure() {
       <text x="42" y="150" fontSize="11" fill={C.muted}>
         Visningssegment: ny rad där kontroll, lutning eller vind ändras
       </text>
+      <circle cx="48" cy="166" r="4" fill={C.text} />
+      <text x="58" y="170" fontSize="11" fill={C.muted}>
+        = kontroll eller depå
+      </text>
     </svg>
   );
 }
@@ -651,8 +655,8 @@ function WeatherClockFigure() {
           viewBox="0 0 10 10"
           refX="8"
           refY="5"
-          markerWidth="7"
-          markerHeight="7"
+          markerWidth="6"
+          markerHeight="6"
           orient="auto-start-reverse"
         >
           <path
@@ -724,16 +728,16 @@ function RoadPrepFigure() {
         strokeLinejoin="round"
       />
       <line
-        x1="380"
-        y1="70"
-        x2="400"
-        y2="64"
+        x1="346"
+        y1="66"
+        x2="434"
+        y2="66"
         stroke={C.coral}
-        strokeWidth="2.5"
-        strokeLinecap="round"
+        strokeWidth="1.5"
+        strokeDasharray="5 3"
       />
-      <text x="392" y="56" fontSize="12" fill={C.coral}>
-        klampad till ±18 %
+      <text x="390" y="58" fontSize="11" fill={C.coral} textAnchor="middle">
+        lutningstak ±18 %
       </text>
       <text x="44" y="172" fontSize="12" fill={C.gray}>
         Rå GPX-höjd
@@ -866,7 +870,7 @@ function EtaClockFigure() {
         En vågrät tidslinje från start till mål med en kontrollpunkt, ett markerat depåstopp som
         skjuter klockan framåt, och en avgångstid efter stoppet.
       </desc>
-      <line x1="40" y1="80" x2="640" y2="80" stroke={C.border} strokeWidth="3" />
+      <line x1="40" y1="80" x2="620" y2="80" stroke={C.border} strokeWidth="3" />
       <circle cx="60" cy="80" r="6" fill={C.accent} />
       <text x="60" y="64" fontSize="12" fill={C.text} textAnchor="middle" fontWeight="600">
         04:22
@@ -892,8 +896,8 @@ function EtaClockFigure() {
       <text x="390" y="108" fontSize="11" fill={C.muted} textAnchor="middle">
         Avgång
       </text>
-      <circle cx="640" cy="80" r="6" fill={C.accent} />
-      <text x="640" y="64" fontSize="12" fill={C.text} textAnchor="end" fontWeight="600">
+      <circle cx="620" cy="80" r="6" fill={C.accent} />
+      <text x="620" y="108" fontSize="11" fill={C.muted} textAnchor="middle">
         Mål
       </text>
     </svg>
