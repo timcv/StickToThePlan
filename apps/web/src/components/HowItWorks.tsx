@@ -671,6 +671,119 @@ function RoadPrepFigure() {
   );
 }
 
+function AnchorFigure() {
+  return (
+    <svg width="100%" viewBox="0 0 680 176" role="img" aria-labelledby="anchor-t anchor-d">
+      <title id="anchor-t">Två vägar till ett referensankare</title>
+      <desc id="anchor-d">
+        En lång tur över två timmar ger turens normaliserade effekt direkt; en kort tur eller ingen
+        fil ger 0,60 gånger FTP. Båda landar i ett referensankare vid sidan av tidslösaren.
+      </desc>
+      <defs>
+        <marker
+          id="an-arrow"
+          viewBox="0 0 10 10"
+          refX="8"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto-start-reverse"
+        >
+          <path
+            d="M2 1L8 5L2 9"
+            fill="none"
+            stroke="context-stroke"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </marker>
+      </defs>
+      <rect
+        x="30"
+        y="34"
+        width="210"
+        height="40"
+        rx="8"
+        fill={C.fill}
+        stroke={C.accent}
+        strokeWidth="1"
+      />
+      <text x="135" y="50" fontSize="12" fill={C.text} textAnchor="middle" fontWeight="600">
+        Lång representativ tur ({'>'}2 h)
+      </text>
+      <text x="135" y="66" fontSize="11" fill={C.muted} textAnchor="middle">
+        turens NP används direkt
+      </text>
+      <rect
+        x="30"
+        y="102"
+        width="210"
+        height="40"
+        rx="8"
+        fill="#fff"
+        stroke={C.gray}
+        strokeWidth="1"
+      />
+      <text x="135" y="118" fontSize="12" fill={C.text} textAnchor="middle" fontWeight="600">
+        Kort test eller ingen fil
+      </text>
+      <text x="135" y="134" fontSize="11" fill={C.muted} textAnchor="middle">
+        0,60 × FTP
+      </text>
+      <line
+        x1="240"
+        y1="54"
+        x2="372"
+        y2="80"
+        stroke={C.muted}
+        strokeWidth="1.5"
+        markerEnd="url(#an-arrow)"
+      />
+      <line
+        x1="240"
+        y1="122"
+        x2="372"
+        y2="92"
+        stroke={C.muted}
+        strokeWidth="1.5"
+        markerEnd="url(#an-arrow)"
+      />
+      <rect
+        x="380"
+        y="64"
+        width="150"
+        height="44"
+        rx="8"
+        fill={C.fill}
+        stroke={C.accent}
+        strokeWidth="1.5"
+      />
+      <text x="455" y="82" fontSize="12" fill={C.text} textAnchor="middle" fontWeight="600">
+        Referensankare
+      </text>
+      <text x="455" y="98" fontSize="11" fill={C.muted} textAnchor="middle">
+        visas i planen
+      </text>
+      <line
+        x1="530"
+        y1="86"
+        x2="600"
+        y2="86"
+        stroke={C.green}
+        strokeWidth="2.5"
+        markerEnd="url(#an-arrow)"
+      />
+      <text x="610" y="82" fontSize="11" fill={C.green} textAnchor="end">
+        tidslösaren
+      </text>
+      <text x="610" y="98" fontSize="11" fill={C.green} textAnchor="end">
+        räknar ändå NP
+      </text>
+    </svg>
+  );
+}
+
 export function HowItWorks({ onBack }: { onBack: () => void }) {
   return (
     <div className="howto">
@@ -927,6 +1040,35 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
             Det gör utvärderingen O(1) per fart i stället för en sampelsimulering, verifierad mot
             referensimplementationen inom 10⁻⁶. Farten som ger mål-NP löses med bisektion till 0,1
             W.
+          </p>
+        </DeepDive>
+      </Section>
+
+      <Section title="Vilken ansträngning planen håller" figure={<AnchorFigure />}>
+        <p>
+          Du kan ladda upp en valfri effektfil (FIT) från en representativ tur. Är den lång (mer än
+          två timmar) använder vi turens normaliserade effekt som ett personligt ankare; är den
+          kort, eller saknas helt, faller vi tillbaka på 0,60 × FTP. Ankaret är ett referensvärde
+          som visas i planen så att du ser vilken ansträngning din måltid ungefär motsvarar. Själva
+          planen löser ändå fram exakt den ansträngning som krävs för att träffa din tid, så ankaret
+          styr inte tempot, det är till för att stämma av att kravet är rimligt för dig.
+        </p>
+        <Formula caption="Normaliserad effekt är gruppstorleks-oberoende, så samma ankare gäller oavsett om ni är 8 eller 12 i gänget.">
+          ankare = lång tur ({'>'}2 h) ? turens NP : 0,60 × FTP
+        </Formula>
+        <DeepDive>
+          <p>Ankaret bestäms ur effektströmmen (fit.ts), klassad på längd:</p>
+          <div className="howto-formula howto-formula-block">
+            {'längd > 7200 s  → long_representative → np_target = turens NP\n'}
+            {'längd ≤ 7200 s  → short_test          → np_target = 0,60 × FTP\n'}
+            {'ingen fil                              → np_target = 0,60 × FTP'}
+          </div>
+          <p>
+            Förar-NP är det gruppstorleks-oberoende fysiologiska ankaret (spec 8.1): en referenstur
+            i ett gäng på 8 (turtäthet 1/8) översätts till en plan för 12 (1/12) utan omräkning av
+            ankaret. I webbflödet är ankaret informativt och visas i plan.json; tidslösaren
+            bisekterar ändå mål-NP i intervallet [60, FTP] för att träffa måltiden (se nästa
+            avsnitt).
           </p>
         </DeepDive>
       </Section>

@@ -31,9 +31,9 @@ describe('HowItWorks deep dives', () => {
     expect(text).toContain('f_front'); // rotationsandel
   });
 
-  it('renders solver and scenario deep dives; seven accordions total', () => {
+  it('renders solver and scenario deep dives; eight accordions total', () => {
     const { container } = render(<HowItWorks onBack={() => {}} />);
-    expect(container.querySelectorAll('details.howto-deep').length).toBe(7);
+    expect(container.querySelectorAll('details.howto-deep').length).toBe(8);
     const text = container.textContent ?? '';
     expect(text).toContain('p10');
     expect(text).toContain('p90');
