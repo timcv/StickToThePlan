@@ -1,0 +1,51 @@
+{
+  "planPath": "docs/superpowers/plans/2026-06-11-howitworks-infographics-a-f.md",
+  "tasks": [
+    {
+      "id": 1,
+      "subject": "Task 1 (C): Section \"Från GPX till väg\"",
+      "status": "pending",
+      "description": "**Goal:** Explain how raw GPX becomes a clean road profile: point de-dup, elevation smoothing (window 5), grade clamp ±18%, neutral first km. Add `RoadPrepFigure` + `<Section title=\"Från GPX till väg\">` before the \"Tre krafter\" Section. Full code in plan doc Task 1.\n\n```json:metadata\n{\"files\": [\"apps/web/src/components/HowItWorks.tsx\"], \"verifyCommand\": \"npx tsc --noEmit -p apps/web/tsconfig.json\", \"acceptanceCriteria\": [\"Section renders between Grundidén and Tre krafter\", \"figure raw vs smoothed + clamp + neutral km\", \"copy dedup/glidande medel 5/±18%/neutral 20 km/h\", \"DeepDive ele_smooth_window=5, max_grade=0.18, neutral_distance_km=1, neutral_speed_kmh=20\", \"tsc passes\"]}\n```"
+    },
+    {
+      "id": 2,
+      "subject": "Task 2 (D): Section \"Vädret skiftar över dygnet\"",
+      "status": "pending",
+      "description": "**Goal:** Explain weather is sampled per location AND per hour-of-day the rider arrives. Add `WeatherClockFigure` + `<Section>` before the \"I grupp\" Section. Full code in plan doc Task 2.\n\n```json:metadata\n{\"files\": [\"apps/web/src/components/HowItWorks.tsx\"], \"verifyCommand\": \"npx tsc --noEmit -p apps/web/tsconfig.json\", \"acceptanceCriteria\": [\"Section between Luft/vind and I grupp\", \"figure arc + 3 clock markers + growing wind arrows\", \"copy per place + per arrival hour, 11h\", \"DeepDive queryHour formula + (lat,lon,timme) cache\", \"tsc passes\"]}\n```"
+    },
+    {
+      "id": 3,
+      "subject": "Task 3 (F): Section \"Vilken ansträngning planen håller\"",
+      "status": "pending",
+      "description": "**Goal:** Explain the effort anchor honestly: optional FIT ride (>2h → its NP; else 0.60×FTP) is a reference NP shown in the plan; the solver still solves NP for the target time. Add `AnchorFigure` + `<Section>` before the solver Section. Full code in plan doc Task 3.\n\n```json:metadata\n{\"files\": [\"apps/web/src/components/HowItWorks.tsx\"], \"verifyCommand\": \"npx tsc --noEmit -p apps/web/tsconfig.json\", \"acceptanceCriteria\": [\"Section between I grupp and Hur vi räknar\", \"figure two paths → reference anchor → solver\", \"copy honest: anchor informational, solver solves NP\", \"DeepDive >7200s class, 0.60xFTP, group-size independent, bisect [60,FTP]\", \"tsc passes\"]}\n```"
+    },
+    {
+      "id": 4,
+      "subject": "Task 4 (A): Section \"Från rutt till tempokort\"",
+      "status": "pending",
+      "description": "**Goal:** Explain micro→display segment grouping, boundaries, merges, two views, note keywords. Add `SegmentFigure` + `<Section>` before footer. A→B→E share the before-footer anchor; apply in order. Full code in plan doc Task 4.\n\n```json:metadata\n{\"files\": [\"apps/web/src/components/HowItWorks.tsx\"], \"verifyCommand\": \"npx tsc --noEmit -p apps/web/tsconfig.json\", \"acceptanceCriteria\": [\"Section after Tre vindscenarier, before footer\", \"figure micro ticks → display bars + dots\", \"copy boundaries/merges/never-merge towns/two views/conditional note\", \"copy web controls from depot stops\", \"DeepDive min_segment_km=2, grade_merge_pct=0.3%, ≤50/≤20, time-weighted, SISTA UPPFÖR\", \"tsc passes\"]}\n```"
+    },
+    {
+      "id": 5,
+      "subject": "Task 5 (B): Section \"Ankomst, depå och avgång\"",
+      "status": "pending",
+      "blockedBy": [4],
+      "description": "**Goal:** Explain segment-end wall-clock time, depot minutes, arrival vs departure. Add `EtaClockFigure` + `<Section>` before footer (renders after Task 4 section → position 11). Full code in plan doc Task 5.\n\n```json:metadata\n{\"files\": [\"apps/web/src/components/HowItWorks.tsx\"], \"verifyCommand\": \"npx tsc --noEmit -p apps/web/tsconfig.json\", \"acceptanceCriteria\": [\"Section after Från rutt till tempokort, before footer\", \"figure timeline start/arrival/depot/departure/finish\", \"copy start+restid, depåminuter, ankomst vs avgång, total=rull+stopp\", \"DeepDive eta_s, depart_s=eta_s+min*60, wrap midnight, total split\", \"tsc passes\"]}\n```"
+    },
+    {
+      "id": 6,
+      "subject": "Task 6 (E): Section \"Tempokortet och klockan på styret\"",
+      "status": "pending",
+      "blockedBy": [5],
+      "description": "**Goal:** Explain the ±5% pull-watt band and the optional Garmin live data field. Add `CardWatchFigure` + `<Section>` before footer (renders after Task 5 section → position 12). Full code in plan doc Task 6.\n\n```json:metadata\n{\"files\": [\"apps/web/src/components/HowItWorks.tsx\"], \"verifyCommand\": \"npx tsc --noEmit -p apps/web/tsconfig.json\", \"acceptanceCriteria\": [\"Section after Ankomst/depå, before footer\", \"figure ±5% band + watch face\", \"copy band not single number; Garmin field live fields\", \"DeepDive band ±5%, target pull/avg, parse planned time, colour ±min\", \"tsc passes\"]}\n```"
+    },
+    {
+      "id": 7,
+      "subject": "Task 7: Full-page integration verification",
+      "status": "pending",
+      "blockedBy": [1, 2, 3, 4, 5, 6],
+      "description": "**Goal:** Confirm all six sections render in correct order, page builds + lints clean, screenshot the live page. Verification only; fix in HowItWorks.tsx if a defect is found. Full detail in plan doc Task 7.\n\n```json:metadata\n{\"files\": [\"apps/web/src/components/HowItWorks.tsx\"], \"verifyCommand\": \"npm run typecheck && npm run build -w apps/web\", \"acceptanceCriteria\": [\"12 sections in correct order\", \"npm run typecheck exit 0\", \"npm run build -w apps/web succeeds\", \"lint clean\", \"screenshot shows 6 new figures rendering\"]}\n```"
+    }
+  ],
+  "lastUpdated": "2026-06-11"
+}

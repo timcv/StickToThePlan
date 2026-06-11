@@ -232,8 +232,8 @@ function WindFigure() {
           viewBox="0 0 10 10"
           refX="8"
           refY="5"
-          markerWidth="7"
-          markerHeight="7"
+          markerWidth="6"
+          markerHeight="6"
           orient="auto-start-reverse"
         >
           <path
@@ -328,8 +328,8 @@ function PacelineFigure() {
           viewBox="0 0 10 10"
           refX="8"
           refY="5"
-          markerWidth="7"
-          markerHeight="7"
+          markerWidth="6"
+          markerHeight="6"
           orient="auto-start-reverse"
         >
           <path
@@ -558,6 +558,407 @@ function ScenarioFigure() {
   );
 }
 
+function SegmentFigure() {
+  const ticks = Array.from({ length: 40 }, (_, i) => 42 + i * 15);
+  const bars = [
+    { x: 42, w: 150, label: 'Flackt', color: C.accent },
+    { x: 200, w: 96, label: 'Klättring', color: C.coral },
+    { x: 304, w: 150, label: 'Flackt', color: C.accent },
+    { x: 462, w: 174, label: 'Depå', color: C.green },
+  ];
+  return (
+    <svg width="100%" viewBox="0 0 680 180" role="img" aria-labelledby="seg-t seg-d">
+      <title id="seg-t">Hundratals mikrosegment grupperas till några få tempokortsrader</title>
+      <desc id="seg-d">
+        En rad med många tunna streck som visar mikrosegment, en pil nedåt, och nedanför några få
+        breda etiketterade rader med markörer för kontroll och depå.
+      </desc>
+      <defs>
+        <marker
+          id="seg-arrow"
+          viewBox="0 0 10 10"
+          refX="8"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto-start-reverse"
+        >
+          <path
+            d="M2 1L8 5L2 9"
+            fill="none"
+            stroke="context-stroke"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </marker>
+      </defs>
+      {ticks.map((x) => (
+        <line key={x} x1={x} y1="22" x2={x} y2="52" stroke={C.gray} strokeWidth="1.5" />
+      ))}
+      <text x="42" y="16" fontSize="11" fill={C.muted}>
+        Mikrosegment (ett per GPX-punkt)
+      </text>
+      <line
+        x1="340"
+        y1="60"
+        x2="340"
+        y2="88"
+        stroke={C.muted}
+        strokeWidth="1.5"
+        markerEnd="url(#seg-arrow)"
+      />
+      {bars.map((b) => (
+        <g key={b.x}>
+          <rect x={b.x} y="100" width={b.w - 6} height="28" rx="5" fill={b.color} opacity="0.85" />
+          <text
+            x={b.x + (b.w - 6) / 2}
+            y="118"
+            fontSize="12"
+            fill="#fff"
+            textAnchor="middle"
+            fontWeight="600"
+          >
+            {b.label}
+          </text>
+        </g>
+      ))}
+      <circle cx="296" cy="100" r="5" fill={C.text} />
+      <circle cx="630" cy="100" r="5" fill={C.text} />
+      <text x="42" y="150" fontSize="11" fill={C.muted}>
+        Visningssegment: ny rad där kontroll, lutning eller vind ändras
+      </text>
+      <circle cx="48" cy="166" r="4" fill={C.text} />
+      <text x="58" y="170" fontSize="11" fill={C.muted}>
+        = kontroll eller depå
+      </text>
+    </svg>
+  );
+}
+
+function WeatherClockFigure() {
+  const pts = [
+    { x: 90, y: 150, t: '05:00', len: 16 },
+    { x: 340, y: 96, t: '10:00', len: 30 },
+    { x: 600, y: 120, t: '15:00', len: 46 },
+  ];
+  return (
+    <svg width="100%" viewBox="0 0 680 196" role="img" aria-labelledby="wx-t wx-d">
+      <title id="wx-t">Vinden ökar längs rutten under dagen</title>
+      <desc id="wx-d">
+        En båge som visar rutten med tre klockmarkörer. Vid varje punkt en vindpil som blir längre
+        och vrider sig, från lugn morgon till blåsig eftermiddag.
+      </desc>
+      <defs>
+        <marker
+          id="wx-arrow"
+          viewBox="0 0 10 10"
+          refX="8"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto-start-reverse"
+        >
+          <path
+            d="M2 1L8 5L2 9"
+            fill="none"
+            stroke="context-stroke"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </marker>
+      </defs>
+      <path d="M60 160 Q340 40 620 132" fill="none" stroke={C.border} strokeWidth="3" />
+      {pts.map((p) => (
+        <g key={p.t}>
+          <circle cx={p.x} cy={p.y} r="5" fill={C.accent} />
+          <text
+            x={p.x}
+            y={p.y + 22}
+            fontSize="12"
+            fill={C.text}
+            textAnchor="middle"
+            fontWeight="600"
+          >
+            {p.t}
+          </text>
+          <line
+            x1={p.x}
+            y1={p.y - 8}
+            x2={p.x + p.len}
+            y2={p.y - 8 - p.len * 0.5}
+            stroke={C.coral}
+            strokeWidth="2.5"
+            markerEnd="url(#wx-arrow)"
+          />
+        </g>
+      ))}
+      <text x="60" y="186" fontSize="12" fill={C.muted}>
+        Lugn morgon
+      </text>
+      <text x="620" y="186" fontSize="12" fill={C.coral} textAnchor="end" fontWeight="600">
+        Blåsig eftermiddag
+      </text>
+    </svg>
+  );
+}
+
+function RoadPrepFigure() {
+  const raw =
+    '40,120 90,96 140,128 190,84 240,150 290,92 340,116 390,70 440,150 490,104 560,88 640,108';
+  const smooth = '40,116 140,112 240,118 340,100 440,108 560,96 640,104';
+  return (
+    <svg width="100%" viewBox="0 0 680 176" role="img" aria-labelledby="road-t road-d">
+      <title id="road-t">Rå höjdkurva jämnas ut och brant lutning klampas</title>
+      <desc id="road-d">
+        En taggig rå höjdkurva med en utjämnad linje ovanpå, en avhuggen spik som visar
+        lutningstaket, och en markerad neutral första kilometer.
+      </desc>
+      <rect x="40" y="40" width="80" height="120" fill={C.fill} opacity="0.7" />
+      <text x="44" y="56" fontSize="11" fill={C.muted}>
+        Neutral km
+      </text>
+      <polyline points={raw} fill="none" stroke={C.gray} strokeWidth="1.5" strokeDasharray="4 3" />
+      <polyline
+        points={smooth}
+        fill="none"
+        stroke={C.accent}
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+      <line
+        x1="346"
+        y1="66"
+        x2="434"
+        y2="66"
+        stroke={C.coral}
+        strokeWidth="1.5"
+        strokeDasharray="5 3"
+      />
+      <text x="390" y="58" fontSize="11" fill={C.coral} textAnchor="middle">
+        lutningstak ±18 %
+      </text>
+      <text x="44" y="172" fontSize="12" fill={C.gray}>
+        Rå GPX-höjd
+      </text>
+      <text x="640" y="172" fontSize="12" fill={C.accent} textAnchor="end" fontWeight="600">
+        Utjämnad profil
+      </text>
+    </svg>
+  );
+}
+
+function AnchorFigure() {
+  return (
+    <svg width="100%" viewBox="0 0 680 176" role="img" aria-labelledby="anchor-t anchor-d">
+      <title id="anchor-t">Två vägar till ett referensankare</title>
+      <desc id="anchor-d">
+        En lång tur över två timmar ger turens normaliserade effekt direkt; en kort tur eller ingen
+        fil ger 0,60 gånger FTP. Båda landar i ett referensankare vid sidan av tidslösaren.
+      </desc>
+      <defs>
+        <marker
+          id="an-arrow"
+          viewBox="0 0 10 10"
+          refX="8"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto-start-reverse"
+        >
+          <path
+            d="M2 1L8 5L2 9"
+            fill="none"
+            stroke="context-stroke"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </marker>
+      </defs>
+      <rect
+        x="30"
+        y="34"
+        width="210"
+        height="40"
+        rx="8"
+        fill={C.fill}
+        stroke={C.accent}
+        strokeWidth="1"
+      />
+      <text x="135" y="50" fontSize="12" fill={C.text} textAnchor="middle" fontWeight="600">
+        Lång representativ tur ({'>'}2 h)
+      </text>
+      <text x="135" y="66" fontSize="11" fill={C.muted} textAnchor="middle">
+        turens NP används direkt
+      </text>
+      <rect
+        x="30"
+        y="102"
+        width="210"
+        height="40"
+        rx="8"
+        fill="#fff"
+        stroke={C.gray}
+        strokeWidth="1"
+      />
+      <text x="135" y="118" fontSize="12" fill={C.text} textAnchor="middle" fontWeight="600">
+        Kort test eller ingen fil
+      </text>
+      <text x="135" y="134" fontSize="11" fill={C.muted} textAnchor="middle">
+        0,60 × FTP
+      </text>
+      <line
+        x1="240"
+        y1="54"
+        x2="372"
+        y2="80"
+        stroke={C.muted}
+        strokeWidth="1.5"
+        markerEnd="url(#an-arrow)"
+      />
+      <line
+        x1="240"
+        y1="122"
+        x2="372"
+        y2="92"
+        stroke={C.muted}
+        strokeWidth="1.5"
+        markerEnd="url(#an-arrow)"
+      />
+      <rect
+        x="380"
+        y="64"
+        width="150"
+        height="44"
+        rx="8"
+        fill={C.fill}
+        stroke={C.accent}
+        strokeWidth="1.5"
+      />
+      <text x="455" y="82" fontSize="12" fill={C.text} textAnchor="middle" fontWeight="600">
+        Referensankare
+      </text>
+      <text x="455" y="98" fontSize="11" fill={C.muted} textAnchor="middle">
+        visas i planen
+      </text>
+      <line
+        x1="530"
+        y1="86"
+        x2="600"
+        y2="86"
+        stroke={C.green}
+        strokeWidth="2.5"
+        markerEnd="url(#an-arrow)"
+      />
+      <text x="610" y="82" fontSize="11" fill={C.green} textAnchor="end">
+        tidslösaren
+      </text>
+      <text x="610" y="98" fontSize="11" fill={C.green} textAnchor="end">
+        räknar ändå NP
+      </text>
+    </svg>
+  );
+}
+
+function EtaClockFigure() {
+  return (
+    <svg width="100%" viewBox="0 0 680 150" role="img" aria-labelledby="eta-t eta-d">
+      <title id="eta-t">Tidslinje med ankomst, depåstopp och avgång</title>
+      <desc id="eta-d">
+        En vågrät tidslinje från start till mål med en kontrollpunkt, ett markerat depåstopp som
+        skjuter klockan framåt, och en avgångstid efter stoppet.
+      </desc>
+      <line x1="40" y1="80" x2="620" y2="80" stroke={C.border} strokeWidth="3" />
+      <circle cx="60" cy="80" r="6" fill={C.accent} />
+      <text x="60" y="64" fontSize="12" fill={C.text} textAnchor="middle" fontWeight="600">
+        04:22
+      </text>
+      <text x="60" y="108" fontSize="11" fill={C.muted} textAnchor="middle">
+        Start
+      </text>
+      <circle cx="300" cy="80" r="6" fill={C.text} />
+      <text x="300" y="64" fontSize="12" fill={C.text} textAnchor="middle" fontWeight="600">
+        07:22
+      </text>
+      <text x="300" y="108" fontSize="11" fill={C.muted} textAnchor="middle">
+        Ankomst depå
+      </text>
+      <rect x="300" y="74" width="90" height="12" fill={C.coral} opacity="0.85" />
+      <text x="345" y="124" fontSize="11" fill={C.coral} textAnchor="middle">
+        +15 min stopp
+      </text>
+      <circle cx="390" cy="80" r="6" fill={C.green} />
+      <text x="390" y="64" fontSize="12" fill={C.green} textAnchor="middle" fontWeight="600">
+        07:37
+      </text>
+      <text x="390" y="108" fontSize="11" fill={C.muted} textAnchor="middle">
+        Avgång
+      </text>
+      <circle cx="620" cy="80" r="6" fill={C.accent} />
+      <text x="620" y="108" fontSize="11" fill={C.muted} textAnchor="middle">
+        Mål
+      </text>
+    </svg>
+  );
+}
+
+function CardWatchFigure() {
+  return (
+    <svg width="100%" viewBox="0 0 680 200" role="img" aria-labelledby="card-t card-d">
+      <title id="card-t">Effektband på kortet och ett Garmin-datafält</title>
+      <desc id="card-d">
+        Till vänster en tempokortsrad med en parentes som visar ett effektband plus minus fem
+        procent. Till höger en klockskärm med nästa kontroll, avstånd, fart, ankomsttid och plus två
+        minuter mot plan.
+      </desc>
+      <text x="40" y="40" fontSize="13" fill={C.text} fontWeight="600">
+        Tempokortet
+      </text>
+      <rect
+        x="40"
+        y="56"
+        width="280"
+        height="40"
+        rx="6"
+        fill={C.fill}
+        stroke={C.border}
+        strokeWidth="1"
+      />
+      <text x="60" y="80" fontSize="13" fill={C.text}>
+        Drageffekt
+      </text>
+      <text x="250" y="80" fontSize="15" fill={C.accent} fontWeight="700" textAnchor="middle">
+        238–263 W
+      </text>
+      <path d="M196 100 H304" fill="none" stroke={C.coral} strokeWidth="1.5" />
+      <text x="250" y="120" fontSize="11" fill={C.coral} textAnchor="middle">
+        ±5 % band
+      </text>
+      <text x="430" y="40" fontSize="13" fill={C.text} fontWeight="600">
+        Garmin-datafält
+      </text>
+      <rect x="430" y="52" width="190" height="120" rx="18" fill="#000" />
+      <text x="525" y="78" fontSize="13" fill="#fff" textAnchor="middle" fontWeight="700">
+        GRÄNNA
+      </text>
+      <text x="525" y="104" fontSize="20" fill="#fff" textAnchor="middle" fontWeight="700">
+        12,3 km
+      </text>
+      <text x="525" y="126" fontSize="13" fill={C.accent} textAnchor="middle">
+        31 km/h
+      </text>
+      <text x="525" y="146" fontSize="12" fill="#fff" textAnchor="middle">
+        ETA 09:14
+      </text>
+      <text x="525" y="164" fontSize="13" fill={C.green} textAnchor="middle" fontWeight="700">
+        +2 min
+      </text>
+    </svg>
+  );
+}
+
 export function HowItWorks({ onBack }: { onBack: () => void }) {
   return (
     <div className="howto">
@@ -576,6 +977,34 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           varvet. Det är så en van cyklist faktiskt kör: lika hårt uppför som nerför, inte lika
           fort.
         </p>
+      </Section>
+
+      <Section title="Från GPX till väg" figure={<RoadPrepFigure />}>
+        <p>
+          Din GPX är en lista med punkter. Vi rensar dubblerade punkter, jämnar ut höjden med ett
+          glidande medel så att barometerbrus inte blir falska backar, och delar rutten i hundratals
+          små bitar. För varje bit räknar vi lutningen ur höjdskillnaden, och klampar orimligt
+          branta värden så att en GPS-spik inte blåser upp effektkravet. Första kilometern är
+          neutral: en lugn rullstart på 20 km/h utanför ansträngningsmodellen, precis som
+          masstarten.
+        </p>
+        <Formula caption="Utan utjämning skulle varje liten höjdvariation läsas som en backe och störa effektberäkningen.">
+          lutning = höjdskillnad ÷ sträcka, klampad till ±18 %
+        </Formula>
+        <DeepDive>
+          <p>Höjden filtreras med ett glidande medel innan lutningen beräknas per mikrosegment:</p>
+          <div className="howto-formula howto-formula-block">
+            {'höjd_utjämnad = glidande medel över 5 punkter\n'}
+            {'lutning = (höjd_slut − höjd_start) ÷ längd\n'}
+            {'lutning klampas till [−0,18, 0,18]  (±18 %)\n'}
+            {'neutral: cum_distans < 1 km → 20 km/h, utanför NP-modellen'}
+          </div>
+          <p>
+            Parametrar: utjämningsfönster 5 punkter, lutningstak 18 %, neutral sträcka 1 km vid 20
+            km/h. Sammanfallande punkter tas bort först så att en stillastående logg inte ger
+            nolldistans-bitar.
+          </p>
+        </DeepDive>
       </Section>
 
       <Section title="Tre krafter du trampar mot" figure={<ForcesFigure />}>
@@ -725,6 +1154,34 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
         </DeepDive>
       </Section>
 
+      <Section title="Vädret skiftar över dygnet" figure={<WeatherClockFigure />}>
+        <p>
+          Vädret är inte en enda siffra för hela loppet. För varje sträcka slår vi upp vinden på
+          just den platsen och vid den timme på dygnet du faktiskt är där. Ett varv tar runt elva
+          timmar, så en lugn morgonstart kan möta helt annan vind på eftermiddagen. Prognosen läggs
+          i ett rutnät i både rum och tid, och vi sparar uppslagen per cell och timme så att
+          tusentals sträckor går snabbt att räkna.
+        </p>
+        <Formula caption="Klockan du når en plats avgör vilken prognostimme som gäller där, inte klockan vid start.">
+          timme på platsen = starttid + din restid dit
+        </Formula>
+        <DeepDive>
+          <p>
+            Klocktiden vid en sträcka är starttiden plus ackumulerad restid. Den mappas till en
+            heltimme och en cell i rutnätet (väderceller lagras i UTC):
+          </p>
+          <div className="howto-formula howto-formula-block">
+            {'timme = ⌊(startklocka_UTC + förfluten_tid_s) ÷ 3600⌋ mod 24\n'}
+            {'cellnyckel = lat | lon | timme  (närmaste cell, exakt cache)'}
+          </div>
+          <p>
+            Ensemblen aggregeras till celler i rum och tid; uppslag per (lat, lon, timme) cachas så
+            att den haversine-tunga sökningen bara körs en gång per cell. Den uppströms
+            prognoshämtningen cachas i sin tur i 3 timmar.
+          </p>
+        </DeepDive>
+      </Section>
+
       <Section title="I grupp: lä och jämn ansträngning" figure={<PacelineFigure />}>
         <p>
           I ett kedjegäng ligger du mest i lä, där luftmotståndet är ungefär en tredjedel lägre. Vi
@@ -758,6 +1215,35 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
             Det gör utvärderingen O(1) per fart i stället för en sampelsimulering, verifierad mot
             referensimplementationen inom 10⁻⁶. Farten som ger mål-NP löses med bisektion till 0,1
             W.
+          </p>
+        </DeepDive>
+      </Section>
+
+      <Section title="Vilken ansträngning planen håller" figure={<AnchorFigure />}>
+        <p>
+          Du kan ladda upp en valfri effektfil (FIT) från en representativ tur. Är den lång (mer än
+          två timmar) använder vi turens normaliserade effekt som ett personligt ankare; är den
+          kort, eller saknas helt, faller vi tillbaka på 0,60 × FTP. Ankaret är ett referensvärde
+          som visas i planen så att du ser vilken ansträngning din måltid ungefär motsvarar. Själva
+          planen löser ändå fram exakt den ansträngning som krävs för att träffa din tid, så ankaret
+          styr inte tempot, det är till för att stämma av att kravet är rimligt för dig.
+        </p>
+        <Formula caption="Normaliserad effekt är gruppstorleks-oberoende, så samma ankare gäller oavsett om ni är 8 eller 12 i gänget.">
+          ankare = lång tur ({'>'}2 h) ? turens NP : 0,60 × FTP
+        </Formula>
+        <DeepDive>
+          <p>Ankaret bestäms ur effektströmmen (fit.ts), klassad på längd:</p>
+          <div className="howto-formula howto-formula-block">
+            {'längd > 7200 s  → long_representative → np_target = turens NP\n'}
+            {'längd ≤ 7200 s  → short_test          → np_target = 0,60 × FTP\n'}
+            {'ingen fil                              → np_target = 0,60 × FTP'}
+          </div>
+          <p>
+            Förar-NP är det gruppstorleks-oberoende fysiologiska ankaret (spec 8.1): en referenstur
+            i ett gäng på 8 (turtäthet 1/8) översätts till en plan för 12 (1/12) utan omräkning av
+            ankaret. I webbflödet är ankaret informativt och visas i plan.json; tidslösaren
+            bisekterar ändå mål-NP i intervallet [60, FTP] för att träffa måltiden (se nästa
+            avsnitt).
           </p>
         </DeepDive>
       </Section>
@@ -823,6 +1309,98 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
             scenarier löses mot samma måltid och skiljer sig i vilken mål-NP (ansträngningsnivå) som
             krävs. Tidsspannet räknas ärligt: förväntad NP hålls fast och rutten marscheras om under
             p10- respektive p90-vind, vilket ger min/max på sluttiden.
+          </p>
+        </DeepDive>
+      </Section>
+
+      <Section title="Från rutt till tempokort" figure={<SegmentFigure />}>
+        <p>
+          Rutten körs i två upplösningar. Fysiken marscherar hundratals små mikrosegment, ett per
+          GPX-punkt, så lutning och vind blir exakta. Men ett kort på styret behöver bara en
+          handfull rader, så vi grupperar mikrosegmenten till visningssegment och klipper en ny rad
+          där något verkligt ändras: vid en kontroll eller depå, där vägen växlar mellan flackt och
+          backe (lutningen korsar 3 %), och där vinden vänder från mot till med. På den inlästa
+          rutten kommer kontrollerna från dina depåstopp, plus start och mål.
+        </p>
+        <p>
+          Sedan städar vi: korta stumpar slås ihop med den granne som har närmast effekt, rader med
+          nästan samma lutning slås ihop, och totalen kapas så att kortet förblir läsbart. Orter och
+          depåer slås aldrig bort. Varje rad får ett nyckelord, JÄMN FART, KLÄTTRING, SISTA UPPFÖR,
+          BACKAR, TA DET LUGNT eller ÖKA, och Not-kolumnen visas bara när rutten faktiskt har något
+          att säga, alltså inte på platta, vindstilla varv. Styrkortsläget klipper bara på
+          kontroller och stopp för ett rent kort; fullständig vy lägger till lutnings- och
+          vindgränserna.
+        </p>
+        <DeepDive>
+          <p>Gränserna byggs ur mikrosegmenten, snäpps till närmaste segmentslut och grupperas:</p>
+          <div className="howto-formula howto-formula-block">
+            {'gräns = kontroll/depå | lutning korsar 3 % | vind vänder (>1 m/s) | start/mål\n'}
+            {'slå ihop rader kortare än 2 km → granne med närmast snitt-effekt\n'}
+            {'slå ihop rader med lutningsskillnad < 0,3 %  (samma nyckelord)\n'}
+            {'kapa till ≤ 50 rader (styrkortsläge ≤ 20)'}
+          </div>
+          <p>
+            All aggregering (fart, effekt, vind) är tidsviktad, eftersom mikrosegmentens längd
+            följer GPX-punkternas täthet. En efterpass märker den sista klättringen före mål som
+            SISTA UPPFÖR. Depå- och ortgränser korsas aldrig vid sammanslagning, så markörerna står
+            kvar.
+          </p>
+        </DeepDive>
+      </Section>
+
+      <Section title="Ankomst, depå och avgång" figure={<EtaClockFigure />}>
+        <p>
+          När farten är känd på varje sträcka kan vi sätta en klocka på kortet. Varje rads slut får
+          en klocktid: starttiden plus all restid dit. Vid en depå lägger vi på dina stoppminuter,
+          så kortet visar både ankomst och avgång, och alla tider efter depån skjuts fram lika
+          mycket. Sluttiden är summan av rulltid och stopptid, så längre depåstopp syns direkt i
+          måltiden.
+        </p>
+        <Formula caption="Depåtiden är inte bortkastad, den ligger inbakad i varje klockslag efter stoppet.">
+          ankomst = starttid + restid dit · avgång = ankomst + depåminuter
+        </Formula>
+        <DeepDive>
+          <p>Varje segment bär sekunder-från-start vid sitt slut; depåer lägger till stopptid:</p>
+          <div className="howto-formula howto-formula-block">
+            {'eta_s = sekunder från start vid segmentets slut\n'}
+            {'avgång_s = eta_s + depåminuter × 60\n'}
+            {'klockslag = (starttid + eta_s) mod 24 h   (slår runt midnatt)\n'}
+            {'total tid = rulltid + stopptid'}
+          </div>
+          <p>
+            Klockan visas som lokal tid och hanterar varv som passerar midnatt. Depåstopp är hårda
+            gränser i kortet: de slås aldrig ihop med grannrader, så ankomst- och avgångstiden står
+            alltid kvar på sin egen rad.
+          </p>
+        </DeepDive>
+      </Section>
+
+      <Section title="Tempokortet och klockan på styret" figure={<CardWatchFigure />}>
+        <p>
+          Drageffekten på kortet visas som ett band, inte en exakt siffra, eftersom verkliga drag
+          varierar och målet är ett spann att hålla dig inom, inte en omöjlig precision. Vill du ha
+          planen live på styret finns ett valfritt Garmin-datafält. Det läser den inlästa banan
+          direkt i klockan och visar nästa kontroll, avstånd kvar dit, din fart på sträckan,
+          beräknad ankomsttid och hur många minuter före eller efter plan du ligger.
+        </p>
+        <Formula caption="Bandet ger marginal för verkliga drag, medan klockan visar om du tjänar eller tappar tid mot planen.">
+          band = drageffekt × (1 ± 5 %)
+        </Formula>
+        <DeepDive>
+          <p>
+            Bandet är ±5 % kring den tidsviktade drageffekten per rad. Datafältet kan rikta sig mot
+            antingen drageffekten eller snitteffekten. Det läser kontrollnamn och avstånd ur banan
+            och tolkar den planerade tiden ur varje banpunkts namn:
+          </p>
+          <div className="howto-formula howto-formula-block">
+            {'"Gränna 07:04"   → absolut klocktid\n'}
+            {'"Gränna +2:42"   → tid sedan start (relativt läge)\n'}
+            {'± min = projicerad ankomst − planerad tid  (färgad grön/gul/röd)'}
+          </div>
+          <p>
+            Fältet är generiskt: inget om en specifik plan är inbyggt, allt når klockan via banfilen
+            (course.fit). Avvikelsen mot plan färgas grön nära noll, gul vid måttlig drift och röd
+            vid stor.
           </p>
         </DeepDive>
       </Section>
