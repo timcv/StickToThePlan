@@ -664,7 +664,7 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           <p>
             Vid fuktig luft korrigeras med virtuell temperatur T<sub>v</sub> = T ÷ (1 − (e/p)(1 −
             Rd/Rv)), där Rv = 461,5 J/(kg·K) och ångtrycket e = RH · e<sub>s</sub> med Tetens
-            approximation e<sub>s</sub> = 611,2 · e^(17,67(T−273,15)/(T−29,65)) Pa. Effekten är
+            approximation e<sub>s</sub> = 611,2 · exp(17,67(T−273,15)/(T−29,65)) Pa. Effekten är
             liten, upp till ungefär en halv procent vid typiskt loppväder.
           </p>
           <p>Vinden delas upp mot färdriktningen (Δ = vindriktning − kurs):</p>
@@ -680,8 +680,9 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           </div>
           <p>
             z0 är terrängens råhetslängd. Standardrutten har exponeringsklass per vägsegment ur
-            OpenStreetMap; uppladdade rutter får en schablon för hela rutten (öppet 0,03 / blandat
-            0,05 / skyddat 0,3 m).
+            OpenStreetMap enligt den finare skalan i tabellen nedan. Uppladdade rutter får i stället
+            en grövre schablon för hela rutten med egna värden: öppet 0,03, blandat 0,05 eller
+            skyddat 0,3 m.
           </p>
           <table>
             <thead>
@@ -745,10 +746,10 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           <p>
             Rotationen modelleras som en fyrkantvåg: 45 s på täten med P<sub>täten</sub> (CdA 0,32),
             resten av cykeln i lä med P<sub>lä</sub> (CdA 0,21). Normaliserad effekt är 30 sekunders
-            rullande medel, upphöjt till fyra, medelvärdesbildat och dragen fjärderot. För
+            rullande medel, upphöjt till fyra och medelvärdesbildat; fjärderoten ger NP. För
             fyrkantvågen finns en sluten form: varje rullande fönster är en konvex blandning a·P
-            <sub>täten</sub> + (1−a)·P<sub>lä</sub>, så NP⁴ blir ett polynom i de två effekterna med
-            förberäknade momentkoefficienter:
+            <sub>täten</sub> + (1−a)·P<sub>lä</sub>, så NP⁴ blir ett polynom i de två effekterna (Pt
+            = P_täten, Pl = P_lä) med förberäknade momentkoefficienter:
           </p>
           <div className="howto-formula howto-formula-block">
             {'NP = (c₄·Pt⁴ + c₃·Pt³·Pl + c₂·Pt²·Pl² + c₁·Pt·Pl³ + c₀·Pl⁴)^¼'}
