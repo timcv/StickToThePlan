@@ -770,6 +770,32 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           effekttak gör att planen aldrig kräver orimligt hårda drag i branta backar eller farter
           över 50 km/h.
         </p>
+        <DeepDive>
+          <p>
+            Två kapslade bisektioner. Inre lösaren marscherar rutten mikrosegment för mikrosegment:
+          </p>
+          <div className="howto-formula howto-formula-block">
+            {'för varje segment:\n'}
+            {'  väder(lat, lon, klocktid) → temperatur, tryck, vind\n'}
+            {'  ρ ur temperatur + tryck · höjdskalning av vinden via z0\n'}
+            {'  vind → motvind + sidvind mot segmentets kurs\n'}
+            {'  bisektion: fart v så att rider-NP(v) = mål-NP (tolerans 0,1 W)\n'}
+            {'  effekttak appliceras · tid = längd ÷ v ackumuleras'}
+          </div>
+          <p>
+            Effekttak: hårt tak 1,3 × FTP per drag (ett 45 s-drag är en kort ansträngning över
+            tröskeln, hållbarheten begränsas av NP, inte av enskilda drag), mjukt tak 0,92 × FTP i
+            backar brantare än 3 %, och ett planeringstak på 50 km/h: i stark medvind eller utför är
+            extra fart buffert, inte bankad tid. Första kilometern är neutral: 20 km/h utanför
+            NP-modellen.
+          </p>
+          <p>
+            Yttre lösaren bisekterar mål-NP i intervallet [60, FTP] W, max 45 iterationer, tills
+            totaltiden träffar måltiden inom ±20 s. Går det inte ens på FTP flaggas planen som
+            onåbar och den snabbaste hållbara planen returneras. Om hela åkets NP överstiger 0,75 ×
+            FTP varnar planen (intensitetsfaktor).
+          </p>
+        </DeepDive>
       </Section>
 
       <Section title="Tre vindscenarier" figure={<ScenarioFigure />}>
@@ -778,6 +804,25 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           väntad vind, och med kraftigare vind (pessimistiskt). Då ser du hur mycket sluttiden kan
           skilja åt båda håll i stället för att lita på en enda siffra.
         </p>
+        <DeepDive>
+          <p>
+            Vädret hämtas som en ensemble från SMHI, MET Norway och Open-Meteo och aggregeras till
+            celler i rum och tid med medelvind, vektormedel för riktning och percentilspridning (p10
+            / p90) över källorna.
+          </p>
+          <div className="howto-formula howto-formula-block">
+            {'förväntat      = medelvind\n'}
+            {'optimistiskt   = p10 (mindre vind)\n'}
+            {'pessimistiskt  = p90 (mer vind)'}
+          </div>
+          <p>
+            Är rutten netto i medvind (ruttens riktning projicerad på medelvindriktningen)
+            inverteras mappningen, då är mer vind snabbare, så pessimistiskt = p10. Alla tre
+            scenarier löses mot samma måltid och skiljer sig i vilken anchor-NP som krävs.
+            Tidsspannet räknas ärligt: förväntad NP hålls fast och rutten marscheras om under p10-
+            respektive p90-vind, vilket ger min/max på sluttiden.
+          </p>
+        </DeepDive>
       </Section>
 
       <footer className="howto-footer">

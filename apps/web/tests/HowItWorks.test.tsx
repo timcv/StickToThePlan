@@ -30,4 +30,16 @@ describe('HowItWorks deep dives', () => {
     expect(text).toContain('45 s'); // dragens längd
     expect(text).toContain('f_front'); // rotationsandel
   });
+
+  it('renders solver and scenario deep dives; five accordions total', () => {
+    const { container } = render(<HowItWorks onBack={() => {}} />);
+    expect(container.querySelectorAll('details.howto-deep').length).toBe(5);
+    const text = container.textContent ?? '';
+    expect(text).toContain('p10');
+    expect(text).toContain('p90');
+    expect(text).toContain('±20 s');
+    expect(text).toContain('1,3');
+    expect(text).toContain('0,92');
+    expect(text).toContain('50 km/h');
+  });
 });
