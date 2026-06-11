@@ -777,7 +777,8 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           <div className="howto-formula howto-formula-block">
             {'för varje segment:\n'}
             {'  väder(lat, lon, klocktid) → temperatur, tryck, vind\n'}
-            {'  ρ ur temperatur + tryck · höjdskalning av vinden via z0\n'}
+            {'  ρ ur temperatur + tryck (lufttäthet)\n'}
+            {'  vinden skalas till 1,2 m via z0 (terrängexponering)\n'}
             {'  vind → motvind + sidvind mot segmentets kurs\n'}
             {'  bisektion: fart v så att rider-NP(v) = mål-NP (tolerans 0,1 W)\n'}
             {'  effekttak appliceras · tid = längd ÷ v ackumuleras'}
@@ -818,9 +819,9 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           <p>
             Är rutten netto i medvind (ruttens riktning projicerad på medelvindriktningen)
             inverteras mappningen, då är mer vind snabbare, så pessimistiskt = p10. Alla tre
-            scenarier löses mot samma måltid och skiljer sig i vilken anchor-NP som krävs.
-            Tidsspannet räknas ärligt: förväntad NP hålls fast och rutten marscheras om under p10-
-            respektive p90-vind, vilket ger min/max på sluttiden.
+            scenarier löses mot samma måltid och skiljer sig i vilken mål-NP (ansträngningsnivå) som
+            krävs. Tidsspannet räknas ärligt: förväntad NP hålls fast och rutten marscheras om under
+            p10- respektive p90-vind, vilket ger min/max på sluttiden.
           </p>
         </DeepDive>
       </Section>
