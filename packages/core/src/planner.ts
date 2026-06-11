@@ -88,9 +88,10 @@ export function runInnerSolve(
   let capTimeMovedS = 0;
 
   // Stops, applied inline when the march crosses their km marker. A stop
-  // attaches to the first segment whose END reaches the marker; it delays that
-  // segment's recorded ETA (= departure time) and shifts the clock for
-  // everything after, including weather queries.
+  // attaches to the first segment whose END reaches the marker. The boundary
+  // segment's eta_s stays the ARRIVAL time at that boundary; the stop then
+  // shifts the march clock (and therefore every later segment's eta_s and
+  // weather query) by the stop duration. Departure lives in StopPlan.depart_s.
   const stopsSorted = [...cfg.stops].sort((a, b) => a.km - b.km);
   let stopIdx = 0;
   const stops: StopPlan[] = [];
@@ -103,7 +104,6 @@ export function runInnerSolve(
       const arrive_s = elapsed;
       elapsed += addS;
       stopTimeS += addS;
-      segments[segments.length - 1].eta_s = elapsed;
       stops.push({
         control: stop.control,
         km: stop.km,

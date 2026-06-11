@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { MicroSegment, SegmentPlan, PlanResult, Config } from '../src/types.js';
 import { applyDefaults } from '../src/config.js';
 import { segment, VATTERN_CONTROLS, type ControlPoint } from '../src/segmentation.js';
+import { runInnerSolve, calmWeather } from '../src/planner.js';
 
 // ---------------------------------------------------------------------------
 // Helper: build a minimal SegmentPlan from a MicroSegment and overrides.
@@ -628,5 +629,60 @@ describe('merged band survives a zero-pull half (M6)', () => {
     expect(merged.pull_w_low).toBeGreaterThan(0);
     expect(merged.pull_w_high).toBeGreaterThan(merged.pull_w_low);
     expect(merged.pull_w_high).toBe(Math.round(merged.pull_w_mean * (1 + cfgM.band_pct)));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SUITE: depot row ETA through the real planner
+// ---------------------------------------------------------------------------
+
+function flatMicros(count: number, lenM: number): MicroSegment[] {
+  const out: MicroSegment[] = [];
+  let cum = 0;
+  for (let i = 0; i < count; i++) {
+    cum += lenM;
+    out.push({
+      index: i,
+      distance_m: lenM,
+      cum_distance_m: cum,
+      grade: 0,
+      bearing_deg: 0,
+      lat: 58.5,
+      lon: 15,
+      ele_start_m: 100,
+      ele_end_m: 100,
+      neutral: false,
+    });
+  }
+  return out;
+}
+
+describe('depot row ETA through the real planner', () => {
+  it('shows arrival as eta_s and arrival+stop as depart_s', () => {
+    const cfg = applyDefaults({
+      gpx_path: 'x.gpx',
+      race_date: '2026-06-13',
+      start_time: '04:22',
+      ftp: 272,
+      n_riders: 12,
+      target_total_hm: '11:45',
+      stops: [{ control: 'Mitt', km: 10, minutes: 10 }],
+      neutral_distance_km: 0,
+    });
+    // 40 micros x 500 m = 20 km; stop km 10 lands exactly on a boundary,
+    // which is the case where snapToBoundary picks the SAME micro the
+    // planner attached the stop to (the historical double-count case).
+    const micros = flatMicros(40, 500);
+    const plan = runInnerSolve(micros, 180, calmWeather, cfg);
+    const stop = plan.stops[0];
+
+    const disp = segment(plan, cfg, [
+      { name: 'Start', km: 0 },
+      { name: 'Mitt', km: 10 },
+      { name: 'Mål', km: 20 },
+    ]);
+    const depot = disp.find((d) => d.stop_minutes !== undefined)!;
+    expect(depot.eta_s).toBeCloseTo(stop.arrive_s, 6);
+    expect(depot.depart_s!).toBeCloseTo(stop.depart_s, 6);
   });
 });
