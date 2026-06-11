@@ -555,22 +555,23 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
       <header className="howto-hero">
         <h1>Så räknar StickToThePlan ut din tid</h1>
         <p>
-          Vi håller din ansträngning jämn och låter farten variera med backar och vind. Sen letar vi
-          upp exakt den ansträngning som träffar din måltid.
+          Vi håller din ansträngning jämn och låter farten variera med backar och vind. Sedan letar
+          vi fram exakt den ansträngning som tar dig i mål på utsatt tid.
         </p>
       </header>
 
       <Section title="Grundidén" figure={<GrundidenFigure />}>
         <p>
           Backar bromsar, utförslöpor och medvind hjälper. I stället för en jämn fart håller vi en
-          jämn effekt (watt). Farten får svaja, men känslan i benen är ungefär konstant hela varvet.
-          Det är så en van cyklist faktiskt kör: lika hårt uppför som nerför, inte lika fort.
+          jämn effekt (watt). Farten får variera, men känslan i benen är i stort sett densamma hela
+          varvet. Det är så en van cyklist faktiskt kör: lika hårt uppför som nerför, inte lika
+          fort.
         </p>
       </Section>
 
       <Section title="Tre krafter du trampar mot" figure={<ForcesFigure />}>
         <p>
-          Varje sekund räknar vi hur många watt som krävs för att slå tre motstånd: tyngden i
+          Varje sekund räknar vi hur många watt som krävs för att övervinna tre motstånd: tyngden i
           backen, däcken mot asfalten och luften framför dig. Luftmotståndet är i särklass störst på
           platt mark.
         </p>
@@ -581,7 +582,7 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
 
       <Section title="Luft, vind och terräng" figure={<WindFigure />}>
         <p>
-          Tyngre luft ger mer motstånd, så vi väger in temperatur och lufttryck. Vindprognosen
+          Tung luft bromsar mer än lätt, så vi väger in temperatur och lufttryck. Vindprognosen
           gäller 10 meter upp, men du sitter på drygt en meter. Vi skalar ner vinden efter hur
           skyddat landskapet är: skog och bebyggelse dämpar, öppet vatten och broar släpper fram
           full vind. Sido- och motvind kostar olika mycket, så vi delar upp vinden i mot- och sidled
@@ -595,11 +596,11 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
       <Section title="I grupp: drafting och jämn ansträngning" figure={<PacelineFigure />}>
         <p>
           I ett kedjegäng ligger du mest i lä, där luftmotståndet är ungefär en femtedel lägre. Vi
-          modellerar rotationen: korta, hårda ryck på täten och längre vila i klungan. För att fånga
-          vad det gör med kroppen mäter vi din ansträngning som normaliserad effekt (NP), ett mått
-          som straffar de hårda rycken mer än ett enkelt snitt gör.
+          modellerar rotationen: korta, hårda drag på täten och längre återhämtning i hjul. För att
+          fånga vad det gör med kroppen mäter vi din ansträngning som normaliserad effekt (NP), ett
+          mått som straffar de hårda dragen hårdare än ett vanligt snitt gör.
         </p>
-        <Formula caption="Upphöjt till fyra gör att korta hårda ryck väger tyngre, precis som de känns i verkligheten.">
+        <Formula caption="Upphöjt till fyra gör att korta hårda drag väger tyngre, precis som de känns i benen.">
           NP = (medel av 30-sekunders rullande effekt⁴)^¼
         </Formula>
       </Section>
@@ -608,16 +609,17 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
         <p>
           Vi gissar en ansträngningsnivå, kör igenom hela rutten sträcka för sträcka, räknar fart
           och tid på varje, och summerar. Blev det för långsamt höjer vi ansträngningen, för snabbt
-          sänker vi den, och halverar oss fram tills tiden träffar ditt mål på sekunden. Realistiska
-          tak gör att vi aldrig planerar orimliga ryck i branta backar eller över 50 km/h.
+          sänker vi den, och halverar intervallet tills tiden stämmer med ditt mål. Realistiska
+          effekttak gör att planen aldrig kräver orimligt hårda drag i branta backar eller farter
+          över 50 km/h.
         </p>
       </Section>
 
       <Section title="Tre vindscenarier" figure={<ScenarioFigure />}>
         <p>
           Väder är osäkert, så vi räknar tre gånger: med lugnare vind än väntat (optimistiskt), med
-          väntad vind, och med kraftigare vind (pessimistiskt). Då ser du hur mycket din tid kan
-          vippa åt båda håll, inte bara en enda siffra.
+          väntad vind, och med kraftigare vind (pessimistiskt). Då ser du hur mycket sluttiden kan
+          skilja åt båda håll i stället för att lita på en enda siffra.
         </p>
       </Section>
 
