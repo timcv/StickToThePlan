@@ -320,7 +320,7 @@ function PacelineFigure() {
       <title id="fig4-t">Kedjegäng med en cyklist på täten</title>
       <desc id="fig4-d">
         Fem cyklister i en rad som rör sig åt höger. Den främre ligger på täten i full vind, de
-        bakom ligger i lä med ungefär en femtedel lägre luftmotstånd.
+        bakom ligger i lä med ungefär en tredjedel lägre luftmotstånd.
       </desc>
       <defs>
         <marker
@@ -393,7 +393,7 @@ function PacelineFigure() {
         På täten: full vind
       </text>
       <text x="120" y="128" fontSize="13" fill={C.muted}>
-        I lä: ungefär 20 % lägre luftmotstånd
+        I lä: ungefär 35 % lägre luftmotstånd
       </text>
     </svg>
   );
@@ -662,10 +662,10 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
             {'ρ = p ÷ (Rd · T)    Rd = 287,058 J/(kg·K), T i kelvin'}
           </div>
           <p>
-            Vid fuktig luft korrigeras med virtuell temperatur T<sub>v</sub> = T ÷ (1 − (e/p)(1 −
-            Rd/Rv)), där Rv = 461,5 J/(kg·K) och ångtrycket e = RH · e<sub>s</sub> med Tetens
-            approximation e<sub>s</sub> = 611,2 · exp(17,67(T−273,15)/(T−29,65)) Pa. Effekten är
-            liten, upp till ungefär en halv procent vid typiskt loppväder.
+            Vid fuktig luft kan modellen korrigera med virtuell temperatur T<sub>v</sub> = T ÷ (1 −
+            (e/p)(1 − Rd/Rv)), där Rv = 461,5 J/(kg·K) och ångtrycket e = RH · e<sub>s</sub> med
+            Tetens approximation e<sub>s</sub> = 611,2 · exp(17,67(T−273,15)/(T−29,65)) Pa. Effekten
+            är liten, upp till ungefär en halv procent vid typiskt loppväder.
           </p>
           <p>Vinden delas upp mot färdriktningen (Δ = vindriktning − kurs):</p>
           <div className="howto-formula howto-formula-block">
@@ -727,7 +727,7 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
 
       <Section title="I grupp: drafting och jämn ansträngning" figure={<PacelineFigure />}>
         <p>
-          I ett kedjegäng ligger du mest i lä, där luftmotståndet är ungefär en femtedel lägre. Vi
+          I ett kedjegäng ligger du mest i lä, där luftmotståndet är ungefär en tredjedel lägre. Vi
           modellerar rotationen: korta, hårda drag på täten och längre återhämtning i hjul. För att
           fånga vad det gör med kroppen mäter vi din ansträngning som normaliserad effekt (NP), ett
           mått som straffar de hårda dragen hårdare än ett vanligt snitt gör.
