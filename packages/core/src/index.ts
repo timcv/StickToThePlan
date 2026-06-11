@@ -50,7 +50,15 @@ export {
   parseGpxString,
   ingestGpxString,
 } from './ingest/gpx.js';
-export { analyzePass, readFitPowerBytes, determineAnchorFromPower } from './ingest/fit.js';
+export {
+  analyzePass,
+  readFitPowerBytes,
+  readFitPowerRecords,
+  readFitPower1Hz,
+  resamplePowerTo1Hz,
+  determineAnchorFromPower,
+  type PowerRecord,
+} from './ingest/fit.js';
 
 // Output builders.
 export { renderMarkdown, renderHtml, buildStyrkortHtml } from './output/tempokort.js';

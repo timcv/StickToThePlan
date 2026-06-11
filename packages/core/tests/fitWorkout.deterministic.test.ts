@@ -27,6 +27,7 @@ function seg(over: Partial<DisplaySegment>): DisplaySegment {
     avg_speed_kmh: 30,
     eta_s: 1200,
     wind_label: 'Lugnt',
+    pull_w_mean: 250,
     pull_w_low: 240,
     pull_w_high: 260,
     avg_w: 200,

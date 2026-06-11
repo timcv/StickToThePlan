@@ -807,9 +807,10 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
         </p>
         <DeepDive>
           <p>
-            Vädret hämtas som en ensemble från SMHI, MET Norway och Open-Meteo och aggregeras till
-            celler i rum och tid med medelvind, vektormedel för riktning och percentilspridning (p10
-            / p90) över källorna.
+            Vädret hämtas som en ensemble från SMHI, MET Norway och Open-Meteo (inklusive de
+            enskilda ensemblemedlemmarna) och aggregeras till celler i rum och tid med skalär
+            medelvind, vektormedel för riktning och percentilspridning (p10 / p90) över källor och
+            medlemmar.
           </p>
           <div className="howto-formula howto-formula-block">
             {'förväntat      = medelvind\n'}

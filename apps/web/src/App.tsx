@@ -15,6 +15,7 @@ import {
   summarizeHourly,
   applyHourlyOverrides,
   buildManualField,
+  localUtcOffsetHours,
   type EnsembleField,
   type HourlyWind,
 } from '@stp/core';
@@ -83,6 +84,17 @@ export function App() {
   const hoursFor = (f: FormSubmit | null) =>
     f ? raceHours(f.form.start_time, f.form.target_total_hm) : raceHours('06:00', '0:00');
 
+  // The hour table and all UI state run in LOCAL race hours; weather cells are
+  // binned on UTC hours. Convert at the two boundaries (summarize + solve).
+  const offsetFor = (f: FormSubmit | null): number =>
+    localUtcOffsetHours(
+      f?.form.race_date ?? '2026-06-13',
+      f?.form.start_time ?? '06:00',
+      'Europe/Stockholm',
+    );
+  const toUtcHour = (h: number, off: number) => (((h - off) % 24) + 24) % 24;
+  const toLocalHour = (h: number, off: number) => (h + off) % 24;
+
   // Rows shown = base summary with overrides applied on top.
   const displayedRows: HourlyWind[] = baseRows.map((r) => overrides.get(r.hour) ?? r);
   const editedHours = new Set(overrides.keys());
@@ -109,7 +121,12 @@ export function App() {
       setField(f);
       setSources(f.sources);
       setReduced(f.reduced || f.sources.length < 3);
-      setBaseRows(summarizeHourly(f, hoursFor(form)));
+      const off = offsetFor(form);
+      const utcRows = summarizeHourly(
+        f,
+        hoursFor(form).map((h) => toUtcHour(h, off)),
+      );
+      setBaseRows(utcRows.map((r) => ({ ...r, hour: toLocalHour(r.hour, off) })));
       setOverrides(new Map());
       setFetchStatus('done');
     } catch {
@@ -152,12 +169,19 @@ export function App() {
 
   const buildFinalField = (): EnsembleField | null => {
     if (mode === 'calm') return null;
+    const off = offsetFor(lastForm);
     if (mode === 'manual') {
-      return buildManualField(displayedRows, lastForm?.form.race_date ?? '2026-06-13', centroid);
+      // Cells are stamped as UTC hours; rows are edited in local hours.
+      const utcRows = displayedRows.map((r) => ({ ...r, hour: toUtcHour(r.hour, off) }));
+      return buildManualField(utcRows, lastForm?.form.race_date ?? '2026-06-13', centroid);
     }
     // fetched
     if (!field) return null;
-    return applyHourlyOverrides(field, [...overrides.values()]);
+    const utcOverrides = [...overrides.values()].map((r) => ({
+      ...r,
+      hour: toUtcHour(r.hour, off),
+    }));
+    return applyHourlyOverrides(field, utcOverrides);
   };
 
   const handleRun = (form: FormSubmit) => {

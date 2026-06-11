@@ -6,17 +6,103 @@ import { Decoder, Stream } from '@garmin/fitsdk';
 import type { FitPassMetrics, Config } from '../types.js';
 import { normalizedPower } from '../physics.js';
 
+/** Plausible-power guard: finite and inside [0, MAX_POWER_W]. */
+const MAX_POWER_W = 2000;
+function isPlausiblePower(p: unknown): p is number {
+  return typeof p === 'number' && Number.isFinite(p) && p >= 0 && p <= MAX_POWER_W;
+}
+
 /**
  * Read raw power values (watts) from the bytes of a FIT activity file.
- * Returns one value per record message that carries a numeric power field.
- * Null/undefined power records are filtered out.
+ * Returns one value per record message that carries a plausible (finite,
+ * 0..2000 W) power field. Ignores record timing; prefer readFitPower1Hz for
+ * NP, which respects timestamps and recording gaps.
  */
 export function readFitPowerBytes(bytes: Uint8Array | number[]): number[] {
   const stream = Stream.fromByteArray(Array.from(bytes));
   const decoder = new Decoder(stream);
   const { messages } = decoder.read();
   const records: Array<{ power?: unknown }> = messages.recordMesgs ?? [];
-  return records.map((r) => r.power).filter((p): p is number => typeof p === 'number');
+  return records.map((r) => r.power).filter(isPlausiblePower);
+}
+
+export interface PowerRecord {
+  t_s: number; // seconds (any epoch; only differences matter)
+  power: number; // W
+}
+
+/**
+ * Read timestamped power records from a FIT activity file. Records without a
+ * usable timestamp or a plausible power value are dropped. The FIT SDK
+ * surfaces timestamps as JS Dates; numeric timestamps are accepted as seconds.
+ */
+export function readFitPowerRecords(bytes: Uint8Array | number[]): PowerRecord[] {
+  const stream = Stream.fromByteArray(Array.from(bytes));
+  const decoder = new Decoder(stream);
+  const { messages } = decoder.read();
+  const records: Array<{ power?: unknown; timestamp?: unknown }> = messages.recordMesgs ?? [];
+  const out: PowerRecord[] = [];
+  for (const r of records) {
+    if (!isPlausiblePower(r.power)) continue;
+    let t_s: number | undefined;
+    if (r.timestamp instanceof Date) t_s = r.timestamp.getTime() / 1000;
+    else if (typeof r.timestamp === 'number' && Number.isFinite(r.timestamp)) t_s = r.timestamp;
+    if (t_s === undefined) continue;
+    out.push({ t_s, power: r.power });
+  }
+  return out;
+}
+
+/**
+ * Resample timestamped power records to a contiguous 1 Hz series.
+ *
+ * NP's 30 s rolling window assumes 1 Hz contiguous samples; Garmin smart
+ * recording emits records every few seconds, and dropping the gaps both
+ * shortens the apparent duration (mis-classifying >2 h rides as short tests)
+ * and distorts the rolling window. Rules:
+ *   - records are sorted by time and snapped to a 1 s grid (last value wins
+ *     within a second)
+ *   - gaps of <= 3 s are forward-filled (smart recording holds steady power)
+ *   - longer gaps are zero-filled (auto-pause / stop: no pedaling credit)
+ */
+export function resamplePowerTo1Hz(records: PowerRecord[]): number[] {
+  if (records.length === 0) return [];
+  const sorted = [...records].sort((a, b) => a.t_s - b.t_s);
+  const t0 = sorted[0].t_s;
+  const lastSec = Math.round(sorted[sorted.length - 1].t_s - t0);
+
+  const HOLD_MAX_S = 3;
+  const out = new Array<number>(lastSec + 1).fill(0);
+  const filled = new Array<boolean>(lastSec + 1).fill(false);
+
+  for (const r of sorted) {
+    const sec = Math.round(r.t_s - t0);
+    out[sec] = r.power;
+    filled[sec] = true;
+  }
+
+  let lastFilledIdx = 0;
+  for (let i = 1; i <= lastSec; i++) {
+    if (filled[i]) {
+      lastFilledIdx = i;
+    } else if (i - lastFilledIdx <= HOLD_MAX_S) {
+      out[i] = out[lastFilledIdx];
+    }
+    // else: leave 0 (pause)
+  }
+
+  return out;
+}
+
+/**
+ * Power stream for NP/anchor analysis: timestamped records resampled to 1 Hz.
+ * Falls back to the raw per-record stream when no records carry timestamps
+ * (synthetic or stripped files).
+ */
+export function readFitPower1Hz(bytes: Uint8Array | number[]): number[] {
+  const records = readFitPowerRecords(bytes);
+  if (records.length > 0) return resamplePowerTo1Hz(records);
+  return readFitPowerBytes(bytes);
 }
 
 /**

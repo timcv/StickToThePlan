@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import {
   parseGpxString,
   ingestGpxString,
-  readFitPowerBytes,
+  readFitPower1Hz,
   determineAnchorFromPower,
   buildCourseGpx,
   buildCourseFit,
@@ -48,10 +48,11 @@ export function ingestGpx(path: string, cfg: Config): MicroSegment[] {
 // ---------------------------------------------------------------------------
 
 /**
- * Read raw power values (watts) from a FIT activity file.
+ * Read the 1 Hz power stream (watts) from a FIT activity file.
+ * Timestamp-aware: smart-recording gaps are resampled, pauses zero-filled.
  */
 export function readFitPower(path: string): number[] {
-  return readFitPowerBytes(readFileSync(path));
+  return readFitPower1Hz(readFileSync(path));
 }
 
 /**

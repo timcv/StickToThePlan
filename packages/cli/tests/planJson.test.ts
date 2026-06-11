@@ -105,6 +105,7 @@ const displaySegments: DisplaySegment[] = [
     avg_grade: 0.013,
     eta_s: 540,
     wind_label: 'Mot 3 m/s',
+    pull_w_mean: 200,
     pull_w_low: 190,
     pull_w_high: 210,
     avg_w: 165,

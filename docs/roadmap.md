@@ -71,7 +71,9 @@ Recorded here so the cuts are not lost:
   the re-acceleration cost after stops, corners, and controls. Minutes-level, wind
   dominates.
 - **Coherent ensemble members** instead of per-cell p10/p90: run whole weather members
-  through the solver so the time band keeps spatial and temporal correlation.
+  through the solver so the time band keeps spatial and temporal correlation. (Members
+  now feed the per-cell p10/p90 spread since the 2026-06-11 math-review pass; the
+  remaining gap is solving per member rather than per percentile.)
 - **GPX fixed-distance resampling** before elevation smoothing, so the smoothing window
   is metres rather than points and plans are stable across GPX sampling densities.
 - **Manual-wind uncertainty band:** manual wind always collapses the interval to a point

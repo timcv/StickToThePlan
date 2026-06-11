@@ -8,6 +8,7 @@ import {
   riderNpSquareWaveReference,
   npFromMoments,
   solveSpeedForRiderNp,
+  solveSpeedForPullPower,
 } from '../src/chaingang.js';
 import { applyDefaults } from '../src/config.js';
 
@@ -156,5 +157,25 @@ describe('NP moments equivalence', () => {
       const ref = riderNpSquareWaveReference(v, GRADE, HW, CW, RHO, groupCfg);
       expect(Math.abs(fast - ref)).toBeLessThan(1e-6);
     }
+  });
+});
+
+describe('solveSpeedForPullPower (yaw-consistent cap solve)', () => {
+  it('pullPower at the returned speed equals the cap, with crosswind yaw in the loop', () => {
+    const cap = groupCfg.pull_cap_hard; // 354 W
+    const headwind = 6;
+    const crosswind = -7;
+    const v = solveSpeedForPullPower(cap, 0, headwind, crosswind, RHO, groupCfg);
+    // The yaw CdA factor is re-evaluated inside the objective, so the power at
+    // the solved speed matches the cap; a frozen-yaw solve would overshoot.
+    expect(pullPower(v, 0, headwind, crosswind, RHO, groupCfg)).toBeCloseTo(cap, 1);
+  });
+
+  it('matches the no-crosswind solve semantics (monotone, single root)', () => {
+    const v = solveSpeedForPullPower(300, 0.02, 2, 0, RHO, groupCfg);
+    expect(pullPower(v, 0.02, 2, 0, RHO, groupCfg)).toBeCloseTo(300, 1);
+    // Higher cap -> higher speed.
+    const v2 = solveSpeedForPullPower(350, 0.02, 2, 0, RHO, groupCfg);
+    expect(v2).toBeGreaterThan(v);
   });
 });

@@ -59,6 +59,7 @@ export interface Config {
   wind_roughness_z0?: number; // optional raw roughness override; else derived from exposure_terrain / per-segment exposure
   exposure_terrain: ExposureTerrain; // coarse global openness when no per-segment exposure data
   apply_wind_height_correction: boolean; // false = treat wind as already at rider level (manual "felt" wind)
+  time_zone: string; // IANA zone start_time is given in, e.g. "Europe/Stockholm"; weather cells are UTC
 }
 
 // physics
@@ -75,6 +76,7 @@ export interface WindCond {
   winddir_from_deg: number;
   temp_c: number;
   pressure_pa: number;
+  rel_humidity?: number; // 0..1 fraction; absent = dry-air density
 }
 
 // ingest
@@ -156,6 +158,7 @@ export interface WindSample {
   winddir_from_deg: number;
   temp_c: number;
   pressure_pa: number;
+  rel_humidity?: number; // 0..1 fraction
   source: string;
 }
 export type Scenario = 'expected' | 'optimistic' | 'pessimistic';
@@ -173,6 +176,7 @@ export interface DisplaySegment {
   avg_speed_kmh: number; // average riding speed for this segment
   eta_s: number; // at segment end
   wind_label: string; // e.g. "Mot 6 m/s", "Med 4 m/s", "Sido 5 m/s"
+  pull_w_mean: number; // unrounded time-weighted pull power; band/merges derive from this
   pull_w_low: number;
   pull_w_high: number;
   avg_w: number;

@@ -42,6 +42,7 @@ const seg1: DisplaySegment = {
   avg_grade: 0.002,
   eta_s: 3600, // 1 hour in: 04:22 + 1h = 05:22
   wind_label: 'Mot 4 m/s',
+  pull_w_mean: 150,
   pull_w_low: 145,
   pull_w_high: 155,
   avg_w: 130,
@@ -59,6 +60,7 @@ const seg2: DisplaySegment = {
   avg_grade: -0.001,
   eta_s: 7200, // 2 hours in: 04:22 + 2h = 06:22
   wind_label: 'Med 3 m/s',
+  pull_w_mean: 145,
   pull_w_low: 140,
   pull_w_high: 150,
   avg_w: 125,
@@ -77,6 +79,7 @@ const segDepot: DisplaySegment = {
   avg_grade: 0.0004,
   eta_s: 10800, // 3 hours in: 04:22 + 3h = 07:22
   wind_label: 'Sido 5 m/s',
+  pull_w_mean: 153,
   pull_w_low: 148,
   pull_w_high: 158,
   avg_w: 133,
@@ -129,6 +132,7 @@ const cfg: Config = {
   forecast_wind_height_m: 10,
   exposure_terrain: 'mixed',
   apply_wind_height_correction: true,
+  time_zone: 'Europe/Stockholm',
 };
 
 // ---------------------------------------------------------------------------

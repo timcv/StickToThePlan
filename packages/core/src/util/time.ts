@@ -36,6 +36,65 @@ export function secondsToClock(offsetS: number, startHHMM: string): string {
 }
 
 /**
+ * UTC offset (minutes) of an IANA time zone at a given instant.
+ * Positive east of Greenwich (Europe/Stockholm in June -> 120).
+ */
+function tzOffsetMinutes(utcMs: number, timeZone: string): number {
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+  const parts: Record<string, string> = {};
+  for (const p of dtf.formatToParts(new Date(utcMs))) parts[p.type] = p.value;
+  const asUtc = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour) % 24, // Intl may emit "24" for midnight
+    Number(parts.minute),
+    Number(parts.second),
+  );
+  return (asUtc - utcMs) / 60_000;
+}
+
+/**
+ * Convert a local wall-clock start ("HH:MM" in the given IANA zone on the given
+ * date) to UTC seconds since midnight. Weather cells are binned on UTC hours,
+ * so the weather clock must run in UTC while ETAs stay in local time.
+ * Example: utcStartClockSeconds("2026-06-13", "06:00", "Europe/Stockholm") -> 14400 (04:00 UTC).
+ */
+export function utcStartClockSeconds(dateIso: string, hhmm: string, timeZone: string): number {
+  const wallAsUtcMs = Date.parse(`${dateIso}T${hhmm.padStart(5, '0')}:00Z`);
+  if (Number.isNaN(wallAsUtcMs)) {
+    throw new Error(`utcStartClockSeconds: invalid date/time "${dateIso}" / "${hhmm}"`);
+  }
+  // Offset evaluated at the wall instant interpreted as UTC; a second pass with
+  // the corrected instant handles the rare start inside a DST transition.
+  let utcMs = wallAsUtcMs - tzOffsetMinutes(wallAsUtcMs, timeZone) * 60_000;
+  utcMs = wallAsUtcMs - tzOffsetMinutes(utcMs, timeZone) * 60_000;
+  const d = new Date(utcMs);
+  return d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds();
+}
+
+/**
+ * Whole-hour offset between local wall clock and UTC for the given date/zone
+ * (Europe/Stockholm in June -> 2). Used by the UI to translate between
+ * local display hours and the UTC hours weather cells are binned on.
+ */
+export function localUtcOffsetHours(dateIso: string, hhmm: string, timeZone: string): number {
+  const localS = clockToSeconds(hhmm);
+  const utcS = utcStartClockSeconds(dateIso, hhmm, timeZone);
+  const diffS = (((localS - utcS) % 86400) + 86400) % 86400;
+  return Math.round(diffS / 3600) % 24;
+}
+
+/**
  * Format an elapsed-seconds offset as H:MM with the hour not zero-padded.
  * Used for start-independent (relative) course-point labels.
  * Example: secondsToElapsed(9720) -> "2:42"

@@ -8,7 +8,7 @@
 import {
   applyDefaults,
   ingestGpxString,
-  readFitPowerBytes,
+  readFitPower1Hz,
   determineAnchorFromPower,
   calmWeather,
   solveForTargetTime,
@@ -181,7 +181,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
   // 0.60 x ftp fallback when no FIT is supplied. We surface the chosen anchor as
   // cfg.np_target for parity with the CLI; the solver still bisects np_target to
   // hit the target time, so this is informational (plan.json verification).
-  const powerStream = fitBytes ? readFitPowerBytes(fitBytes) : null;
+  const powerStream = fitBytes ? readFitPower1Hz(fitBytes) : null;
   const anchor = determineAnchorFromPower(powerStream, cfg);
   cfg.np_target = anchor.np_target_candidate;
   const npTargetUsed = anchor.np_target_candidate;

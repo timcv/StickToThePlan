@@ -32,6 +32,7 @@ const DEFAULTS = {
   forecast_wind_height_m: 10,
   exposure_terrain: 'mixed' as const,
   apply_wind_height_correction: true,
+  time_zone: 'Europe/Stockholm',
 } as const;
 
 /**

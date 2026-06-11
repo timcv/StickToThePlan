@@ -20,7 +20,7 @@ import type {
 } from './types.js';
 import type { EnsembleField } from './weather/ensemble.js';
 import { makeWeatherFn } from './weather/ensemble.js';
-import { airDensity, decomposeWind, solveSpeedForPower, yawCdaFactor } from './physics.js';
+import { airDensity, decomposeWind } from './physics.js';
 import { adjustWindForHeight, terrainToZ0 } from './weather/effective.js';
 import { exposureCoveragePct } from './weather/exposure.js';
 import {
@@ -30,8 +30,9 @@ import {
   fFront,
   riderNpAtSpeed,
   solveSpeedForRiderNp,
+  solveSpeedForPullPower,
 } from './chaingang.js';
-import { clockToSeconds, hmToSeconds } from './util/time.js';
+import { hmToSeconds, utcStartClockSeconds } from './util/time.js';
 
 /**
  * Calm-weather provider: no wind, 15 C, sea-level standard pressure.
@@ -43,46 +44,6 @@ export const calmWeather: WeatherFn = () => ({
   temp_c: 15,
   pressure_pa: 101325,
 });
-
-/**
- * Speed (m/s) at a capped PULL power on the front, at the current segment
- * conditions. Mirrors the yaw-adjusted cda_pull used in pullPower so the cap
- * is applied consistently. In solo mode pull == rider power, so capping the
- * pull also caps rider effort directly.
- *
- * @param capW       Target pull power in W
- * @param grade      Segment grade (decimal)
- * @param headwind   Signed headwind (m/s)
- * @param crosswind  Signed crosswind (m/s)
- * @param rho        Air density (kg/m^3)
- * @param vRef       Reference ground speed used to fix the yaw CdA factor
- * @param cfg        Config
- */
-function speedAtPull(
-  capW: number,
-  grade: number,
-  headwind: number,
-  crosswind: number,
-  rho: number,
-  vRef: number,
-  cfg: Config,
-): number {
-  const cda = yawCdaFactor(crosswind, vRef + headwind, cfg.k_yaw) * cfg.cda_pull;
-  return solveSpeedForPower(
-    capW,
-    grade,
-    headwind,
-    {
-      m: cfg.m,
-      g: cfg.g,
-      crr: cfg.crr,
-      eta: cfg.eta,
-      rho,
-      cda,
-    },
-    crosswind,
-  );
-}
 
 /** Roughness length for a segment: per-segment exposure if present, else an
  *  explicit override, else the coarse terrain default. */
@@ -99,20 +60,21 @@ function resolveZ0(micro: MicroSegment, cfg: Config): number {
  *  - Effort segments: solve ground speed for rider NP == np_target, then apply
  *    hard and (on climbs) soft pull caps. eta_s is elapsed seconds from start
  *    at the segment END.
- *  - Stops: insert at each stop's km marker; the stop delays everything after.
+ *  - Stops: applied inline at each stop's km marker, so the march clock (and
+ *    therefore every later weather query) includes earlier stop time.
  *
  * @param microsegments  Ordered microsegments (from ingestGpx).
  * @param npTarget       Rider NP target (W).
- * @param weather        Weather provider (lat, lon, clockSecondsSinceMidnight).
+ * @param weather        Weather provider; receives elapsed seconds from race
+ *                       start (the WeatherFn contract). Clock/UTC conversion
+ *                       lives inside the provider (see makeWeatherFn).
  * @param cfg            Config.
- * @param startClockS    Seconds since midnight at the start (clockToSeconds(start_time)).
  */
 export function runInnerSolve(
   microsegments: MicroSegment[],
   npTarget: number,
   weather: WeatherFn,
   cfg: Config,
-  startClockS: number,
 ): PlanResult {
   const fFrontVal = fFront(cfg.n_riders, cfg.pull_seconds);
   const segments: SegmentPlan[] = [];
@@ -124,6 +86,34 @@ export function runInnerSolve(
   let spinoutCount = 0;
   // Time added by caps relative to the uncapped (np-target) speed, in seconds.
   let capTimeMovedS = 0;
+
+  // Stops, applied inline when the march crosses their km marker. A stop
+  // attaches to the first segment whose END reaches the marker; it delays that
+  // segment's recorded ETA (= departure time) and shifts the clock for
+  // everything after, including weather queries.
+  const stopsSorted = [...cfg.stops].sort((a, b) => a.km - b.km);
+  let stopIdx = 0;
+  const stops: StopPlan[] = [];
+  let stopTimeS = 0;
+
+  const applyStopsAtBoundary = (cumDistanceM: number): void => {
+    while (stopIdx < stopsSorted.length && cumDistanceM >= stopsSorted[stopIdx].km * 1000) {
+      const stop = stopsSorted[stopIdx];
+      const addS = stop.minutes * 60;
+      const arrive_s = elapsed;
+      elapsed += addS;
+      stopTimeS += addS;
+      segments[segments.length - 1].eta_s = elapsed;
+      stops.push({
+        control: stop.control,
+        km: stop.km,
+        minutes: stop.minutes,
+        arrive_s,
+        depart_s: elapsed,
+      });
+      stopIdx++;
+    }
+  };
 
   for (const micro of microsegments) {
     const z0 = resolveZ0(micro, cfg);
@@ -152,12 +142,13 @@ export function runInnerSolve(
         z0_used: z0,
         exposure_class: micro.exposure_class,
       });
+      applyStopsAtBoundary(micro.cum_distance_m);
       continue;
     }
 
     // Effort segment.
-    const w: WindCond = weather(micro.lat, micro.lon, startClockS + elapsed);
-    const rho = airDensity(w.temp_c, w.pressure_pa);
+    const w: WindCond = weather(micro.lat, micro.lon, elapsed);
+    const rho = airDensity(w.temp_c, w.pressure_pa, w.rel_humidity ?? 0);
     const rawW = w.windspeed_ms;
     const effW = cfg.apply_wind_height_correction
       ? adjustWindForHeight(rawW, z0, cfg.rider_wind_height_m, cfg.forecast_wind_height_m)
@@ -173,7 +164,7 @@ export function runInnerSolve(
 
     let cap_binding: SegmentPlan['cap_binding'] = 'none';
     if (pPull > cfg.pull_cap_hard) {
-      v = speedAtPull(cfg.pull_cap_hard, micro.grade, headwind, crosswind, rho, v, cfg);
+      v = solveSpeedForPullPower(cfg.pull_cap_hard, micro.grade, headwind, crosswind, rho, cfg);
       cap_binding = 'hard';
       hardCount++;
     } else if (
@@ -181,7 +172,7 @@ export function runInnerSolve(
       cfg.climb_discount &&
       pPull > cfg.pull_cap_soft
     ) {
-      v = speedAtPull(cfg.pull_cap_soft, micro.grade, headwind, crosswind, rho, v, cfg);
+      v = solveSpeedForPullPower(cfg.pull_cap_soft, micro.grade, headwind, crosswind, rho, cfg);
       cap_binding = 'soft';
       softCount++;
     }
@@ -245,30 +236,7 @@ export function runInnerSolve(
       z0_used: z0,
       exposure_class: micro.exposure_class,
     });
-  }
-
-  // ---- Stops (spec 4.2 / 9.4) ----
-  // Each stop sits at the first segment boundary whose cumulative distance
-  // reaches the stop km marker. The stop delays that segment's ETA and every
-  // subsequent segment's ETA by minutes*60.
-  const stops: StopPlan[] = [];
-  let stopTimeS = 0;
-
-  for (const stop of cfg.stops) {
-    const targetM = stop.km * 1000;
-    const idx = segments.findIndex((s) => s.micro.cum_distance_m >= targetM);
-    if (idx === -1) continue; // stop km beyond the route end; skip
-    const addS = stop.minutes * 60;
-    const arrive_s = segments[idx].eta_s;
-    const depart_s = arrive_s + addS;
-    stops.push({ control: stop.control, km: stop.km, minutes: stop.minutes, arrive_s, depart_s });
-
-    // Delay this segment and all subsequent segments by the stop duration.
-    for (let j = idx; j < segments.length; j++) {
-      segments[j].eta_s += addS;
-    }
-    elapsed += addS;
-    stopTimeS += addS;
+    applyStopsAtBoundary(micro.cum_distance_m);
   }
 
   // ---- Totals ----
@@ -324,14 +292,15 @@ export function runInnerSolve(
  *
  * If even at np = ftp the total is still above target (cannot go fast enough
  * sustainably), returns the np = ftp result (fastest) with reachable = false
- * and an explanatory note.
+ * and an explanatory note. Symmetrically, if the target is slower than the
+ * minimum-effort plan (np = 60), returns that plan with a note instead of
+ * silently pinning the bisection to the floor.
  */
 export function solveForTargetTime(
   microsegments: MicroSegment[],
   weather: WeatherFn,
   cfg: Config,
 ): PlanResult {
-  const startClockS = clockToSeconds(cfg.start_time);
   const target = hmToSeconds(cfg.target_total_hm);
 
   const loNp = 60;
@@ -339,7 +308,7 @@ export function solveForTargetTime(
 
   // Fastest sustainable plan (np = ftp). If its total is still > target, the
   // target time is unreachable.
-  const fastest = runInnerSolve(microsegments, hiNp, weather, cfg, startClockS);
+  const fastest = runInnerSolve(microsegments, hiNp, weather, cfg);
   if (fastest.total_time_s > target) {
     const over = (fastest.total_time_s - target) / 60;
     fastest.reachable = false;
@@ -351,6 +320,19 @@ export function solveForTargetTime(
     return fastest;
   }
 
+  // Slowest plan in the search range (np = 60). If it already beats the target,
+  // the target is slower than any plan the solver can produce.
+  const slowest = runInnerSolve(microsegments, loNp, weather, cfg);
+  if (slowest.total_time_s < target) {
+    const under = (target - slowest.total_time_s) / 60;
+    slowest.notes.push(
+      `Target time ${cfg.target_total_hm} is slower than even a minimum-effort plan ` +
+        `(${loNp} W NP finishes ${under.toFixed(1)} min early). Returning the minimum-effort ` +
+        `plan. Consider longer stops or a faster target.`,
+    );
+    return slowest;
+  }
+
   // Bisect: total_time_s decreasing in np, so to lower total we raise np.
   let lo = loNp;
   let hi = hiNp;
@@ -358,7 +340,7 @@ export function solveForTargetTime(
 
   for (let i = 0; i < 45; i++) {
     const mid = (lo + hi) / 2;
-    const plan = runInnerSolve(microsegments, mid, weather, cfg, startClockS);
+    const plan = runInnerSolve(microsegments, mid, weather, cfg);
     best = plan;
     if (Math.abs(plan.total_time_s - target) <= 20) {
       return plan;
@@ -414,8 +396,9 @@ export interface ThreeScenarios {
  * and re-bisects np_target to hit the same target total time, so the three
  * results report the three anchor NPs they required (spec 9.5).
  *
- * The wind field is queried at clock times offset from the race start
- * (clockToSeconds(cfg.start_time)), matching how the inner solve marches the clock.
+ * The wind field is queried at elapsed seconds from race start; makeWeatherFn
+ * anchors that march to the UTC start clock (utcStartClockSeconds) so the
+ * local start time matches the UTC-binned cells.
  *
  * @param microsegments  Ordered microsegments (from ingestGpx).
  * @param field          The aggregated weather ensemble (cells + percentile spread).
@@ -459,11 +442,13 @@ export function solveThreeScenarios(
   field: EnsembleField,
   cfg: Config,
 ): ThreeScenarios {
-  const startClockS = clockToSeconds(cfg.start_time);
+  // Weather cells are binned on UTC hours; convert the local start clock to
+  // UTC once here so makeWeatherFn matches the right hour (ETAs stay local).
+  const utcStartS = utcStartClockSeconds(cfg.race_date, cfg.start_time, cfg.time_zone);
   const favorableWind = routeIsNetDownwind(microsegments, field);
 
   const solveScenario = (scenario: Scenario): PlanResult => {
-    const weather = makeWeatherFn(field, scenario, startClockS, favorableWind);
+    const weather = makeWeatherFn(field, scenario, utcStartS, favorableWind);
     return solveForTargetTime(microsegments, weather, cfg);
   };
 
@@ -479,16 +464,14 @@ export function solveThreeScenarios(
   const lowTime = runInnerSolve(
     microsegments,
     np,
-    makeWeatherFn(field, 'optimistic', startClockS, favorableWind),
+    makeWeatherFn(field, 'optimistic', utcStartS, favorableWind),
     cfg,
-    startClockS,
   ).total_time_s;
   const highTime = runInnerSolve(
     microsegments,
     np,
-    makeWeatherFn(field, 'pessimistic', startClockS, favorableWind),
+    makeWeatherFn(field, 'pessimistic', utcStartS, favorableWind),
     cfg,
-    startClockS,
   ).total_time_s;
   const expTime = expected.total_time_s;
 

@@ -18,7 +18,8 @@ export interface GeoPoint {
 // URL builders
 // ---------------------------------------------------------------------------
 
-const HOURLY_PARAMS = 'windspeed_10m,winddirection_10m,temperature_2m,surface_pressure';
+const HOURLY_PARAMS =
+  'windspeed_10m,winddirection_10m,temperature_2m,surface_pressure,relativehumidity_2m';
 
 /**
  * Build a query string where the hourly field keeps literal commas.
@@ -65,9 +66,18 @@ export function buildEnsembleUrl(point: GeoPoint, date: string): string {
 /**
  * Convert an Open-Meteo JSON response to an array of WindSample values.
  *
- * The API returns surface_pressure in hPa; multiply by 100 to get Pa.
+ * The API returns surface_pressure in hPa; multiply by 100 to get Pa, and
+ * relativehumidity_2m in percent; divide by 100 to get a fraction.
  * Wind speed is already in m/s because we requested windspeed_unit=ms.
  * Wind direction is meteorological from-direction (no conversion needed).
+ *
+ * Ensemble responses carry one extra array set per member
+ * (windspeed_10m_member01, ...). Each member becomes its own sample series
+ * (source suffixed `-mNN`) so buildEnsemble's p10/p90 reflects the real
+ * ensemble spread instead of just the control run. Member arrays missing a
+ * variable fall back to the control arrays.
+ *
+ * Rows with a non-finite speed/direction/temp/pressure are skipped.
  */
 export function parseOpenMeteo(
   json: any,
@@ -78,24 +88,68 @@ export function parseOpenMeteo(
   if (!h) return [];
 
   const times: string[] = h.time ?? [];
-  const speeds: number[] = h.windspeed_10m ?? [];
-  const dirs: number[] = h.winddirection_10m ?? [];
-  const temps: number[] = h.temperature_2m ?? [];
-  const pressures: number[] = h.surface_pressure ?? [];
-
   const samples: WindSample[] = [];
-  for (let i = 0; i < times.length; i++) {
-    samples.push({
-      time_iso: times[i],
-      lat: point.lat,
-      lon: point.lon,
-      windspeed_ms: speeds[i],
-      winddir_from_deg: dirs[i],
-      temp_c: temps[i],
-      pressure_pa: pressures[i] * 100, // hPa to Pa
-      source,
-    });
+
+  const pushSeries = (
+    speeds: number[],
+    dirs: number[],
+    temps: number[],
+    pressures: number[],
+    humidities: number[],
+    seriesSource: string,
+  ): void => {
+    for (let i = 0; i < times.length; i++) {
+      const windspeed_ms = speeds[i];
+      const winddir_from_deg = dirs[i];
+      const temp_c = temps[i];
+      const pressure_pa = pressures[i] * 100; // hPa to Pa
+      if (
+        !Number.isFinite(windspeed_ms) ||
+        !Number.isFinite(winddir_from_deg) ||
+        !Number.isFinite(temp_c) ||
+        !Number.isFinite(pressure_pa)
+      ) {
+        continue;
+      }
+      const rh = humidities[i];
+      samples.push({
+        time_iso: times[i],
+        lat: point.lat,
+        lon: point.lon,
+        windspeed_ms,
+        winddir_from_deg,
+        temp_c,
+        pressure_pa,
+        ...(Number.isFinite(rh) ? { rel_humidity: rh / 100 } : {}), // % to fraction
+        source: seriesSource,
+      });
+    }
+  };
+
+  const ctrlSpeeds: number[] = h.windspeed_10m ?? [];
+  const ctrlDirs: number[] = h.winddirection_10m ?? [];
+  const ctrlTemps: number[] = h.temperature_2m ?? [];
+  const ctrlPressures: number[] = h.surface_pressure ?? [];
+  const ctrlHumidities: number[] = h.relativehumidity_2m ?? [];
+
+  pushSeries(ctrlSpeeds, ctrlDirs, ctrlTemps, ctrlPressures, ctrlHumidities, source);
+
+  // Ensemble members: hourly keys like "windspeed_10m_member01".
+  const memberSuffixes = Object.keys(h)
+    .filter((k) => k.startsWith('windspeed_10m_member'))
+    .map((k) => k.slice('windspeed_10m'.length))
+    .sort();
+  for (const suf of memberSuffixes) {
+    pushSeries(
+      h['windspeed_10m' + suf] ?? [],
+      h['winddirection_10m' + suf] ?? ctrlDirs,
+      h['temperature_2m' + suf] ?? ctrlTemps,
+      h['surface_pressure' + suf] ?? ctrlPressures,
+      h['relativehumidity_2m' + suf] ?? ctrlHumidities,
+      `${source}${suf}`,
+    );
   }
+
   return samples;
 }
 

@@ -92,6 +92,64 @@ describe('parseOpenMeteo', () => {
     };
     expect(parseOpenMeteo(empty, point)).toHaveLength(0);
   });
+
+  it('converts relativehumidity_2m percent to a 0..1 fraction', () => {
+    const withRh = {
+      hourly: { ...fixture.hourly, relativehumidity_2m: [60, 80] },
+    };
+    const samples = parseOpenMeteo(withRh, point);
+    expect(samples[0].rel_humidity).toBeCloseTo(0.6, 6);
+    expect(samples[1].rel_humidity).toBeCloseTo(0.8, 6);
+  });
+
+  it('omits rel_humidity when the API does not return it', () => {
+    const samples = parseOpenMeteo(fixture, point);
+    expect(samples[0].rel_humidity).toBeUndefined();
+  });
+
+  it('skips rows with non-finite values instead of emitting NaN samples', () => {
+    const dirty = {
+      hourly: {
+        time: ['2026-06-13T04:00', '2026-06-13T05:00', '2026-06-13T06:00'],
+        windspeed_10m: [3.2, Number.NaN, 5.0],
+        winddirection_10m: [270, 280, 290],
+        temperature_2m: [9.5, 10.2, 11.0],
+        surface_pressure: [1013.2, 1012.8, 1012.0],
+      },
+    };
+    const samples = parseOpenMeteo(dirty, point);
+    expect(samples).toHaveLength(2);
+    expect(samples.map((s) => s.windspeed_ms)).toEqual([3.2, 5.0]);
+  });
+
+  it('parses ensemble member arrays into per-member sample series', () => {
+    const ensemble = {
+      hourly: {
+        time: ['2026-06-13T04:00'],
+        windspeed_10m: [3.0],
+        winddirection_10m: [270],
+        temperature_2m: [9.0],
+        surface_pressure: [1013.0],
+        windspeed_10m_member01: [4.0],
+        winddirection_10m_member01: [260],
+        windspeed_10m_member02: [6.0],
+        // member02 lacks its own direction/temp/pressure: falls back to control
+      },
+    };
+    const samples = parseOpenMeteo(ensemble, point, 'open-meteo-ensemble');
+    expect(samples).toHaveLength(3);
+
+    const control = samples.find((s) => s.source === 'open-meteo-ensemble');
+    const m01 = samples.find((s) => s.source === 'open-meteo-ensemble_member01');
+    const m02 = samples.find((s) => s.source === 'open-meteo-ensemble_member02');
+
+    expect(control?.windspeed_ms).toBe(3.0);
+    expect(m01?.windspeed_ms).toBe(4.0);
+    expect(m01?.winddir_from_deg).toBe(260);
+    expect(m02?.windspeed_ms).toBe(6.0);
+    expect(m02?.winddir_from_deg).toBe(270); // control fallback
+    expect(m02?.pressure_pa).toBeCloseTo(101300, 0); // control fallback
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -114,7 +172,9 @@ describe('buildForecastUrl', () => {
   });
 
   it('requests the expected hourly fields', () => {
-    expect(url).toContain('hourly=windspeed_10m,winddirection_10m,temperature_2m,surface_pressure');
+    expect(url).toContain(
+      'hourly=windspeed_10m,winddirection_10m,temperature_2m,surface_pressure,relativehumidity_2m',
+    );
   });
 
   it('includes start_date and end_date equal to the supplied date', () => {
@@ -147,7 +207,9 @@ describe('buildEnsembleUrl', () => {
   });
 
   it('requests the expected hourly fields', () => {
-    expect(url).toContain('hourly=windspeed_10m,winddirection_10m,temperature_2m,surface_pressure');
+    expect(url).toContain(
+      'hourly=windspeed_10m,winddirection_10m,temperature_2m,surface_pressure,relativehumidity_2m',
+    );
   });
 
   it('specifies icon_seamless model', () => {

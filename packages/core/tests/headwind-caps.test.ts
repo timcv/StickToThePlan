@@ -50,7 +50,7 @@ const micro = buildFlatRoute(400);
 
 describe('spin-out / planning-speed ceiling', () => {
   // Strong tailwind + high effort would push flat speed well past 50 km/h.
-  const plan = runInnerSolve(micro, 220, wind(270, 12), cfg, 0);
+  const plan = runInnerSolve(micro, 220, wind(270, 12), cfg);
   const effort = plan.segments.filter((s) => !s.micro.neutral);
 
   it('no effort segment exceeds max_plan_speed_kmh', () => {
@@ -76,7 +76,7 @@ describe('raised hard pull cap unblocks headwind speed', () => {
   // Into a 9 m/s headwind a rider NP of 230 W requires front pulls above FTP.
   // The old cap (= ftp) would have clamped them; the new cap (1.3*ftp) allows
   // the short supra-threshold pull, so the rider uses sustainable NP headroom.
-  const plan = runInnerSolve(micro, 230, wind(90, 9), cfg, 0);
+  const plan = runInnerSolve(micro, 230, wind(90, 9), cfg);
   const effort = plan.segments.filter((s) => !s.micro.neutral);
 
   it('at least one front pull runs above FTP (supra-threshold 45 s pull)', () => {
@@ -96,19 +96,36 @@ describe('raised hard pull cap unblocks headwind speed', () => {
 
 describe('intensity factor + sustainability warning', () => {
   it('intensity_factor === rider_np_ride_w / ftp', () => {
-    const plan = runInnerSolve(micro, 200, wind(90, 6), cfg, 0);
+    const plan = runInnerSolve(micro, 200, wind(90, 6), cfg);
     expect(plan.intensity_factor).toBeCloseTo(plan.rider_np_ride_w / cfg.ftp, 6);
   });
 
   it('a hard plan (high NP) emits an IF sustainability note', () => {
-    const plan = runInnerSolve(micro, 260, wind(90, 6), cfg, 0);
+    const plan = runInnerSolve(micro, 260, wind(90, 6), cfg);
     expect(plan.intensity_factor).toBeGreaterThan(cfg.sustain_if_warn);
     expect(plan.notes.some((n) => n.includes('IF'))).toBe(true);
   });
 
   it('an easy plan (low NP) emits no IF note', () => {
-    const plan = runInnerSolve(micro, 150, wind(0, 0), cfg, 0);
+    const plan = runInnerSolve(micro, 150, wind(0, 0), cfg);
     expect(plan.intensity_factor).toBeLessThan(cfg.sustain_if_warn);
     expect(plan.notes.some((n) => n.includes('IF'))).toBe(false);
+  });
+});
+
+describe('hard-capped pulls sit exactly at the cap (yaw-consistent solve)', () => {
+  // Wind from 45 deg on an eastbound route: strong head + cross components, so
+  // the yaw factor matters. High NP forces the hard cap to bind.
+  const plan = runInnerSolve(micro, 268, wind(45, 12), cfg);
+  const capped = plan.segments.filter((s) => s.cap_binding === 'hard');
+
+  it('the hard cap binds somewhere on this plan', () => {
+    expect(capped.length).toBeGreaterThan(0);
+  });
+
+  it('every hard-capped segment shows pull power == pull_cap_hard within tolerance', () => {
+    for (const s of capped) {
+      expect(Math.abs(s.p_pull_w - cfg.pull_cap_hard)).toBeLessThan(0.1);
+    }
   });
 });
