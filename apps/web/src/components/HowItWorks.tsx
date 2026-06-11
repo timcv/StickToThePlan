@@ -558,6 +558,80 @@ function ScenarioFigure() {
   );
 }
 
+function SegmentFigure() {
+  const ticks = Array.from({ length: 40 }, (_, i) => 42 + i * 15);
+  const bars = [
+    { x: 42, w: 150, label: 'Flackt', color: C.accent },
+    { x: 200, w: 96, label: 'Klättring', color: C.coral },
+    { x: 304, w: 150, label: 'Flackt', color: C.accent },
+    { x: 462, w: 174, label: 'Depå', color: C.green },
+  ];
+  return (
+    <svg width="100%" viewBox="0 0 680 180" role="img" aria-labelledby="seg-t seg-d">
+      <title id="seg-t">Hundratals mikrosegment grupperas till några få tempokortsrader</title>
+      <desc id="seg-d">
+        En rad med många tunna streck som visar mikrosegment, en pil nedåt, och nedanför några få
+        breda etiketterade rader med markörer för kontroll och depå.
+      </desc>
+      <defs>
+        <marker
+          id="seg-arrow"
+          viewBox="0 0 10 10"
+          refX="8"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto-start-reverse"
+        >
+          <path
+            d="M2 1L8 5L2 9"
+            fill="none"
+            stroke="context-stroke"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </marker>
+      </defs>
+      {ticks.map((x) => (
+        <line key={x} x1={x} y1="22" x2={x} y2="52" stroke={C.gray} strokeWidth="1.5" />
+      ))}
+      <text x="42" y="16" fontSize="11" fill={C.muted}>
+        Mikrosegment (ett per GPX-punkt)
+      </text>
+      <line
+        x1="340"
+        y1="60"
+        x2="340"
+        y2="88"
+        stroke={C.muted}
+        strokeWidth="1.5"
+        markerEnd="url(#seg-arrow)"
+      />
+      {bars.map((b) => (
+        <g key={b.x}>
+          <rect x={b.x} y="100" width={b.w - 6} height="28" rx="5" fill={b.color} opacity="0.85" />
+          <text
+            x={b.x + (b.w - 6) / 2}
+            y="118"
+            fontSize="12"
+            fill="#fff"
+            textAnchor="middle"
+            fontWeight="600"
+          >
+            {b.label}
+          </text>
+        </g>
+      ))}
+      <circle cx="296" cy="100" r="5" fill={C.text} />
+      <circle cx="630" cy="100" r="5" fill={C.text} />
+      <text x="42" y="150" fontSize="11" fill={C.muted}>
+        Visningssegment: ny rad där kontroll, lutning eller vind ändras
+      </text>
+    </svg>
+  );
+}
+
 function WeatherClockFigure() {
   const pts = [
     { x: 90, y: 150, t: '05:00', len: 16 },
@@ -1134,6 +1208,41 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
             scenarier löses mot samma måltid och skiljer sig i vilken mål-NP (ansträngningsnivå) som
             krävs. Tidsspannet räknas ärligt: förväntad NP hålls fast och rutten marscheras om under
             p10- respektive p90-vind, vilket ger min/max på sluttiden.
+          </p>
+        </DeepDive>
+      </Section>
+
+      <Section title="Från rutt till tempokort" figure={<SegmentFigure />}>
+        <p>
+          Rutten körs i två upplösningar. Fysiken marscherar hundratals små mikrosegment, ett per
+          GPX-punkt, så lutning och vind blir exakta. Men ett kort på styret behöver bara en
+          handfull rader, så vi grupperar mikrosegmenten till visningssegment och klipper en ny rad
+          där något verkligt ändras: vid en kontroll eller depå, där vägen växlar mellan flackt och
+          backe (lutningen korsar 3 %), och där vinden vänder från mot till med. På den inlästa
+          rutten kommer kontrollerna från dina depåstopp, plus start och mål.
+        </p>
+        <p>
+          Sedan städar vi: korta stumpar slås ihop med den granne som har närmast effekt, rader med
+          nästan samma lutning slås ihop, och totalen kapas så att kortet förblir läsbart. Orter och
+          depåer slås aldrig bort. Varje rad får ett nyckelord, JÄMN FART, KLÄTTRING, SISTA UPPFÖR,
+          BACKAR, TA DET LUGNT eller ÖKA, och Not-kolumnen visas bara när rutten faktiskt har något
+          att säga, alltså inte på platta, vindstilla varv. Styrkortsläget klipper bara på
+          kontroller och stopp för ett rent kort; fullständig vy lägger till lutnings- och
+          vindgränserna.
+        </p>
+        <DeepDive>
+          <p>Gränserna byggs ur mikrosegmenten, snäpps till närmaste segmentslut och grupperas:</p>
+          <div className="howto-formula howto-formula-block">
+            {'gräns = kontroll/depå | lutning korsar 3 % | vind vänder (>1 m/s) | start/mål\n'}
+            {'slå ihop rader kortare än 2 km → granne med närmast snitt-effekt\n'}
+            {'slå ihop rader med lutningsskillnad < 0,3 %  (samma nyckelord)\n'}
+            {'kapa till ≤ 50 rader (styrkortsläge ≤ 20)'}
+          </div>
+          <p>
+            All aggregering (fart, effekt, vind) är tidsviktad, eftersom mikrosegmentens längd
+            följer GPX-punkternas täthet. En efterpass märker den sista klättringen före mål som
+            SISTA UPPFÖR. Depå- och ortgränser korsas aldrig vid sammanslagning, så markörerna står
+            kvar.
           </p>
         </DeepDive>
       </Section>
