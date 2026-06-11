@@ -19,6 +19,8 @@ interface Props {
   rows: HourlyWind[];
   edited: Set<number>;
   fetchStatus: 'idle' | 'loading' | 'done' | 'error';
+  /** Optional error message to show when fetchStatus is 'error'. */
+  fetchError?: string;
   sources: string[];
   reduced: boolean;
   /** Manual mode only: whether the entered number is a 10 m forecast or felt wind. */
@@ -31,7 +33,8 @@ interface Props {
 }
 
 export function WeatherPanel(props: Props) {
-  const { mode, onModeChange, rows, edited, fetchStatus, sources, reduced, windRef } = props;
+  const { mode, onModeChange, rows, edited, fetchStatus, fetchError, sources, reduced, windRef } =
+    props;
   const [constDir, setConstDir] = useState(270);
   const [constSpeed, setConstSpeed] = useState(5);
 
@@ -57,7 +60,11 @@ export function WeatherPanel(props: Props) {
           <button type="button" onClick={props.onFetch} disabled={fetchStatus === 'loading'}>
             {fetchStatus === 'loading' ? 'Hämtar…' : 'Hämta väder'}
           </button>
-          {fetchStatus === 'error' && <span className="hint error">Hämtning misslyckades.</span>}
+          {fetchStatus === 'error' && (
+            <span className="hint error">
+              Hämtning misslyckades.{fetchError ? ` ${fetchError}` : ''}
+            </span>
+          )}
           {fetchStatus === 'done' && (
             <span className="hint">
               Källor: {sources.join(', ') || 'inga'}
