@@ -558,6 +558,74 @@ function ScenarioFigure() {
   );
 }
 
+function WeatherClockFigure() {
+  const pts = [
+    { x: 90, y: 150, t: '05:00', len: 16 },
+    { x: 340, y: 96, t: '10:00', len: 30 },
+    { x: 600, y: 120, t: '15:00', len: 46 },
+  ];
+  return (
+    <svg width="100%" viewBox="0 0 680 196" role="img" aria-labelledby="wx-t wx-d">
+      <title id="wx-t">Vinden ökar längs rutten under dagen</title>
+      <desc id="wx-d">
+        En båge som visar rutten med tre klockmarkörer. Vid varje punkt en vindpil som blir längre
+        och vrider sig, från lugn morgon till blåsig eftermiddag.
+      </desc>
+      <defs>
+        <marker
+          id="wx-arrow"
+          viewBox="0 0 10 10"
+          refX="8"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto-start-reverse"
+        >
+          <path
+            d="M2 1L8 5L2 9"
+            fill="none"
+            stroke="context-stroke"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </marker>
+      </defs>
+      <path d="M60 160 Q340 40 620 132" fill="none" stroke={C.border} strokeWidth="3" />
+      {pts.map((p) => (
+        <g key={p.t}>
+          <circle cx={p.x} cy={p.y} r="5" fill={C.accent} />
+          <text
+            x={p.x}
+            y={p.y + 22}
+            fontSize="12"
+            fill={C.text}
+            textAnchor="middle"
+            fontWeight="600"
+          >
+            {p.t}
+          </text>
+          <line
+            x1={p.x}
+            y1={p.y - 8}
+            x2={p.x + p.len}
+            y2={p.y - 8 - p.len * 0.5}
+            stroke={C.coral}
+            strokeWidth="2.5"
+            markerEnd="url(#wx-arrow)"
+          />
+        </g>
+      ))}
+      <text x="60" y="186" fontSize="12" fill={C.muted}>
+        Lugn morgon
+      </text>
+      <text x="620" y="186" fontSize="12" fill={C.coral} textAnchor="end" fontWeight="600">
+        Blåsig eftermiddag
+      </text>
+    </svg>
+  );
+}
+
 function RoadPrepFigure() {
   const raw =
     '40,120 90,96 140,128 190,84 240,150 290,92 340,116 390,70 440,150 490,104 560,88 640,108';
@@ -795,6 +863,34 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
               </tr>
             </tbody>
           </table>
+        </DeepDive>
+      </Section>
+
+      <Section title="Vädret skiftar över dygnet" figure={<WeatherClockFigure />}>
+        <p>
+          Vädret är inte en enda siffra för hela loppet. För varje sträcka slår vi upp vinden på
+          just den platsen och vid den timme på dygnet du faktiskt är där. Ett varv tar runt elva
+          timmar, så en lugn morgonstart kan möta helt annan vind på eftermiddagen. Prognosen läggs
+          i ett rutnät i både rum och tid, och vi sparar uppslagen per cell och timme så att
+          tusentals sträckor går snabbt att räkna.
+        </p>
+        <Formula caption="Klockan du når en plats avgör vilken prognostimme som gäller där, inte klockan vid start.">
+          timme på platsen = starttid + din restid dit
+        </Formula>
+        <DeepDive>
+          <p>
+            Klocktiden vid en sträcka är starttiden plus ackumulerad restid. Den mappas till en
+            heltimme och en cell i rutnätet (väderceller lagras i UTC):
+          </p>
+          <div className="howto-formula howto-formula-block">
+            {'timme = ⌊(startklocka_UTC + förfluten_tid_s) ÷ 3600⌋ mod 24\n'}
+            {'cellnyckel = lat | lon | timme  (närmaste cell, exakt cache)'}
+          </div>
+          <p>
+            Ensemblen aggregeras till celler i rum och tid; uppslag per (lat, lon, timme) cachas så
+            att den haversine-tunga sökningen bara körs en gång per cell. Den uppströms
+            prognoshämtningen cachas i sin tur i 3 timmar.
+          </p>
         </DeepDive>
       </Section>
 
