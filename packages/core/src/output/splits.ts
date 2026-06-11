@@ -44,6 +44,13 @@ export function buildSplitTable(
   // so matching by name here silently dropped stops whose `control` string did
   // not exactly equal the control name. Controls are ~30 km apart; 2 km is wide
   // enough for "stop at the control" configs and narrow enough never to span two.
+  //
+  // Deliberate display limitation: a stop whose km is farther than
+  // STOP_CONTROL_TOL_KM from every control ("orphan stop") is still counted
+  // into arrival times for later controls via stopsBefore, so total elapsed
+  // time is correct. However, no row's stop_minutes column will reflect it;
+  // the leg containing the orphan simply reads as slower riding time. This is
+  // accepted because the config convention is to place stops at controls.
   const STOP_CONTROL_TOL_KM = 2;
   const stopsFor = (controlKm: number) =>
     cfg.stops.filter((s) => Math.abs(s.km - controlKm) <= STOP_CONTROL_TOL_KM);
