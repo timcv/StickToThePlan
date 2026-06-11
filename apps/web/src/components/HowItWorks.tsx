@@ -50,6 +50,15 @@ function Formula({ children, caption }: { children: ReactNode; caption: string }
   );
 }
 
+function DeepDive({ children }: { children: ReactNode }) {
+  return (
+    <details className="howto-deep">
+      <summary>Fördjupning: exakta formler</summary>
+      <div className="howto-deep-body">{children}</div>
+    </details>
+  );
+}
+
 /* ---- Figures ---- */
 
 function GrundidenFigure() {
@@ -311,7 +320,7 @@ function PacelineFigure() {
       <title id="fig4-t">Kedjegäng med en cyklist på täten</title>
       <desc id="fig4-d">
         Fem cyklister i en rad som rör sig åt höger. Den främre ligger på täten i full vind, de
-        bakom ligger i lä med ungefär en femtedel lägre luftmotstånd.
+        bakom ligger i lä med ungefär en tredjedel lägre luftmotstånd.
       </desc>
       <defs>
         <marker
@@ -384,7 +393,7 @@ function PacelineFigure() {
         På täten: full vind
       </text>
       <text x="120" y="128" fontSize="13" fill={C.muted}>
-        I lä: ungefär 20 % lägre luftmotstånd
+        I lä: ungefär 35 % lägre luftmotstånd
       </text>
     </svg>
   );
@@ -555,33 +564,90 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
       <header className="howto-hero">
         <h1>Så räknar StickToThePlan ut din tid</h1>
         <p>
-          Vi håller din ansträngning jämn och låter farten variera med backar och vind. Sen letar vi
-          upp exakt den ansträngning som träffar din måltid.
+          Vi håller din ansträngning jämn och låter farten variera med backar och vind. Sedan letar
+          vi fram exakt den ansträngning som tar dig i mål på utsatt tid.
         </p>
       </header>
 
       <Section title="Grundidén" figure={<GrundidenFigure />}>
         <p>
           Backar bromsar, utförslöpor och medvind hjälper. I stället för en jämn fart håller vi en
-          jämn effekt (watt). Farten får svaja, men känslan i benen är ungefär konstant hela varvet.
-          Det är så en van cyklist faktiskt kör: lika hårt uppför som nerför, inte lika fort.
+          jämn effekt (watt). Farten får variera, men känslan i benen är i stort sett densamma hela
+          varvet. Det är så en van cyklist faktiskt kör: lika hårt uppför som nerför, inte lika
+          fort.
         </p>
       </Section>
 
       <Section title="Tre krafter du trampar mot" figure={<ForcesFigure />}>
         <p>
-          Varje sekund räknar vi hur många watt som krävs för att slå tre motstånd: tyngden i
+          Varje sekund räknar vi hur många watt som krävs för att övervinna tre motstånd: tyngden i
           backen, däcken mot asfalten och luften framför dig. Luftmotståndet är i särklass störst på
           platt mark.
         </p>
         <Formula caption="Luftmotståndet växer med farten i kvadrat, därför betyder vind och kroppshållning så mycket.">
           effekt = (backe + rull + luft) × fart ÷ verkningsgrad
         </Formula>
+        <DeepDive>
+          <p>
+            Effekten vid tramporna för fart <var>v</var>, lutning och vind beräknas stationärt
+            (physics.ts):
+          </p>
+          <div className="howto-formula howto-formula-block">
+            {'θ = atan(lutning)\n'}
+            {'F_gravitation = m · g · sin θ\n'}
+            {'F_rull = m · g · cos θ · crr\n'}
+            {'u = v + motvind (axiell skenbar vind)\n'}
+            {'v_app = √(u² + sidvind²)\n'}
+            {'F_luft = ½ · ρ · CdA · v_app · u\n'}
+            {'P = (F_gravitation + F_rull + F_luft) · v ÷ η'}
+          </div>
+          <p>
+            Sidvind höjer dessutom effektiv CdA med yaw-vinkeln: CdA·(1 + 0,04·|yaw°|/10), cirka +8
+            % vid 20° yaw, klampad till ±50°. Fart ur effekt löses med bisektion på [0,5, 25] m/s
+            till 0,01 W.
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Parameter</th>
+                <th>Standardvärde</th>
+                <th>Betydelse</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>m</td>
+                <td>96 kg</td>
+                <td>cyklist + cykel</td>
+              </tr>
+              <tr>
+                <td>crr</td>
+                <td>0,0045</td>
+                <td>rullmotståndskoefficient</td>
+              </tr>
+              <tr>
+                <td>CdA</td>
+                <td>0,32 / 0,21 m²</td>
+                <td>på täten / i lä</td>
+              </tr>
+              <tr>
+                <td>η</td>
+                <td>0,97</td>
+                <td>drivlinans verkningsgrad</td>
+              </tr>
+              <tr>
+                <td>g</td>
+                <td>9,81 m/s²</td>
+                <td>tyngdacceleration</td>
+              </tr>
+            </tbody>
+          </table>
+        </DeepDive>
       </Section>
 
       <Section title="Luft, vind och terräng" figure={<WindFigure />}>
         <p>
-          Tyngre luft ger mer motstånd, så vi väger in temperatur och lufttryck. Vindprognosen
+          Tung luft bromsar mer än lätt, så vi väger in temperatur och lufttryck. Vindprognosen
           gäller 10 meter upp, men du sitter på drygt en meter. Vi skalar ner vinden efter hur
           skyddat landskapet är: skog och bebyggelse dämpar, öppet vatten och broar släpper fram
           full vind. Sido- och motvind kostar olika mycket, så vi delar upp vinden i mot- och sidled
@@ -590,35 +656,174 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
         <Formula caption="Terrängfaktorn kommer ur en standardmodell för hur vind avtar nära marken (logaritmisk vindprofil).">
           effektiv vind = prognosvind × terrängfaktor
         </Formula>
+        <DeepDive>
+          <p>Lufttäthet ur temperatur och tryck (ideala gaslagen, torr luft):</p>
+          <div className="howto-formula howto-formula-block">
+            {'ρ = p ÷ (Rd · T)    Rd = 287,058 J/(kg·K), T i kelvin'}
+          </div>
+          <p>
+            Vid fuktig luft kan modellen korrigera med virtuell temperatur T<sub>v</sub> = T ÷ (1 −
+            (e/p)(1 − Rd/Rv)), där Rv = 461,5 J/(kg·K) och ångtrycket e = RH · e<sub>s</sub> med
+            Tetens approximation e<sub>s</sub> = 611,2 · exp(17,67(T−273,15)/(T−29,65)) Pa. Effekten
+            är liten, upp till ungefär en halv procent vid typiskt loppväder.
+          </p>
+          <p>Vinden delas upp mot färdriktningen (Δ = vindriktning − kurs):</p>
+          <div className="howto-formula howto-formula-block">
+            {'motvind = W · cos Δ\nsidvind = W · sin Δ'}
+          </div>
+          <p>
+            Prognosvind (10 m) skalas till styrhöjd (1,2 m) med neutral logaritmisk vindprofil,
+            faktorn klampas till [0,15, 1]:
+          </p>
+          <div className="howto-formula howto-formula-block">
+            {'faktor = ln(1,2 ÷ z0) ÷ ln(10 ÷ z0)'}
+          </div>
+          <p>
+            z0 är terrängens råhetslängd. Standardrutten har exponeringsklass per vägsegment ur
+            OpenStreetMap enligt den finare skalan i tabellen nedan. Uppladdade rutter får i stället
+            en grövre schablon för hela rutten med egna värden: öppet 0,03, blandat 0,05 eller
+            skyddat 0,3 m.
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Exponeringsklass</th>
+                <th>z0 (m)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>vatten</td>
+                <td>0,001</td>
+              </tr>
+              <tr>
+                <td>bro</td>
+                <td>0,002</td>
+              </tr>
+              <tr>
+                <td>öppet</td>
+                <td>0,03</td>
+              </tr>
+              <tr>
+                <td>halvöppet</td>
+                <td>0,08</td>
+              </tr>
+              <tr>
+                <td>skog</td>
+                <td>0,3</td>
+              </tr>
+              <tr>
+                <td>bebyggelse</td>
+                <td>0,4</td>
+              </tr>
+              <tr>
+                <td>skyddat</td>
+                <td>0,5</td>
+              </tr>
+            </tbody>
+          </table>
+        </DeepDive>
       </Section>
 
       <Section title="I grupp: drafting och jämn ansträngning" figure={<PacelineFigure />}>
         <p>
-          I ett kedjegäng ligger du mest i lä, där luftmotståndet är ungefär en femtedel lägre. Vi
-          modellerar rotationen: korta, hårda ryck på täten och längre vila i klungan. För att fånga
-          vad det gör med kroppen mäter vi din ansträngning som normaliserad effekt (NP), ett mått
-          som straffar de hårda rycken mer än ett enkelt snitt gör.
+          I ett kedjegäng ligger du mest i lä, där luftmotståndet är ungefär en tredjedel lägre. Vi
+          modellerar rotationen: korta, hårda drag på täten och längre återhämtning i hjul. För att
+          fånga vad det gör med kroppen mäter vi din ansträngning som normaliserad effekt (NP), ett
+          mått som straffar de hårda dragen hårdare än ett vanligt snitt gör.
         </p>
-        <Formula caption="Upphöjt till fyra gör att korta hårda ryck väger tyngre, precis som de känns i verkligheten.">
+        <Formula caption="Upphöjt till fyra gör att korta hårda drag väger tyngre, precis som de känns i benen.">
           NP = (medel av 30-sekunders rullande effekt⁴)^¼
         </Formula>
+        <DeepDive>
+          <p>
+            Med <var>n</var> cyklister och 45 s drag är andelen tid på täten f_front = 1/n (solo:
+            1,0). Tidsmedeleffekten:
+          </p>
+          <div className="howto-formula howto-formula-block">
+            {'P_medel = f_front · P_täten + (1 − f_front) · P_lä'}
+          </div>
+          <p>
+            Rotationen modelleras som en fyrkantvåg: 45 s på täten med P<sub>täten</sub> (CdA 0,32),
+            resten av cykeln i lä med P<sub>lä</sub> (CdA 0,21). Normaliserad effekt är 30 sekunders
+            rullande medel, upphöjt till fyra och medelvärdesbildat; fjärderoten ger NP. För
+            fyrkantvågen finns en sluten form: varje rullande fönster är en konvex blandning a·P
+            <sub>täten</sub> + (1−a)·P<sub>lä</sub>, så NP⁴ blir ett polynom i de två effekterna (Pt
+            = P_täten, Pl = P_lä) med förberäknade momentkoefficienter:
+          </p>
+          <div className="howto-formula howto-formula-block">
+            {'NP = (c₄·Pt⁴ + c₃·Pt³·Pl + c₂·Pt²·Pl² + c₁·Pt·Pl³ + c₀·Pl⁴)^¼'}
+          </div>
+          <p>
+            Det gör utvärderingen O(1) per fart i stället för en sampelsimulering, verifierad mot
+            referensimplementationen inom 10⁻⁶. Farten som ger mål-NP löses med bisektion till 0,1
+            W.
+          </p>
+        </DeepDive>
       </Section>
 
       <Section title="Hur lösaren hittar din tid" figure={<SolverFigure />}>
         <p>
           Vi gissar en ansträngningsnivå, kör igenom hela rutten sträcka för sträcka, räknar fart
           och tid på varje, och summerar. Blev det för långsamt höjer vi ansträngningen, för snabbt
-          sänker vi den, och halverar oss fram tills tiden träffar ditt mål på sekunden. Realistiska
-          tak gör att vi aldrig planerar orimliga ryck i branta backar eller över 50 km/h.
+          sänker vi den, och halverar intervallet tills tiden stämmer med ditt mål. Realistiska
+          effekttak gör att planen aldrig kräver orimligt hårda drag i branta backar eller farter
+          över 50 km/h.
         </p>
+        <DeepDive>
+          <p>
+            Två kapslade bisektioner. Inre lösaren marscherar rutten mikrosegment för mikrosegment:
+          </p>
+          <div className="howto-formula howto-formula-block">
+            {'för varje segment:\n'}
+            {'  väder(lat, lon, klocktid) → temperatur, tryck, vind\n'}
+            {'  ρ ur temperatur + tryck (lufttäthet)\n'}
+            {'  vinden skalas till 1,2 m via z0 (terrängexponering)\n'}
+            {'  vind → motvind + sidvind mot segmentets kurs\n'}
+            {'  bisektion: fart v så att rider-NP(v) = mål-NP (tolerans 0,1 W)\n'}
+            {'  effekttak appliceras · tid = längd ÷ v ackumuleras'}
+          </div>
+          <p>
+            Effekttak: hårt tak 1,3 × FTP per drag (ett 45 s-drag är en kort ansträngning över
+            tröskeln, hållbarheten begränsas av NP, inte av enskilda drag), mjukt tak 0,92 × FTP i
+            backar brantare än 3 %, och ett planeringstak på 50 km/h: i stark medvind eller utför är
+            extra fart buffert, inte bankad tid. Första kilometern är neutral: 20 km/h utanför
+            NP-modellen.
+          </p>
+          <p>
+            Yttre lösaren bisekterar mål-NP i intervallet [60, FTP] W, max 45 iterationer, tills
+            totaltiden träffar måltiden inom ±20 s. Går det inte ens på FTP flaggas planen som
+            onåbar och den snabbaste hållbara planen returneras. Om hela åkets NP överstiger 0,75 ×
+            FTP varnar planen (intensitetsfaktor).
+          </p>
+        </DeepDive>
       </Section>
 
       <Section title="Tre vindscenarier" figure={<ScenarioFigure />}>
         <p>
           Väder är osäkert, så vi räknar tre gånger: med lugnare vind än väntat (optimistiskt), med
-          väntad vind, och med kraftigare vind (pessimistiskt). Då ser du hur mycket din tid kan
-          vippa åt båda håll, inte bara en enda siffra.
+          väntad vind, och med kraftigare vind (pessimistiskt). Då ser du hur mycket sluttiden kan
+          skilja åt båda håll i stället för att lita på en enda siffra.
         </p>
+        <DeepDive>
+          <p>
+            Vädret hämtas som en ensemble från SMHI, MET Norway och Open-Meteo och aggregeras till
+            celler i rum och tid med medelvind, vektormedel för riktning och percentilspridning (p10
+            / p90) över källorna.
+          </p>
+          <div className="howto-formula howto-formula-block">
+            {'förväntat      = medelvind\n'}
+            {'optimistiskt   = p10 (mindre vind)\n'}
+            {'pessimistiskt  = p90 (mer vind)'}
+          </div>
+          <p>
+            Är rutten netto i medvind (ruttens riktning projicerad på medelvindriktningen)
+            inverteras mappningen, då är mer vind snabbare, så pessimistiskt = p10. Alla tre
+            scenarier löses mot samma måltid och skiljer sig i vilken mål-NP (ansträngningsnivå) som
+            krävs. Tidsspannet räknas ärligt: förväntad NP hålls fast och rutten marscheras om under
+            p10- respektive p90-vind, vilket ger min/max på sluttiden.
+          </p>
+        </DeepDive>
       </Section>
 
       <footer className="howto-footer">
