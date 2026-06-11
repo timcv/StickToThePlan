@@ -162,19 +162,18 @@ export function runInnerSolve(
     // Pull power on the front at the uncapped speed.
     const pPull = pullPower(v, micro.grade, headwind, crosswind, rho, cfg);
 
+    // Pull caps. On a climb (grade > climb_threshold, climb_discount on) the
+    // soft cap is the climb discount and takes PRECEDENCE: the binding cap is
+    // min(soft, hard). Off-climb only the hard cap applies. Checking hard
+    // first would let the steepest ramps pull at the (higher) hard cap while
+    // moderate climbs sit at the soft cap, inverting the intended severity.
+    const onClimb = micro.grade > cfg.climb_threshold && cfg.climb_discount;
+    const capW = onClimb ? Math.min(cfg.pull_cap_soft, cfg.pull_cap_hard) : cfg.pull_cap_hard;
+
     let cap_binding: SegmentPlan['cap_binding'] = 'none';
-    if (pPull > cfg.pull_cap_hard) {
-      v = solveSpeedForPullPower(cfg.pull_cap_hard, micro.grade, headwind, crosswind, rho, cfg);
-      cap_binding = 'hard';
-      hardCount++;
-    } else if (
-      micro.grade > cfg.climb_threshold &&
-      cfg.climb_discount &&
-      pPull > cfg.pull_cap_soft
-    ) {
-      v = solveSpeedForPullPower(cfg.pull_cap_soft, micro.grade, headwind, crosswind, rho, cfg);
-      cap_binding = 'soft';
-      softCount++;
+    if (pPull > capW) {
+      v = solveSpeedForPullPower(capW, micro.grade, headwind, crosswind, rho, cfg);
+      cap_binding = onClimb && capW < cfg.pull_cap_hard ? 'soft' : 'hard';
     }
 
     // Spin-out / planning-speed ceiling. A rotating group will not (and for
@@ -189,8 +188,12 @@ export function runInnerSolve(
     if (v > vMax) {
       v = vMax;
       cap_binding = 'spinout';
-      spinoutCount++;
     }
+
+    // Count the FINAL binding so the notes line matches what the plan shows.
+    if (cap_binding === 'hard') hardCount++;
+    else if (cap_binding === 'soft') softCount++;
+    else if (cap_binding === 'spinout') spinoutCount++;
 
     let p_pull_w: number;
     let rider_np_w: number;
