@@ -656,6 +656,72 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
         <Formula caption="Terrängfaktorn kommer ur en standardmodell för hur vind avtar nära marken (logaritmisk vindprofil).">
           effektiv vind = prognosvind × terrängfaktor
         </Formula>
+        <DeepDive>
+          <p>Lufttäthet ur temperatur och tryck (ideala gaslagen, torr luft):</p>
+          <div className="howto-formula howto-formula-block">
+            {'ρ = p ÷ (Rd · T)    Rd = 287,058 J/(kg·K), T i kelvin'}
+          </div>
+          <p>
+            Vid fuktig luft korrigeras med virtuell temperatur T<sub>v</sub> = T ÷ (1 − (e/p)(1 −
+            Rd/Rv)), där Rv = 461,5 J/(kg·K) och ångtrycket e = RH · e<sub>s</sub> med Tetens
+            approximation e<sub>s</sub> = 611,2 · e^(17,67(T−273,15)/(T−29,65)) Pa. Effekten är
+            liten, upp till ungefär en halv procent vid typiskt loppväder.
+          </p>
+          <p>Vinden delas upp mot färdriktningen (Δ = vindriktning − kurs):</p>
+          <div className="howto-formula howto-formula-block">
+            {'motvind = W · cos Δ\nsidvind = W · sin Δ'}
+          </div>
+          <p>
+            Prognosvind (10 m) skalas till styrhöjd (1,2 m) med neutral logaritmisk vindprofil,
+            faktorn klampas till [0,15, 1]:
+          </p>
+          <div className="howto-formula howto-formula-block">
+            {'faktor = ln(1,2 ÷ z0) ÷ ln(10 ÷ z0)'}
+          </div>
+          <p>
+            z0 är terrängens råhetslängd. Standardrutten har exponeringsklass per vägsegment ur
+            OpenStreetMap; uppladdade rutter får en schablon för hela rutten (öppet 0,03 / blandat
+            0,05 / skyddat 0,3 m).
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Exponeringsklass</th>
+                <th>z0 (m)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>vatten</td>
+                <td>0,001</td>
+              </tr>
+              <tr>
+                <td>bro</td>
+                <td>0,002</td>
+              </tr>
+              <tr>
+                <td>öppet</td>
+                <td>0,03</td>
+              </tr>
+              <tr>
+                <td>halvöppet</td>
+                <td>0,08</td>
+              </tr>
+              <tr>
+                <td>skog</td>
+                <td>0,3</td>
+              </tr>
+              <tr>
+                <td>bebyggelse</td>
+                <td>0,4</td>
+              </tr>
+              <tr>
+                <td>skyddat</td>
+                <td>0,5</td>
+              </tr>
+            </tbody>
+          </table>
+        </DeepDive>
       </Section>
 
       <Section title="I grupp: drafting och jämn ansträngning" figure={<PacelineFigure />}>
@@ -668,6 +734,31 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
         <Formula caption="Upphöjt till fyra gör att korta hårda drag väger tyngre, precis som de känns i benen.">
           NP = (medel av 30-sekunders rullande effekt⁴)^¼
         </Formula>
+        <DeepDive>
+          <p>
+            Med <var>n</var> cyklister och 45 s drag är andelen tid på täten f_front = 1/n (solo:
+            1,0). Tidsmedeleffekten:
+          </p>
+          <div className="howto-formula howto-formula-block">
+            {'P_medel = f_front · P_täten + (1 − f_front) · P_lä'}
+          </div>
+          <p>
+            Rotationen modelleras som en fyrkantvåg: 45 s på täten med P<sub>täten</sub> (CdA 0,32),
+            resten av cykeln i lä med P<sub>lä</sub> (CdA 0,21). Normaliserad effekt är 30 sekunders
+            rullande medel, upphöjt till fyra, medelvärdesbildat och dragen fjärderot. För
+            fyrkantvågen finns en sluten form: varje rullande fönster är en konvex blandning a·P
+            <sub>täten</sub> + (1−a)·P<sub>lä</sub>, så NP⁴ blir ett polynom i de två effekterna med
+            förberäknade momentkoefficienter:
+          </p>
+          <div className="howto-formula howto-formula-block">
+            {'NP = (c₄·Pt⁴ + c₃·Pt³·Pl + c₂·Pt²·Pl² + c₁·Pt·Pl³ + c₀·Pl⁴)^¼'}
+          </div>
+          <p>
+            Det gör utvärderingen O(1) per fart i stället för en sampelsimulering, verifierad mot
+            referensimplementationen inom 10⁻⁶. Farten som ger mål-NP löses med bisektion till 0,1
+            W.
+          </p>
+        </DeepDive>
       </Section>
 
       <Section title="Hur lösaren hittar din tid" figure={<SolverFigure />}>

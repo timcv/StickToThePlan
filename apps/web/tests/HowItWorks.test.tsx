@@ -18,6 +18,16 @@ describe('HowItWorks deep dives', () => {
     expect(text).toContain('0,32'); // CdA på täten
     expect(text).toContain('0,21'); // CdA i lä
     expect(text).toContain('0,97'); // drivlina
-    expect(text).toContain('96'); // massa
+    expect(text).toContain('96 kg'); // massa
+  });
+
+  it('renders air/wind and group deep dives with exact constants', () => {
+    const { container } = render(<HowItWorks onBack={() => {}} />);
+    expect(container.querySelectorAll('details.howto-deep').length).toBeGreaterThanOrEqual(3);
+    const text = container.textContent ?? '';
+    expect(text).toContain('287,058'); // Rd
+    expect(text).toContain('0,001'); // z0 vatten
+    expect(text).toContain('45 s'); // dragens längd
+    expect(text).toContain('f_front'); // rotationsandel
   });
 });
