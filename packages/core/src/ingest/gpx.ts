@@ -8,7 +8,8 @@ import { haversine, bearing } from '../util/geo.js';
 
 /**
  * Parse a GPX XML string and return an array of RoutePoints.
- * Handles trk and trkseg as either arrays or single objects.
+ * Reads all trk, trkseg, and trkpt elements; handles single objects and arrays.
+ * Concatenates track points from all segments in document order.
  */
 export function parseGpxString(xml: string): RoutePoint[] {
   const parser = new XMLParser({
@@ -19,26 +20,20 @@ export function parseGpxString(xml: string): RoutePoint[] {
 
   const gpx = doc['gpx'] as Record<string, unknown>;
 
-  // trk may be a single object or an array
-  let trk = gpx['trk'];
-  if (Array.isArray(trk)) {
-    trk = trk[0];
-  }
-  const trkObj = trk as Record<string, unknown>;
+  // fast-xml-parser yields a single object for one element, an array for many.
+  const asArray = (x: unknown): Array<Record<string, unknown>> =>
+    x === undefined || x === null
+      ? []
+      : Array.isArray(x)
+        ? (x as Array<Record<string, unknown>>)
+        : [x as Record<string, unknown>];
 
-  // trkseg may be a single object or an array
-  let trkseg = trkObj['trkseg'];
-  if (Array.isArray(trkseg)) {
-    trkseg = trkseg[0];
+  const points: Array<Record<string, unknown>> = [];
+  for (const trk of asArray(gpx['trk'])) {
+    for (const seg of asArray(trk['trkseg'])) {
+      points.push(...asArray(seg['trkpt']));
+    }
   }
-  const trksegObj = trkseg as Record<string, unknown>;
-
-  // trkpt is always an array (fast-xml-parser may return a single object if only 1 point)
-  let trkpts = trksegObj['trkpt'];
-  if (!Array.isArray(trkpts)) {
-    trkpts = [trkpts];
-  }
-  const points = trkpts as Array<Record<string, unknown>>;
 
   return points.map((pt) => ({
     lat: Number(pt['@_lat']),
