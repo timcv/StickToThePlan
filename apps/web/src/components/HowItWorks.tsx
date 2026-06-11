@@ -50,6 +50,15 @@ function Formula({ children, caption }: { children: ReactNode; caption: string }
   );
 }
 
+function DeepDive({ children }: { children: ReactNode }) {
+  return (
+    <details className="howto-deep">
+      <summary>Fördjupning: exakta formler</summary>
+      <div className="howto-deep-body">{children}</div>
+    </details>
+  );
+}
+
 /* ---- Figures ---- */
 
 function GrundidenFigure() {
@@ -578,6 +587,62 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
         <Formula caption="Luftmotståndet växer med farten i kvadrat, därför betyder vind och kroppshållning så mycket.">
           effekt = (backe + rull + luft) × fart ÷ verkningsgrad
         </Formula>
+        <DeepDive>
+          <p>
+            Effekten vid tramporna för fart <var>v</var>, lutning och vind beräknas stationärt
+            (physics.ts):
+          </p>
+          <div className="howto-formula howto-formula-block">
+            {'θ = atan(lutning)\n'}
+            {'F_gravitation = m · g · sin θ\n'}
+            {'F_rull = m · g · cos θ · crr\n'}
+            {'u = v + motvind (axiell skenbar vind)\n'}
+            {'v_app = √(u² + sidvind²)\n'}
+            {'F_luft = ½ · ρ · CdA · v_app · u\n'}
+            {'P = (F_gravitation + F_rull + F_luft) · v ÷ η'}
+          </div>
+          <p>
+            Sidvind höjer dessutom effektiv CdA med yaw-vinkeln: CdA·(1 + 0,04·|yaw°|/10), cirka +8
+            % vid 20° yaw, klampad till ±50°. Fart ur effekt löses med bisektion på [0,5, 25] m/s
+            till 0,01 W.
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Parameter</th>
+                <th>Standardvärde</th>
+                <th>Betydelse</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>m</td>
+                <td>96 kg</td>
+                <td>cyklist + cykel</td>
+              </tr>
+              <tr>
+                <td>crr</td>
+                <td>0,0045</td>
+                <td>rullmotståndskoefficient</td>
+              </tr>
+              <tr>
+                <td>CdA</td>
+                <td>0,32 / 0,21 m²</td>
+                <td>på täten / i lä</td>
+              </tr>
+              <tr>
+                <td>η</td>
+                <td>0,97</td>
+                <td>drivlinans verkningsgrad</td>
+              </tr>
+              <tr>
+                <td>g</td>
+                <td>9,81 m/s²</td>
+                <td>tyngdacceleration</td>
+              </tr>
+            </tbody>
+          </table>
+        </DeepDive>
       </Section>
 
       <Section title="Luft, vind och terräng" figure={<WindFigure />}>
