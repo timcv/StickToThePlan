@@ -16,10 +16,12 @@ const OVERPASS_ENDPOINTS = [
 const DELAY_MS = 2500;
 const MAX_RETRIES = 6;
 
-// Downsample route for tiled queries — one sample per ~5 km avoids
+// Downsample route for tiled queries — one sample per ~3 km avoids
 // querying tens-of-thousands of tiny boxes while still covering the route.
-const TILE_STEP_KM = 5;
-const TILE_PAD_DEG = 0.015; // ~1.67 km N-S, ~0.88 km E-W at 58°N; keep TILE_STEP_KM <= ~2x the smaller (E-W) value or tiles leave gaps
+// Gap-free requires TILE_STEP_KM <= 2x the smaller (E-W) pad radius:
+// 0.03° ≈ 3.33 km N-S, ~1.76 km E-W at 58°N, so step 3 km <= 2*1.76 holds.
+const TILE_STEP_KM = 3;
+const TILE_PAD_DEG = 0.03;
 
 function parsePoints(xml) {
   const pts = [];
@@ -51,6 +53,8 @@ async function fetchTile(bbox) {
   way["landuse"="residential"](${bbox});
   way["landuse"="commercial"](${bbox});
   way["landuse"="industrial"](${bbox});
+  way["natural"="scrub"](${bbox});
+  way["natural"="heath"](${bbox});
   way["bridge"="yes"](${bbox});
 );
 out geom;`;
@@ -98,6 +102,7 @@ function classOf(el) {
   if (t.natural === 'wood' || t.landuse === 'forest') return 'forest';
   if (t.landuse === 'residential' || t.landuse === 'commercial' || t.landuse === 'industrial')
     return 'urban';
+  if (t.natural === 'scrub' || t.natural === 'heath') return 'semi_open';
   return null;
 }
 
@@ -116,14 +121,67 @@ function inPoly(pt, geom) {
 }
 
 function classifyPoint(pt, polys) {
-  // Priority: bridge > water > forest > urban > semi_open (default)
-  const order = ['bridge', 'water', 'forest', 'urban'];
+  // Priority: bridge > water > forest > urban > semi_open (scrub/heath) > open (default).
+  // Untagged land on this rural route is overwhelmingly open farmland, so the
+  // fallback is 'open'; 'semi_open' is reserved for confirmed shrub/heath cover.
+  const order = ['bridge', 'water', 'forest', 'urban', 'semi_open'];
   for (const cls of order) {
     for (const poly of polys) {
       if (poly.cls === cls && poly.geom.length > 2 && inPoly(pt, poly.geom)) return cls;
     }
   }
-  return 'semi_open';
+  return 'open';
+}
+
+// Sheltering cover at a single side-sample point: forest > urban > scrub, else null.
+function shelterAt(pt, polys) {
+  for (const cls of ['forest', 'urban', 'semi_open']) {
+    for (const poly of polys) {
+      if (poly.cls === cls && poly.geom.length > 2 && inPoly(pt, poly.geom)) return cls;
+    }
+  }
+  return null;
+}
+
+// Roughness used only to rank shelter classes when the two sides disagree.
+const SIDE_Z0 = { semi_open: 0.08, forest: 0.3, urban: 0.4 };
+
+const M_PER_DEG_LAT = 111320;
+
+/**
+ * Classify one route segment. OSM landcover polygons stop at the road edge, so
+ * point-in-polygon on the road centerline misses the forest you ride through.
+ * Sample SIDE_OFFSET_M perpendicular to the segment on both sides:
+ * shelter on both sides -> that class, one side -> semi_open, none -> open.
+ * The centerline point still decides bridge/water/inside-polygon cases.
+ */
+const SIDE_OFFSET_M = 45;
+function classifySegment(a, b, polys) {
+  const mid = { lat: (a.lat + b.lat) / 2, lon: (a.lon + b.lon) / 2 };
+  const centre = classifyPoint(mid, polys);
+  if (centre !== 'open') return centre;
+
+  const mPerDegLon = M_PER_DEG_LAT * Math.cos((mid.lat * Math.PI) / 180);
+  const dx = (b.lon - a.lon) * mPerDegLon;
+  const dy = (b.lat - a.lat) * M_PER_DEG_LAT;
+  const len = Math.hypot(dx, dy);
+  if (len === 0) return centre; // duplicate trackpoints; no direction to offset along
+
+  // Unit perpendicular (metres), scaled to the sampling offset.
+  const px = (-dy / len) * SIDE_OFFSET_M;
+  const py = (dx / len) * SIDE_OFFSET_M;
+  const left = { lat: mid.lat + py / M_PER_DEG_LAT, lon: mid.lon + px / mPerDegLon };
+  const right = { lat: mid.lat - py / M_PER_DEG_LAT, lon: mid.lon - px / mPerDegLon };
+
+  const sL = shelterAt(left, polys);
+  const sR = shelterAt(right, polys);
+  if (sL && sR) {
+    // Both sides sheltered. When they disagree, use the LESS sheltering class
+    // (lower z0) so the wind model stays conservative.
+    return sL === sR ? sL : SIDE_Z0[sL] <= SIDE_Z0[sR] ? sL : sR;
+  }
+  if (sL || sR) return 'semi_open';
+  return 'open';
 }
 
 function toRuns(perSegClass, cumKm) {
@@ -218,14 +276,10 @@ for (const c of centres) {
 
 console.log(`\npolygons total (deduped)=${polys.length}`);
 
-// Classify each segment midpoint.
+// Classify each segment (centerline + perpendicular side samples).
 const perSeg = [];
 for (let i = 0; i < pts.length - 1; i++) {
-  const mid = {
-    lat: (pts[i].lat + pts[i + 1].lat) / 2,
-    lon: (pts[i].lon + pts[i + 1].lon) / 2,
-  };
-  perSeg.push(classifyPoint(mid, polys));
+  perSeg.push(classifySegment(pts[i], pts[i + 1], polys));
 }
 
 const runs = toRuns(perSeg, cumKm);
@@ -250,7 +304,8 @@ writeFileSync(
     {
       route_id: ROUTE_ID,
       generated_note:
-        'OSM/Overpass bake; classes literature-mapped to z0 in core/weather/effective.ts',
+        'OSM/Overpass bake with perpendicular side-sampling (one-sided shelter = semi_open); ' +
+        'classes literature-mapped to z0 in core/weather/effective.ts',
       total_km: +totalKm.toFixed(3),
       runs,
     },
