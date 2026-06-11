@@ -62,6 +62,44 @@ export function dedupePoints(pts: RoutePoint[]): RoutePoint[] {
 }
 
 // -------------------------------------------------------------------------
+// fillElevationGaps
+// -------------------------------------------------------------------------
+
+/**
+ * Replace non-finite elevation values (missing <ele> parses to NaN) so the
+ * grade model never sees NaN. Interior gaps are linearly interpolated between
+ * the nearest finite anchors; leading/trailing gaps clamp to the nearest
+ * finite value. Throws when NO point carries a finite elevation: silently
+ * assuming a flat route would produce a misleading plan.
+ */
+export function fillElevationGaps(eles: number[]): number[] {
+  const n = eles.length;
+  const out = [...eles];
+  const finiteIdx: number[] = [];
+  for (let i = 0; i < n; i++) {
+    if (Number.isFinite(out[i])) finiteIdx.push(i);
+  }
+  if (finiteIdx.length === 0) {
+    throw new Error(
+      `GPX elevation data missing: none of the ${n} track points has a finite <ele> value`,
+    );
+  }
+  const first = finiteIdx[0];
+  const last = finiteIdx[finiteIdx.length - 1];
+  for (let i = 0; i < first; i++) out[i] = out[first];
+  for (let i = last + 1; i < n; i++) out[i] = out[last];
+  for (let k = 0; k < finiteIdx.length - 1; k++) {
+    const a = finiteIdx[k];
+    const b = finiteIdx[k + 1];
+    for (let i = a + 1; i < b; i++) {
+      const t = (i - a) / (b - a);
+      out[i] = out[a] * (1 - t) + out[b] * t;
+    }
+  }
+  return out;
+}
+
+// -------------------------------------------------------------------------
 // smoothElevation
 // -------------------------------------------------------------------------
 
@@ -129,7 +167,11 @@ export function buildMicroSegments(
     let grade = 0;
     if (distance_m !== 0) {
       const rawGrade = (eleEnd - eleStart) / distance_m;
-      grade = Math.max(-cfg.max_grade, Math.min(cfg.max_grade, rawGrade));
+      // NaN would slip through the min/max clamp and poison the speed solver;
+      // treat any non-finite grade as flat.
+      grade = Number.isFinite(rawGrade)
+        ? Math.max(-cfg.max_grade, Math.min(cfg.max_grade, rawGrade))
+        : 0;
     }
 
     // neutral is based on the START cumulative distance (before this segment)
@@ -166,7 +208,7 @@ export function ingestGpxString(xml: string, cfg: Config): MicroSegment[] {
   const pts = parseGpxString(xml);
   const deduped = dedupePoints(pts);
   const smoothedEle = smoothElevation(
-    deduped.map((p) => p.ele),
+    fillElevationGaps(deduped.map((p) => p.ele)),
     cfg.ele_smooth_window,
   );
   return buildMicroSegments(deduped, smoothedEle, cfg);
