@@ -558,6 +558,51 @@ function ScenarioFigure() {
   );
 }
 
+function RoadPrepFigure() {
+  const raw =
+    '40,120 90,96 140,128 190,84 240,150 290,92 340,116 390,70 440,150 490,104 560,88 640,108';
+  const smooth = '40,116 140,112 240,118 340,100 440,108 560,96 640,104';
+  return (
+    <svg width="100%" viewBox="0 0 680 176" role="img" aria-labelledby="road-t road-d">
+      <title id="road-t">Rå höjdkurva jämnas ut och brant lutning klampas</title>
+      <desc id="road-d">
+        En taggig rå höjdkurva med en utjämnad linje ovanpå, en avhuggen spik som visar
+        lutningstaket, och en markerad neutral första kilometer.
+      </desc>
+      <rect x="40" y="40" width="80" height="120" fill={C.fill} opacity="0.7" />
+      <text x="44" y="56" fontSize="11" fill={C.muted}>
+        Neutral km
+      </text>
+      <polyline points={raw} fill="none" stroke={C.gray} strokeWidth="1.5" strokeDasharray="4 3" />
+      <polyline
+        points={smooth}
+        fill="none"
+        stroke={C.accent}
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+      <line
+        x1="380"
+        y1="70"
+        x2="400"
+        y2="64"
+        stroke={C.coral}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+      <text x="392" y="56" fontSize="12" fill={C.coral}>
+        klampad till ±18 %
+      </text>
+      <text x="44" y="172" fontSize="12" fill={C.gray}>
+        Rå GPX-höjd
+      </text>
+      <text x="640" y="172" fontSize="12" fill={C.accent} textAnchor="end" fontWeight="600">
+        Utjämnad profil
+      </text>
+    </svg>
+  );
+}
+
 export function HowItWorks({ onBack }: { onBack: () => void }) {
   return (
     <div className="howto">
@@ -576,6 +621,34 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           varvet. Det är så en van cyklist faktiskt kör: lika hårt uppför som nerför, inte lika
           fort.
         </p>
+      </Section>
+
+      <Section title="Från GPX till väg" figure={<RoadPrepFigure />}>
+        <p>
+          Din GPX är en lista med punkter. Vi rensar dubblerade punkter, jämnar ut höjden med ett
+          glidande medel så att barometerbrus inte blir falska backar, och delar rutten i hundratals
+          små bitar. För varje bit räknar vi lutningen ur höjdskillnaden, och klampar orimligt
+          branta värden så att en GPS-spik inte blåser upp effektkravet. Första kilometern är
+          neutral: en lugn rullstart på 20 km/h utanför ansträngningsmodellen, precis som
+          masstarten.
+        </p>
+        <Formula caption="Utan utjämning skulle varje liten höjdvariation läsas som en backe och störa effektberäkningen.">
+          lutning = höjdskillnad ÷ sträcka, klampad till ±18 %
+        </Formula>
+        <DeepDive>
+          <p>Höjden filtreras med ett glidande medel innan lutningen beräknas per mikrosegment:</p>
+          <div className="howto-formula howto-formula-block">
+            {'höjd_utjämnad = glidande medel över 5 punkter\n'}
+            {'lutning = (höjd_slut − höjd_start) ÷ längd\n'}
+            {'lutning klampas till [−0,18, 0,18]  (±18 %)\n'}
+            {'neutral: cum_distans < 1 km → 20 km/h, utanför NP-modellen'}
+          </div>
+          <p>
+            Parametrar: utjämningsfönster 5 punkter, lutningstak 18 %, neutral sträcka 1 km vid 20
+            km/h. Sammanfallande punkter tas bort först så att en stillastående logg inte ger
+            nolldistans-bitar.
+          </p>
+        </DeepDive>
       </Section>
 
       <Section title="Tre krafter du trampar mot" figure={<ForcesFigure />}>
