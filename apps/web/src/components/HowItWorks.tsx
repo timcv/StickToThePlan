@@ -101,7 +101,7 @@ function ForcesFigure() {
       <title id="fig2-t">Cyklist med tre motståndskrafter</title>
       <desc id="fig2-d">
         En cyklist på en svag uppförsbacke med tre bakåtriktade pilar: ett stort luftmotstånd, ett
-        mindre rullmotstånd och tyngden nedåt, samt en framåtriktad pil för tramplkraften.
+        mindre rullmotstånd och tyngden nedåt, samt en framåtriktad pil för trampkraften.
       </desc>
       <defs>
         <marker
@@ -393,7 +393,7 @@ function PacelineFigure() {
         På täten: full vind
       </text>
       <text x="120" y="128" fontSize="13" fill={C.muted}>
-        I lä: ungefär 35 % lägre luftmotstånd
+        I lä: ungefär en tredjedel lägre luftmotstånd
       </text>
     </svg>
   );
@@ -710,7 +710,7 @@ function RoadPrepFigure() {
   const smooth = '40,116 140,112 240,118 340,100 440,108 560,96 640,104';
   return (
     <svg width="100%" viewBox="0 0 680 176" role="img" aria-labelledby="road-t road-d">
-      <title id="road-t">Rå höjdkurva jämnas ut och brant lutning klampas</title>
+      <title id="road-t">Rå höjdkurva jämnas ut och brant lutning kapas</title>
       <desc id="road-d">
         En taggig rå höjdkurva med en utjämnad linje ovanpå, en avhuggen spik som visar
         lutningstaket, och en markerad neutral första kilometer.
@@ -983,20 +983,19 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
         <p>
           Din GPX är en lista med punkter. Vi rensar dubblerade punkter, jämnar ut höjden med ett
           glidande medel så att barometerbrus inte blir falska backar, och delar rutten i hundratals
-          små bitar. För varje bit räknar vi lutningen ur höjdskillnaden, och klampar orimligt
-          branta värden så att en GPS-spik inte blåser upp effektkravet. Första kilometern är
-          neutral: en lugn rullstart på 20 km/h utanför ansträngningsmodellen, precis som
-          masstarten.
+          små bitar. För varje bit räknar vi lutningen ur höjdskillnaden, och kapar orimligt branta
+          värden så att en GPS-spik inte blåser upp effektkravet. Första kilometern är neutral: en
+          lugn rullstart på 20 km/h utanför ansträngningsmodellen, precis som masstarten.
         </p>
         <Formula caption="Utan utjämning skulle varje liten höjdvariation läsas som en backe och störa effektberäkningen.">
-          lutning = höjdskillnad ÷ sträcka, klampad till ±18 %
+          lutning = höjdskillnad ÷ sträcka, kapad till ±18 %
         </Formula>
         <DeepDive>
           <p>Höjden filtreras med ett glidande medel innan lutningen beräknas per mikrosegment:</p>
           <div className="howto-formula howto-formula-block">
             {'höjd_utjämnad = glidande medel över 5 punkter\n'}
             {'lutning = (höjd_slut − höjd_start) ÷ längd\n'}
-            {'lutning klampas till [−0,18, 0,18]  (±18 %)\n'}
+            {'lutning kapas till [−0,18, 0,18]  (±18 %)\n'}
             {'neutral: cum_distans < 1 km → 20 km/h, utanför NP-modellen'}
           </div>
           <p>
@@ -1032,8 +1031,8 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           </div>
           <p>
             Sidvind höjer dessutom effektiv CdA med yaw-vinkeln: CdA·(1 + 0,04·|yaw°|/10), cirka +8
-            % vid 20° yaw, klampad till ±50°. Fart ur effekt löses med bisektion på [0,5, 25] m/s
-            till 0,01 W.
+            % vid 20° yaw, kapad till ±50°. Fart ur effekt löses med bisektion på [0,5, 25] m/s till
+            0,01 W.
           </p>
           <table>
             <thead>
@@ -1102,7 +1101,7 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           </div>
           <p>
             Prognosvind (10 m) skalas till styrhöjd (1,2 m) med neutral logaritmisk vindprofil,
-            faktorn klampas till [0,15, 1]:
+            faktorn kapas till [0,15, 1]:
           </p>
           <div className="howto-formula howto-formula-block">
             {'faktor = ln(1,2 ÷ z0) ÷ ln(10 ÷ z0)'}
@@ -1187,7 +1186,7 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           I ett kedjegäng ligger du mest i lä, där luftmotståndet är ungefär en tredjedel lägre. Vi
           modellerar rotationen: korta, hårda drag på täten och längre återhämtning i hjul. För att
           fånga vad det gör med kroppen mäter vi din ansträngning som normaliserad effekt (NP), ett
-          mått som straffar de hårda dragen hårdare än ett vanligt snitt gör.
+          mått som straffar de hårda dragen mer än ett vanligt snitt gör.
         </p>
         <Formula caption="Upphöjt till fyra gör att korta hårda drag väger tyngre, precis som de känns i benen.">
           NP = (medel av 30-sekunders rullande effekt⁴)^¼
@@ -1388,9 +1387,9 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
         </Formula>
         <DeepDive>
           <p>
-            Bandet är ±5 % kring den tidsviktade drageffekten per rad. Datafältet kan rikta sig mot
-            antingen drageffekten eller snitteffekten. Det läser kontrollnamn och avstånd ur banan
-            och tolkar den planerade tiden ur varje banpunkts namn:
+            Bandet är ±5 % kring den tidsviktade drageffekten per rad. Garmin-datafältet läser
+            kontrollnamn och avstånd ur banan och tolkar den planerade tiden ur varje banpunkts
+            namn:
           </p>
           <div className="howto-formula howto-formula-block">
             {'"Gränna 07:04"   → absolut klocktid\n'}
