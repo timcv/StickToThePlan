@@ -900,6 +900,61 @@ function EtaClockFigure() {
   );
 }
 
+function CardWatchFigure() {
+  return (
+    <svg width="100%" viewBox="0 0 680 200" role="img" aria-labelledby="card-t card-d">
+      <title id="card-t">Effektband på kortet och ett Garmin-datafält</title>
+      <desc id="card-d">
+        Till vänster en tempokortsrad med en parentes som visar ett effektband plus minus fem
+        procent. Till höger en klockskärm med nästa kontroll, avstånd, fart, ankomsttid och plus två
+        minuter mot plan.
+      </desc>
+      <text x="40" y="40" fontSize="13" fill={C.text} fontWeight="600">
+        Tempokortet
+      </text>
+      <rect
+        x="40"
+        y="56"
+        width="280"
+        height="40"
+        rx="6"
+        fill={C.fill}
+        stroke={C.border}
+        strokeWidth="1"
+      />
+      <text x="60" y="80" fontSize="13" fill={C.text}>
+        Drageffekt
+      </text>
+      <text x="250" y="80" fontSize="15" fill={C.accent} fontWeight="700" textAnchor="middle">
+        238–263 W
+      </text>
+      <path d="M196 100 H304" fill="none" stroke={C.coral} strokeWidth="1.5" />
+      <text x="250" y="120" fontSize="11" fill={C.coral} textAnchor="middle">
+        ±5 % band
+      </text>
+      <text x="430" y="40" fontSize="13" fill={C.text} fontWeight="600">
+        Garmin-datafält
+      </text>
+      <rect x="430" y="52" width="190" height="120" rx="18" fill="#000" />
+      <text x="525" y="78" fontSize="13" fill="#fff" textAnchor="middle" fontWeight="700">
+        GRÄNNA
+      </text>
+      <text x="525" y="104" fontSize="20" fill="#fff" textAnchor="middle" fontWeight="700">
+        12,3 km
+      </text>
+      <text x="525" y="126" fontSize="13" fill={C.accent} textAnchor="middle">
+        31 km/h
+      </text>
+      <text x="525" y="146" fontSize="12" fill="#fff" textAnchor="middle">
+        ETA 09:14
+      </text>
+      <text x="525" y="164" fontSize="13" fill={C.green} textAnchor="middle" fontWeight="700">
+        +2 min
+      </text>
+    </svg>
+  );
+}
+
 export function HowItWorks({ onBack }: { onBack: () => void }) {
   return (
     <div className="howto">
@@ -1312,6 +1367,36 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
             Klockan visas som lokal tid och hanterar varv som passerar midnatt. Depåstopp är hårda
             gränser i kortet: de slås aldrig ihop med grannrader, så ankomst- och avgångstiden står
             alltid kvar på sin egen rad.
+          </p>
+        </DeepDive>
+      </Section>
+
+      <Section title="Tempokortet och klockan på styret" figure={<CardWatchFigure />}>
+        <p>
+          Drageffekten på kortet visas som ett band, inte en exakt siffra, eftersom verkliga drag
+          varierar och målet är ett spann att hålla dig inom, inte en omöjlig precision. Vill du ha
+          planen live på styret finns ett valfritt Garmin-datafält. Det läser den inlästa banan
+          direkt i klockan och visar nästa kontroll, avstånd kvar dit, din fart på sträckan,
+          beräknad ankomsttid och hur många minuter före eller efter plan du ligger.
+        </p>
+        <Formula caption="Bandet ger marginal för verkliga drag, medan klockan visar om du tjänar eller tappar tid mot planen.">
+          band = drageffekt × (1 ± 5 %)
+        </Formula>
+        <DeepDive>
+          <p>
+            Bandet är ±5 % kring den tidsviktade drageffekten per rad. Datafältet kan rikta sig mot
+            antingen drageffekten eller snitteffekten. Det läser kontrollnamn och avstånd ur banan
+            och tolkar den planerade tiden ur varje banpunkts namn:
+          </p>
+          <div className="howto-formula howto-formula-block">
+            {'"Gränna 07:04"   → absolut klocktid\n'}
+            {'"Gränna +2:42"   → tid sedan start (relativt läge)\n'}
+            {'± min = projicerad ankomst − planerad tid  (färgad grön/gul/röd)'}
+          </div>
+          <p>
+            Fältet är generiskt: inget om en specifik plan är inbyggt, allt når klockan via banfilen
+            (course.fit). Avvikelsen mot plan färgas grön nära noll, gul vid måttlig drift och röd
+            vid stor.
           </p>
         </DeepDive>
       </Section>
