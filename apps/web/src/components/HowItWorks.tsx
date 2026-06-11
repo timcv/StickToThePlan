@@ -402,7 +402,7 @@ function PacelineFigure() {
 function SolverFigure() {
   const steps = [
     { x: 30, label: 'Gissa', sub: 'ansträngning' },
-    { x: 198, label: 'Marschera', sub: 'rutten sträcka för sträcka' },
+    { x: 198, label: 'Kör', sub: 'rutten sträcka för sträcka' },
     { x: 366, label: 'Summera', sub: 'total tid' },
     { x: 534, label: 'Träffar', sub: 'måltiden?' },
   ];
@@ -410,9 +410,9 @@ function SolverFigure() {
     <svg width="100%" viewBox="0 0 680 168" role="img" aria-labelledby="fig5-t fig5-d">
       <title id="fig5-t">Lösarens slinga</title>
       <desc id="fig5-d">
-        Fyra steg i rad: gissa en ansträngning, marschera rutten, summera tiden och se om den
-        träffar målet. En pil tillbaka visar att ansträngningen justeras och slingan körs om tills
-        tiden stämmer.
+        Fyra steg i rad: gissa en ansträngning, kör rutten, summera tiden och se om den träffar
+        målet. En pil tillbaka visar att ansträngningen justeras och slingan körs om tills tiden
+        stämmer.
       </desc>
       <defs>
         <marker
@@ -481,7 +481,7 @@ function SolverFigure() {
         markerEnd="url(#s-arrow)"
       />
       <text x="340" y="148" fontSize="12" fill={C.coral} textAnchor="middle">
-        Justera ansträngningen och kör om tills tiden stämmer på sekunden
+        Justera ansträngningen och kör om tills tiden stämmer med målet
       </text>
     </svg>
   );
@@ -725,7 +725,7 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
         </DeepDive>
       </Section>
 
-      <Section title="I grupp: drafting och jämn ansträngning" figure={<PacelineFigure />}>
+      <Section title="I grupp: lä och jämn ansträngning" figure={<PacelineFigure />}>
         <p>
           I ett kedjegäng ligger du mest i lä, där luftmotståndet är ungefär en tredjedel lägre. Vi
           modellerar rotationen: korta, hårda drag på täten och längre återhämtning i hjul. För att
@@ -762,11 +762,11 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
         </DeepDive>
       </Section>
 
-      <Section title="Hur lösaren hittar din tid" figure={<SolverFigure />}>
+      <Section title="Hur vi räknar fram din tid" figure={<SolverFigure />}>
         <p>
           Vi gissar en ansträngningsnivå, kör igenom hela rutten sträcka för sträcka, räknar fart
           och tid på varje, och summerar. Blev det för långsamt höjer vi ansträngningen, för snabbt
-          sänker vi den, och halverar intervallet tills tiden stämmer med ditt mål. Realistiska
+          sänker vi den, och justerar oss närmare tills tiden stämmer med ditt mål. Realistiska
           effekttak gör att planen aldrig kräver orimligt hårda drag i branta backar eller farter
           över 50 km/h.
         </p>
