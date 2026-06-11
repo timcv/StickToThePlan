@@ -683,6 +683,56 @@ button.download-btn:hover {
   color: var(--text);
 }
 
+.howto-toc {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 24px;
+  margin: 0 0 16px;
+}
+.howto-toc-title {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.howto-toc ol {
+  counter-reset: howto-toc;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 2px 20px;
+}
+.howto-toc li {
+  counter-increment: howto-toc;
+}
+.howto-toc-link {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 5px 0;
+  font: inherit;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: var(--accent);
+  cursor: pointer;
+}
+.howto-toc-link::before {
+  content: counter(howto-toc) '.';
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.howto-toc-link:hover {
+  text-decoration: underline;
+}
+
 .howto-section {
   background: var(--surface);
   border: 1px solid var(--border);
