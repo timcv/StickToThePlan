@@ -548,3 +548,85 @@ describe('segment() preserves control towns across merges', () => {
     expect(result.some((s) => s.town === 'Mid')).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Math review M5/M6: time-weighted aggregation + band survival through merges
+// ---------------------------------------------------------------------------
+
+describe('time-weighted power aggregation (M5)', () => {
+  const cfgW: Config = applyDefaults({
+    race_date: '2026-06-13',
+    start_time: '04:22',
+    gpx_path: 'x',
+    ftp: 272,
+    n_riders: 12,
+    target_total_hm: '11:45',
+    stops: [],
+  });
+
+  it('weights segment power by time, not by micro count', () => {
+    const micros = buildMicros(3); // idx0 neutral, idx1-2 effort, 1000 m each
+    const segs = [
+      makeSeg(micros[0]),
+      // 1000 m at 10 m/s -> 100 s at 100 W
+      makeSeg(micros[1], { v_ms: 10, p_mean_w: 100, p_pull_w: 100 }),
+      // 1000 m at 5 m/s -> 200 s at 200 W (and pull 250)
+      makeSeg(micros[2], { v_ms: 5, p_mean_w: 200, p_pull_w: 250 }),
+    ];
+    const plan = buildPlanResult(segs);
+    const controls: ControlPoint[] = [
+      { name: 'Start', km: 0 },
+      { name: 'End', km: 3 },
+    ];
+    const rows = segment(plan, cfgW, controls);
+    expect(rows).toHaveLength(1);
+    // Time-weighted: (100*100 + 200*200) / 300 = 166.7 -> 167.
+    // An unweighted mean would read 150.
+    expect(rows[0].avg_w).toBe(167);
+    // pull mean time-weighted: (100*100 + 250*200) / 300 = 200 -> band 190/210.
+    expect(rows[0].pull_w_mean).toBeCloseTo(200, 6);
+    expect(rows[0].pull_w_low).toBe(190);
+    expect(rows[0].pull_w_high).toBe(210);
+  });
+});
+
+describe('merged band survives a zero-pull half (M6)', () => {
+  const cfgM: Config = applyDefaults({
+    race_date: '2026-06-13',
+    start_time: '04:22',
+    gpx_path: 'x',
+    ftp: 272,
+    n_riders: 12,
+    target_total_hm: '11:45',
+    stops: [],
+    min_segment_km: 3,
+  });
+
+  it('re-derives the band from the carried pull_w_mean instead of collapsing to 0', () => {
+    // Wind-flip boundary after micro idx1: group A = [0,1] (coasting, pull 0),
+    // group B = [2..5] (pull 200). Group A is 2 km < min_segment_km 3 km, so it
+    // merges into B; the merged band must stay positive.
+    const micros = buildMicros(6);
+    const segs = [
+      makeSeg(micros[0], { headwind_ms: 3 }),
+      makeSeg(micros[1], { headwind_ms: 3, p_pull_w: 0, p_mean_w: 0 }),
+      makeSeg(micros[2], { headwind_ms: -3, p_pull_w: 200, p_mean_w: 150 }),
+      makeSeg(micros[3], { headwind_ms: -3, p_pull_w: 200, p_mean_w: 150 }),
+      makeSeg(micros[4], { headwind_ms: -3, p_pull_w: 200, p_mean_w: 150 }),
+      makeSeg(micros[5], { headwind_ms: -3, p_pull_w: 200, p_mean_w: 150 }),
+    ];
+    const plan = buildPlanResult(segs);
+    const controls: ControlPoint[] = [
+      { name: 'Start', km: 0 },
+      { name: 'End', km: 6 },
+    ];
+    const rows = segment(plan, cfgM, controls);
+    expect(rows).toHaveLength(1);
+    const merged = rows[0];
+    // Old behavior: the zero-pull left half collapsed the band to 0/0.
+    expect(merged.pull_w_mean).toBeGreaterThan(0);
+    expect(merged.pull_w_low).toBeGreaterThan(0);
+    expect(merged.pull_w_high).toBeGreaterThan(merged.pull_w_low);
+    expect(merged.pull_w_high).toBe(Math.round(merged.pull_w_mean * (1 + cfgM.band_pct)));
+  });
+});

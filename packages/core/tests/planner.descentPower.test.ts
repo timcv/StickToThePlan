@@ -46,7 +46,7 @@ const cfg: Config = applyDefaults({
 
 describe('planner descent power', () => {
   it('never reports negative pedal power on a gentle descent at low effort', () => {
-    const plan = runInnerSolve(buildDescentRoute(-0.03), 80, calmWeather, cfg, 0);
+    const plan = runInnerSolve(buildDescentRoute(-0.03), 80, calmWeather, cfg);
     for (const s of plan.segments) {
       expect(s.p_pull_w).toBeGreaterThanOrEqual(0);
       expect(s.p_draft_w).toBeGreaterThanOrEqual(0);

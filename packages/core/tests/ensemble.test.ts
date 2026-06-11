@@ -25,7 +25,7 @@ function makeSample(
 // ---------------------------------------------------------------------------
 
 describe('buildEnsemble vector mean', () => {
-  it('averages 350 deg and 10 deg to ~0 deg (not 180), speed between 4.8 and 5.0', () => {
+  it('averages 350 deg and 10 deg to ~0 deg (not 180), scalar-mean speed 5', () => {
     const samples: WindSample[] = [
       makeSample({ windspeed_ms: 5, winddir_from_deg: 350, source: 'src-A' }),
       makeSample({ windspeed_ms: 5, winddir_from_deg: 10, source: 'src-B' }),
@@ -36,9 +36,9 @@ describe('buildEnsemble vector mean', () => {
 
     const cell = field.cells[0];
 
-    // Wind speed: vector mean of two symmetric vectors should be close to 5*cos(10deg) ~ 4.92
-    expect(cell.windspeed_mean_ms).toBeGreaterThan(4.8);
-    expect(cell.windspeed_mean_ms).toBeLessThan(5.0);
+    // Wind speed: scalar mean of member speeds; direction spread must not
+    // cancel the magnitude (a vector-mean magnitude would give 5*cos(10deg)).
+    expect(cell.windspeed_mean_ms).toBeCloseTo(5, 6);
 
     // Direction: 0 degrees (north), NOT 180. Handle 360-wrap: both 0 and 360 are acceptable.
     const dir = cell.winddir_from_deg;
@@ -47,6 +47,45 @@ describe('buildEnsemble vector mean', () => {
 
     // n_sources counts distinct sources
     expect(cell.n_sources).toBe(2);
+  });
+
+  it('does not cancel opposing members: scalar mean stays 5, percentiles intact', () => {
+    const samples: WindSample[] = [
+      makeSample({ windspeed_ms: 5, winddir_from_deg: 0, source: 'src-A' }),
+      makeSample({ windspeed_ms: 5, winddir_from_deg: 180, source: 'src-B' }),
+    ];
+    const field = buildEnsemble(samples);
+    const cell = field.cells[0];
+    // Vector-mean magnitude would be 0 here; the expected speed must not sit
+    // below p10.
+    expect(cell.windspeed_mean_ms).toBeCloseTo(5, 6);
+    expect(cell.windspeed_mean_ms).toBeGreaterThanOrEqual(cell.windspeed_p10_ms);
+  });
+
+  it('drops non-finite samples instead of poisoning the cell', () => {
+    const samples: WindSample[] = [
+      makeSample({ windspeed_ms: 4, winddir_from_deg: 90, source: 'src-A' }),
+      makeSample({ windspeed_ms: Number.NaN, winddir_from_deg: 90, source: 'src-B' }),
+      makeSample({ windspeed_ms: 6, winddir_from_deg: 90, temp_c: Infinity, source: 'src-C' }),
+    ];
+    const field = buildEnsemble(samples);
+    expect(field.cells).toHaveLength(1);
+    const cell = field.cells[0];
+    expect(cell.windspeed_mean_ms).toBeCloseTo(4, 6);
+    expect(Number.isFinite(cell.temp_c)).toBe(true);
+    expect(cell.n_sources).toBe(1);
+  });
+
+  it('collapses ensemble member sources to one provider in n_sources/reduced', () => {
+    const samples: WindSample[] = [
+      makeSample({ windspeed_ms: 3, winddir_from_deg: 90, source: 'open-meteo-ensemble_member01' }),
+      makeSample({ windspeed_ms: 5, winddir_from_deg: 90, source: 'open-meteo-ensemble_member02' }),
+      makeSample({ windspeed_ms: 7, winddir_from_deg: 90, source: 'open-meteo-ensemble_member03' }),
+    ];
+    const field = buildEnsemble(samples);
+    expect(field.cells[0].n_sources).toBe(1);
+    expect(field.sources).toEqual(['open-meteo-ensemble']);
+    expect(field.reduced).toBe(true); // one provider, members do not count
   });
 });
 

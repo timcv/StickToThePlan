@@ -203,7 +203,7 @@ Reference implementation (`riderNpSquareWaveReference`, `chaingang.ts:135`): bui
 
 ## 6. Pacing solver
 
-### 6.1 Inner solve: `runInnerSolve(micro, npTarget, weather, cfg, startClockS)` (`planner.ts:96`)
+### 6.1 Inner solve: `runInnerSolve(micro, npTarget, weather, cfg)` (`planner.ts`)
 
 Marches the route at a **constant rider NP = `npTarget`**:
 
@@ -211,17 +211,17 @@ For each microsegment:
 
 - **Neutral segment** (km 0–1): fixed speed `neutral_speed_kmh` (20), no power/NP accounting.
 - **Effort segment**:
-  1. `w = weather(lat, lon, startClockS + elapsed)` → wind at the right clock time.
-  2. `rho = airDensity(temp, pressure)`; `(headwind, crosswind) = decomposeWind(W, dirFrom, bearing)`.
+  1. `w = weather(lat, lon, elapsed)` → the WeatherFn receives **elapsed seconds from race start** (stop time included); the provider anchors that march to the UTC start clock (see 7.1).
+  2. `rho = airDensity(temp, pressure, rel_humidity)`; `(headwind, crosswind) = decomposeWind(W, dirFrom, bearing)`.
   3. `v = solveSpeedForRiderNp(npTarget, grade, headwind, crosswind, rho, cfg)` → uncapped speed.
   4. `pPull = pullPower(v, …)`.
-  5. **Hard cap**: if `pPull > pull_cap_hard` ⇒ lower v so `pull = pull_cap_hard`; mark `cap='hard'`.
-  6. **Soft cap (climbs only)**: else if `grade > climb_threshold` (3 %) and `pPull > pull_cap_soft` ⇒ lower to `pull = pull_cap_soft`; `cap='soft'`.
+  5. **Hard cap**: if `pPull > pull_cap_hard` ⇒ `v = solveSpeedForPullPower(pull_cap_hard, …)` (yaw CdA re-evaluated inside the objective, so the capped pull lands exactly on the cap); mark `cap='hard'`.
+  6. **Soft cap (climbs only)**: else if `grade > climb_threshold` (3 %) and `pPull > pull_cap_soft` ⇒ lower to `pull = pull_cap_soft` the same way; `cap='soft'`.
   7. **Spin-out cap**: `vMax = max_plan_speed_kmh / 3.6`; if `v > vMax` ⇒ `v = vMax`; `cap='spinout'`. Overrides a hard/soft classification (it is the binding constraint on the final speed).
   8. Final powers: if no cap bound ⇒ `p_pull = pPull`, `rider_np = npTarget`. Otherwise recompute exactly at the final v. On `spinout`, `p_pull`/`p_draft` are clamped to ≥ 0 (a descent can give negative pedal power = freewheel).
   9. `p_mean = meanPower(p_pull, p_draft, f_front)`; `time = distance / v`.
 
-**Stops** (`planner.ts`, the stops loop): each stop sits at the first segment boundary whose cumulative distance ≥ `stop.km·1000`. The stop delays that segment's and all subsequent segments' arrival times (`eta_s`) by `minutes·60`.
+**Stops** (`planner.ts`, applied inline during the march): each stop sits at the first segment boundary whose cumulative distance ≥ `stop.km·1000`. The stop adds `minutes·60` to the march clock at that boundary, so the hosting segment's `eta_s` becomes the departure time and **every later weather query sees the delayed clock**.
 
 **Totals**: `total_time` (incl. neutral + stops), `rolling_time = total − stop_time`.
 
@@ -243,11 +243,14 @@ loNp = 60,  hiNp = ftp
 fastest = runInnerSolve(hiNp)                  // fastest sustainable
 if fastest.total_time > target:
     reachable = false; return fastest + explanatory note
+slowest = runInnerSolve(loNp)                  // minimum-effort plan
+if slowest.total_time < target:
+    return slowest + "target slower than minimum effort" note
 else: bisect npTarget ∈ [60, ftp], 45 iterations, tolerance 20 s on total_time
       (total_time is monotonically decreasing in npTarget)
 ```
 
-So NP is bounded above by FTP. If even NP = FTP cannot hit the target, `reachable=false` is reported and the fastest plan is returned.
+So NP is bounded above by FTP. If even NP = FTP cannot hit the target, `reachable=false` is reported and the fastest plan is returned. Symmetrically, a target slower than the 60 W floor returns the minimum-effort plan with an explanatory note instead of silently pinning the bisection.
 
 ### 6.4 The power caps: design choices
 
@@ -261,9 +264,9 @@ So NP is bounded above by FTP. If even NP = FTP cannot hit the target, `reachabl
 
 ### 7.1 EnsembleField
 
-`buildEnsemble` (`weather/ensemble.ts:109`) groups wind samples by (lat rounded 0.1°, lon 0.1°, hour). Per cell: vector-mean direction (`u = −W·sin(dir)`, `v = −W·cos(dir)`, `dir = atan2(−ū, −v̄)`), p10/p90 of scalar wind speed, mean temp/pressure.
+`buildEnsemble` (`weather/ensemble.ts`) groups wind samples by (lat rounded 0.1°, lon 0.1°, hour). Non-finite samples are dropped first. Per cell: **scalar-mean wind speed** (a vector-mean magnitude would cancel when members disagree on direction and bias the expected wind low), vector-mean direction (`u = −W·sin(dir)`, `v = −W·cos(dir)`, `dir = atan2(−ū, −v̄)`), p10/p90 of scalar wind speed, mean temp/pressure/humidity. Open-Meteo **ensemble members** are parsed as individual sample series (`source` suffixed `_memberNN`), so p10/p90 reflects the real ensemble spread; member suffixes collapse to one provider when counting `n_sources`/`reduced`.
 
-`makeWeatherFn(field, scenario, startClockS, favorableWind)` (`weather/ensemble.ts`): each lookup picks the nearest cell via `score = distance_m/100000 + |hourDiff|/12`. Wind speed per scenario:
+`makeWeatherFn(field, scenario, startClockS, favorableWind)` (`weather/ensemble.ts`): `startClockS` is the **UTC** start clock (`utcStartClockSeconds(race_date, start_time, time_zone)`), since cells are binned on UTC hours while `start_time` is local. Each lookup picks the nearest cell via `score = distance_m/100000 + |hourDiff|/12`, memoized per (lat, lon, hour). Wind speed per scenario:
 
 ```
 expected     → windspeed_mean_ms

@@ -304,6 +304,34 @@ export function riderNpAtSpeed(
 }
 
 /**
+ * Bisection solver: find ground speed v such that pullPower(v,...) == target.
+ * Unlike solving with a frozen CdA, the yaw CdA factor is re-evaluated inside
+ * the objective at every iteration, so a pull capped to `target` really rides
+ * at `target` W on the front (pullPower at the returned v equals the cap within
+ * tolerance). Searches v in [0.5, 25] m/s; caps are large positive powers, so
+ * the crossing on the rising branch is unique.
+ */
+export function solveSpeedForPullPower(
+  target: number,
+  grade: number,
+  headwind: number,
+  crosswind: number,
+  rho: number,
+  cfg: Config,
+): number {
+  let lo = 0.5;
+  let hi = 25;
+  for (let i = 0; i < 100; i++) {
+    const mid = (lo + hi) / 2;
+    const pm = pullPower(mid, grade, headwind, crosswind, rho, cfg);
+    if (Math.abs(pm - target) < 0.01) return mid;
+    if (pm < target) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+/**
  * Bisection solver: find ground speed v such that riderNpAtSpeed(v,...) == npTarget.
  * Searches v in [0.5, 25] m/s. Converges within 60 iterations to tolerance
  * of 0.1 W on NP. riderNpAtSpeed is monotone non-decreasing in v because the

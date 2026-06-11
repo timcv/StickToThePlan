@@ -137,27 +137,35 @@ export function yawCdaFactor(crosswind: number, vAir: number, kYaw: number): num
  * NP = (mean(rolling_30s(P)^4))^(1/4)
  *
  * Spec section 6.5. Window = 30 * hz samples (30-second rolling mean).
- * For arrays shorter than the window, each sample uses the prefix up to that point.
+ * Standard NP uses only FULL 30 s windows (the first window-1 samples seed the
+ * first window but contribute no rolling value of their own). Arrays shorter
+ * than one window fall back to the plain mean (NP of a sub-30 s burst is not
+ * meaningful; the mean is the least-surprising stand-in).
+ *
+ * O(n) via a running window sum.
  *
  * @param samples  Power samples in W
  * @param hz       Sampling rate in Hz (default 1 Hz)
  * @returns NP in W
  */
 export function normalizedPower(samples: number[], hz = 1): number {
-  if (samples.length === 0) return 0;
+  const n = samples.length;
+  if (n === 0) return 0;
 
   const window = 30 * hz;
-  const rolling: number[] = [];
-
-  for (let i = 0; i < samples.length; i++) {
-    // Use available prefix for samples before a full window is available
-    const start = Math.max(0, i - window + 1);
-    const slice = samples.slice(start, i + 1);
-    const mean = slice.reduce((a, b) => a + b, 0) / slice.length;
-    rolling.push(mean);
+  if (n < window) {
+    return samples.reduce((a, b) => a + b, 0) / n;
   }
 
-  // Mean of (rolling^4), then take the fourth root
-  const meanFourthPow = rolling.reduce((a, v) => a + v ** 4, 0) / rolling.length;
-  return meanFourthPow ** 0.25;
+  let windowSum = 0;
+  for (let i = 0; i < window; i++) windowSum += samples[i];
+
+  let sumFourth = (windowSum / window) ** 4;
+  let count = 1;
+  for (let i = window; i < n; i++) {
+    windowSum += samples[i] - samples[i - window];
+    sumFourth += (windowSum / window) ** 4;
+    count++;
+  }
+  return (sumFourth / count) ** 0.25;
 }
