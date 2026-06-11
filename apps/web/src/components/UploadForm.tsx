@@ -171,7 +171,6 @@ export function UploadForm({ onRun, status }: Props) {
   };
 
   const running = status === 'running';
-  const canRun = !running && gpxText.trim().length > 0;
   // The baked exposure file only covers the bundled route. For an uploaded GPX
   // we would have to fetch exposure (see fetchExposureForRoute), which is not
   // implemented yet, so we surface a disabled affordance instead.
@@ -290,22 +289,33 @@ export function UploadForm({ onRun, status }: Props) {
     onRun(buildSubmit({ gpxText: defaultRouteGpx, fitBytes: null, values: FORM_DEFAULTS }));
   };
 
-  // Seed the parent with the initial/persisted values on mount so the weather
-  // panel has a sensible hour range (from start_time + target) before the user
-  // clicks the submit button. Edits are pushed up again on submit.
-
+  // Flush the current form state up to the parent on mount and on every edit,
+  // so the weather panel's hour range and the "Beräkna plan" action always see
+  // the latest values. The parent only stores these; the pacing pipeline runs
+  // on the explicit "Beräkna plan" button. onRun is intentionally omitted from
+  // the deps (it is an inline arrow in the parent, recreated each render) to
+  // avoid a setState feedback loop.
   useEffect(() => {
     onRun(buildSubmit());
-  }, []);
-
-  const onSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!canRun) return;
-    onRun(buildSubmit());
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    gpxText,
+    fitBytes,
+    targetTotalHm,
+    ftp,
+    nRiders,
+    m,
+    watchTarget,
+    raceDate,
+    startTime,
+    stops,
+    styrkortMaxRows,
+    exposureTerrain,
+    showInterval,
+  ]);
 
   return (
-    <form className="card" onSubmit={onSubmit}>
+    <div className="card">
       <h2>Rutt och parametrar</h2>
 
       <fieldset className="form-section">
@@ -566,14 +576,11 @@ export function UploadForm({ onRun, status }: Props) {
       </fieldset>
 
       <div className="actions">
-        <button type="submit" className="primary" disabled={!canRun}>
-          Använd inställningar
-        </button>
         <button type="button" className="ghost" onClick={handleReset} disabled={running}>
           Återställ till standard
         </button>
         {running && <span className="spinner" aria-label="Beräknar" />}
       </div>
-    </form>
+    </div>
   );
 }
