@@ -820,3 +820,16 @@ button.download-btn:hover {
   background: var(--zebra);
   font-weight: 600;
 }
+
+/* Narrow screens: the constants tables' longest words (e.g.
+   "rullmotståndskoefficient") exceed the accordion's min-content width.
+   Fixed layout + word wrap keeps them inside the card. */
+@media (max-width: 640px) {
+  .howto-deep table {
+    table-layout: fixed;
+  }
+  .howto-deep th,
+  .howto-deep td {
+    overflow-wrap: break-word;
+  }
+}
