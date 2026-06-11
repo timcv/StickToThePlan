@@ -44,7 +44,7 @@ segment each time you pass a control and shows pace and ETA to the next one.
 
 ## Settings
 
-In Connect IQ (Garmin Connect Mobile): layout (Standard / Compact / Fart och
-distans / Endast ETA), unit (km/h or mph), and whether to show plan deviation.
+In Connect IQ (Garmin Connect Mobile): unit (km/h or mph) and whether to show
+plan deviation.
 
 Publishing to the Connect IQ Store is tracked in [roadmap.md](roadmap.md).

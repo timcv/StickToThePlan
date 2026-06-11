@@ -23,6 +23,34 @@ const C = {
   green: '#2b8a3e',
 };
 
+function slug(title: string): string {
+  return title
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
+function scrollToSection(id: string): void {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+const TOC_SECTIONS = [
+  'Grundidén',
+  'Tre krafter du trampar mot',
+  'Luft, vind och terräng',
+  'Vädret skiftar över dygnet',
+  'I grupp: lä och jämn ansträngning',
+  'Vilken ansträngning planen håller',
+  'Hur vi räknar fram din tid',
+  'Tre vindscenarier',
+  'Från GPX till väg',
+  'Från rutt till tempokort',
+  'Ankomst, depå och avgång',
+  'Tempokortet och klockan på styret',
+];
+
 function Section({
   title,
   children,
@@ -33,7 +61,7 @@ function Section({
   figure?: ReactNode;
 }) {
   return (
-    <section className="howto-section">
+    <section className="howto-section" id={slug(title)}>
       <h2>{title}</h2>
       {children}
       {figure ? <div className="howto-figure">{figure}</div> : null}
@@ -969,7 +997,22 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           vi fram exakt den ansträngning som tar dig i mål på utsatt tid.
         </p>
       </header>
-
+      <nav className="howto-toc" aria-label="Innehåll på sidan">
+        <p className="howto-toc-title">På den här sidan</p>
+        <ol>
+          {TOC_SECTIONS.map((t) => (
+            <li key={t}>
+              <button
+                type="button"
+                className="howto-toc-link"
+                onClick={() => scrollToSection(slug(t))}
+              >
+                {t}
+              </button>
+            </li>
+          ))}
+        </ol>
+      </nav>
       <Section title="Grundidén" figure={<GrundidenFigure />}>
         <p>
           Backar bromsar, utförslöpor och medvind hjälper. I stället för en jämn fart håller vi en
@@ -978,34 +1021,6 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           fort.
         </p>
       </Section>
-
-      <Section title="Från GPX till väg" figure={<RoadPrepFigure />}>
-        <p>
-          Din GPX är en lista med punkter. Vi rensar dubblerade punkter, jämnar ut höjden med ett
-          glidande medel så att barometerbrus inte blir falska backar, och delar rutten i hundratals
-          små bitar. För varje bit räknar vi lutningen ur höjdskillnaden, och kapar orimligt branta
-          värden så att en GPS-spik inte blåser upp effektkravet. Första kilometern är neutral: en
-          lugn rullstart på 20 km/h utanför ansträngningsmodellen, precis som masstarten.
-        </p>
-        <Formula caption="Utan utjämning skulle varje liten höjdvariation läsas som en backe och störa effektberäkningen.">
-          lutning = höjdskillnad ÷ sträcka, kapad till ±18 %
-        </Formula>
-        <DeepDive>
-          <p>Höjden filtreras med ett glidande medel innan lutningen beräknas per mikrosegment:</p>
-          <div className="howto-formula howto-formula-block">
-            {'höjd_utjämnad = glidande medel över 5 punkter\n'}
-            {'lutning = (höjd_slut − höjd_start) ÷ längd\n'}
-            {'lutning kapas till [−0,18, 0,18]  (±18 %)\n'}
-            {'neutral: cum_distans < 1 km → 20 km/h, utanför NP-modellen'}
-          </div>
-          <p>
-            Parametrar: utjämningsfönster 5 punkter, lutningstak 18 %, neutral sträcka 1 km vid 20
-            km/h. Sammanfallande punkter tas bort först så att en stillastående logg inte ger
-            nolldistans-bitar.
-          </p>
-        </DeepDive>
-      </Section>
-
       <Section title="Tre krafter du trampar mot" figure={<ForcesFigure />}>
         <p>
           Varje sekund räknar vi hur många watt som krävs för att övervinna tre motstånd: tyngden i
@@ -1072,7 +1087,6 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           </table>
         </DeepDive>
       </Section>
-
       <Section title="Luft, vind och terräng" figure={<WindFigure />}>
         <p>
           Tung luft bromsar mer än lätt, så vi väger in temperatur och lufttryck. Vindprognosen
@@ -1152,7 +1166,6 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           </table>
         </DeepDive>
       </Section>
-
       <Section title="Vädret skiftar över dygnet" figure={<WeatherClockFigure />}>
         <p>
           Vädret är inte en enda siffra för hela loppet. För varje sträcka slår vi upp vinden på
@@ -1180,7 +1193,6 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           </p>
         </DeepDive>
       </Section>
-
       <Section title="I grupp: lä och jämn ansträngning" figure={<PacelineFigure />}>
         <p>
           I ett kedjegäng ligger du mest i lä, där luftmotståndet är ungefär en tredjedel lägre. Vi
@@ -1217,7 +1229,6 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           </p>
         </DeepDive>
       </Section>
-
       <Section title="Vilken ansträngning planen håller" figure={<AnchorFigure />}>
         <p>
           Du kan ladda upp en valfri effektfil (FIT) från en representativ tur. Är den lång (mer än
@@ -1246,7 +1257,6 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           </p>
         </DeepDive>
       </Section>
-
       <Section title="Hur vi räknar fram din tid" figure={<SolverFigure />}>
         <p>
           Vi gissar en ansträngningsnivå, kör igenom hela rutten sträcka för sträcka, räknar fart
@@ -1283,7 +1293,6 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           </p>
         </DeepDive>
       </Section>
-
       <Section title="Tre vindscenarier" figure={<ScenarioFigure />}>
         <p>
           Väder är osäkert, så vi räknar tre gånger: med lugnare vind än väntat (optimistiskt), med
@@ -1311,7 +1320,33 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           </p>
         </DeepDive>
       </Section>
-
+      <Section title="Från GPX till väg" figure={<RoadPrepFigure />}>
+        <p>
+          Din GPX är en lista med punkter. Vi rensar dubblerade punkter, jämnar ut höjden med ett
+          glidande medel så att barometerbrus inte blir falska backar, och delar rutten i hundratals
+          små bitar. För varje bit räknar vi lutningen ur höjdskillnaden, och kapar orimligt branta
+          värden så att en GPS-spik inte blåser upp effektkravet. Första kilometern är neutral: en
+          lugn rullstart på 20 km/h utanför ansträngningsmodellen, precis som masstarten.
+        </p>
+        <Formula caption="Utan utjämning skulle varje liten höjdvariation läsas som en backe och störa effektberäkningen.">
+          lutning = höjdskillnad ÷ sträcka, kapad till ±18 %
+        </Formula>
+        <DeepDive>
+          <p>Höjden filtreras med ett glidande medel innan lutningen beräknas per mikrosegment:</p>
+          <div className="howto-formula howto-formula-block">
+            {'höjd_utjämnad = glidande medel över 5 punkter\n'}
+            {'lutning = (höjd_slut − höjd_start) ÷ längd\n'}
+            {'lutning kapas till [−0,18, 0,18]  (±18 %)\n'}
+            {'neutral: cum_distans < 1 km → 20 km/h, utanför NP-modellen'}
+          </div>
+          <p>
+            Parametrar: utjämningsfönster 5 punkter, lutningstak 18 %, neutral sträcka 1 km vid 20
+            km/h. Sammanfallande punkter tas bort först så att en stillastående logg inte ger
+            nolldistans-bitar.
+          </p>
+        </DeepDive>
+      </Section>
+      .
       <Section title="Från rutt till tempokort" figure={<SegmentFigure />}>
         <p>
           Rutten körs i två upplösningar. Fysiken marscherar hundratals små mikrosegment, ett per
@@ -1346,7 +1381,6 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           </p>
         </DeepDive>
       </Section>
-
       <Section title="Ankomst, depå och avgång" figure={<EtaClockFigure />}>
         <p>
           När farten är känd på varje sträcka kan vi sätta en klocka på kortet. Varje rads slut får
@@ -1373,7 +1407,6 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           </p>
         </DeepDive>
       </Section>
-
       <Section title="Tempokortet och klockan på styret" figure={<CardWatchFigure />}>
         <p>
           Drageffekten på kortet visas som ett band, inte en exakt siffra, eftersom verkliga drag
@@ -1403,7 +1436,6 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
           </p>
         </DeepDive>
       </Section>
-
       <footer className="howto-footer">
         <p>
           <strong>Du matar in:</strong> rutt (GPX), din FTP, antal i gruppen, måltid, depåstopp och
