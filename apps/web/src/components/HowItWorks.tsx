@@ -858,6 +858,48 @@ function AnchorFigure() {
   );
 }
 
+function EtaClockFigure() {
+  return (
+    <svg width="100%" viewBox="0 0 680 150" role="img" aria-labelledby="eta-t eta-d">
+      <title id="eta-t">Tidslinje med ankomst, depåstopp och avgång</title>
+      <desc id="eta-d">
+        En vågrät tidslinje från start till mål med en kontrollpunkt, ett markerat depåstopp som
+        skjuter klockan framåt, och en avgångstid efter stoppet.
+      </desc>
+      <line x1="40" y1="80" x2="640" y2="80" stroke={C.border} strokeWidth="3" />
+      <circle cx="60" cy="80" r="6" fill={C.accent} />
+      <text x="60" y="64" fontSize="12" fill={C.text} textAnchor="middle" fontWeight="600">
+        04:22
+      </text>
+      <text x="60" y="108" fontSize="11" fill={C.muted} textAnchor="middle">
+        Start
+      </text>
+      <circle cx="300" cy="80" r="6" fill={C.text} />
+      <text x="300" y="64" fontSize="12" fill={C.text} textAnchor="middle" fontWeight="600">
+        07:22
+      </text>
+      <text x="300" y="108" fontSize="11" fill={C.muted} textAnchor="middle">
+        Ankomst depå
+      </text>
+      <rect x="300" y="74" width="90" height="12" fill={C.coral} opacity="0.85" />
+      <text x="345" y="124" fontSize="11" fill={C.coral} textAnchor="middle">
+        +15 min stopp
+      </text>
+      <circle cx="390" cy="80" r="6" fill={C.green} />
+      <text x="390" y="64" fontSize="12" fill={C.green} textAnchor="middle" fontWeight="600">
+        07:37
+      </text>
+      <text x="390" y="108" fontSize="11" fill={C.muted} textAnchor="middle">
+        Avgång
+      </text>
+      <circle cx="640" cy="80" r="6" fill={C.accent} />
+      <text x="640" y="64" fontSize="12" fill={C.text} textAnchor="end" fontWeight="600">
+        Mål
+      </text>
+    </svg>
+  );
+}
+
 export function HowItWorks({ onBack }: { onBack: () => void }) {
   return (
     <div className="howto">
@@ -1243,6 +1285,33 @@ export function HowItWorks({ onBack }: { onBack: () => void }) {
             följer GPX-punkternas täthet. En efterpass märker den sista klättringen före mål som
             SISTA UPPFÖR. Depå- och ortgränser korsas aldrig vid sammanslagning, så markörerna står
             kvar.
+          </p>
+        </DeepDive>
+      </Section>
+
+      <Section title="Ankomst, depå och avgång" figure={<EtaClockFigure />}>
+        <p>
+          När farten är känd på varje sträcka kan vi sätta en klocka på kortet. Varje rads slut får
+          en klocktid: starttiden plus all restid dit. Vid en depå lägger vi på dina stoppminuter,
+          så kortet visar både ankomst och avgång, och alla tider efter depån skjuts fram lika
+          mycket. Sluttiden är summan av rulltid och stopptid, så längre depåstopp syns direkt i
+          måltiden.
+        </p>
+        <Formula caption="Depåtiden är inte bortkastad, den ligger inbakad i varje klockslag efter stoppet.">
+          ankomst = starttid + restid dit · avgång = ankomst + depåminuter
+        </Formula>
+        <DeepDive>
+          <p>Varje segment bär sekunder-från-start vid sitt slut; depåer lägger till stopptid:</p>
+          <div className="howto-formula howto-formula-block">
+            {'eta_s = sekunder från start vid segmentets slut\n'}
+            {'avgång_s = eta_s + depåminuter × 60\n'}
+            {'klockslag = (starttid + eta_s) mod 24 h   (slår runt midnatt)\n'}
+            {'total tid = rulltid + stopptid'}
+          </div>
+          <p>
+            Klockan visas som lokal tid och hanterar varv som passerar midnatt. Depåstopp är hårda
+            gränser i kortet: de slås aldrig ihop med grannrader, så ankomst- och avgångstiden står
+            alltid kvar på sin egen rad.
           </p>
         </DeepDive>
       </Section>
