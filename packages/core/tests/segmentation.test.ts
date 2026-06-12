@@ -336,8 +336,8 @@ describe('segment() merge: alternating grades force >50 boundaries before merge'
 // SUITE 3: VATTERN_CONTROLS constant.
 // ---------------------------------------------------------------------------
 describe('VATTERN_CONTROLS', () => {
-  it('has 11 entries', () => {
-    expect(VATTERN_CONTROLS.length).toBe(11);
+  it('has 12 entries', () => {
+    expect(VATTERN_CONTROLS.length).toBe(12);
   });
 
   it('starts at Motala km 0', () => {
