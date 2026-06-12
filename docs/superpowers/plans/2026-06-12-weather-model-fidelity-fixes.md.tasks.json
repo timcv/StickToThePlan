@@ -1,0 +1,45 @@
+{
+  "planPath": "docs/superpowers/plans/2026-06-12-weather-model-fidelity-fixes.md",
+  "tasks": [
+    {
+      "id": 1,
+      "subject": "Task 1: Unify default atmosphere (Fix 3)",
+      "status": "pending",
+      "description": "Add STANDARD_ATMOSPHERE + STANDARD_RHO to physics.ts; repoint calmWeather, empty-field WeatherFn, buildManualField, and config rho_fallback to the constant. Verify: npm test -w @stp/core"
+    },
+    {
+      "id": 2,
+      "subject": "Task 2: Absolute-time primitives (raceStartEpochMs + nearestCell)",
+      "status": "pending",
+      "description": "Add raceStartEpochMs (absolute UTC ms) to util/time.ts and refactor utcStartClockSeconds to use it; add exported nearestCell (absolute-ms time score) to ensemble.ts. Verify: npm test -w @stp/core"
+    },
+    {
+      "id": 3,
+      "subject": "Task 3: Multi-day weather fetch (Fix 1, fetch half)",
+      "status": "pending",
+      "description": "Add nextDay to openMeteo.ts; set end_date: nextDay(date) in buildForecastUrl, buildEnsembleUrl, buildForecastUrlMulti. Verify: npm test -w @stp/core"
+    },
+    {
+      "id": 4,
+      "subject": "Task 4: Absolute-time matching in makeWeatherFn + planner wiring (Fix 1, match half)",
+      "status": "pending",
+      "blockedBy": [2],
+      "description": "makeWeatherFn takes startEpochMs and picks via nearestCell (memo key absolute hour); solveThreeScenarios uses raceStartEpochMs for all three makeWeatherFn calls. Verify: npm test -w @stp/core && npm run typecheck"
+    },
+    {
+      "id": 5,
+      "subject": "Task 5: routeIsNetDownwind weights by ridden hours (Fix 2)",
+      "status": "pending",
+      "blockedBy": [2, 4],
+      "description": "Export + rewrite routeIsNetDownwind(microsegments, field, startEpochMs, totalTimeS) to use per-segment local wind at distance-proportional ride time; same -0.05 deadband. Verify: npm test -w @stp/core && npm run typecheck"
+    },
+    {
+      "id": 6,
+      "subject": "Task 6: Window-aware summarizeHourly + web wiring (Fix 1, web no-regression)",
+      "status": "pending",
+      "blockedBy": [2],
+      "description": "summarizeHourly gains optional startEpochMs that resolves each hour to its ride-window occurrence; App.tsx passes raceStartEpochMs; ensure index export. Verify: npm test -w @stp/core && npm run typecheck"
+    }
+  ],
+  "lastUpdated": "2026-06-12"
+}
