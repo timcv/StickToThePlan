@@ -25,6 +25,7 @@ import {
   solveForTargetTime,
   solveThreeScenarios,
   segment,
+  checkpointsFromStyrkort,
   VATTERN_CONTROLS,
   buildEnsemble,
   renderMarkdown,
@@ -165,6 +166,14 @@ export async function runPlan(opts: RunOptions = {}): Promise<RunSummary> {
   const controls = soloControls(cfg, micro);
   const displaySegments = segment(scenarios.expected, cfg, controls);
 
+  // GPS checkpoints follow the compact styrkort rows (Max rader) so the GPX/FIT
+  // course points match the printed handlebar card.
+  const styrkortSegments = segment(scenarios.expected, cfg, controls, {
+    compactMode: true,
+    maxSegments: cfg.styrkort_max_rows,
+  });
+  const courseCheckpoints = checkpointsFromStyrkort(styrkortSegments, controls);
+
   // 8. Unreachable target -> WARNING prefix in markdown + plan note.
   let markdown = renderMarkdown(scenarios, displaySegments, cfg);
   if (!scenarios.expected.reachable) {
@@ -188,8 +197,8 @@ export async function runPlan(opts: RunOptions = {}): Promise<RunSummary> {
   writeFileUtf8(mdPath, markdown);
   writeFileUtf8(htmlPath, renderHtml(scenarios, displaySegments, cfg));
   writeWorkout(displaySegments, cfg, fitPath);
-  writeCourseGpx(micro, scenarios.expected, cfg, controls, coursePath);
-  writeCourseFit(micro, scenarios.expected, cfg, controls, courseFitPath);
+  writeCourseGpx(micro, scenarios.expected, cfg, courseCheckpoints, coursePath);
+  writeCourseFit(micro, scenarios.expected, cfg, courseCheckpoints, courseFitPath);
   writePlanJson(scenarios, displaySegments, anchor, cfg, meta, planPath);
 
   // 9. Summary.

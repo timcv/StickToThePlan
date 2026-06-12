@@ -63,6 +63,14 @@ export {
 
 // Output builders.
 export { renderMarkdown, renderHtml, buildStyrkortHtml } from './output/tempokort.js';
+export {
+  styrkortMeta,
+  diffToStraightMin,
+  formatDiff,
+  formatAnkomst,
+  type StyrkortMeta,
+} from './output/styrkort.js';
+export { checkpointsFromStyrkort } from './output/checkpoints.js';
 export { buildCourseGpx } from './output/course.js';
 export { buildCourseFit } from './output/fitCourse.js';
 export { buildSteps, encodeWorkout, type WorkoutStepTarget } from './output/fitWorkout.js';
