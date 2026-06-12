@@ -8,7 +8,7 @@
 import type { DisplaySegment, Config } from '../types.js';
 import type { ThreeScenarios } from '../planner.js';
 import { secondsToClock } from '../util/time.js';
-import { diffToStraightMin, formatAnkomst, type StyrkortMeta } from './styrkort.js';
+import { styrkortDiffsMin, formatAnkomst, type StyrkortMeta } from './styrkort.js';
 
 // ---------------------------------------------------------------------------
 // Local helpers
@@ -318,11 +318,12 @@ export function buildStyrkortHtml(
     `Totalsnitt inkl. pauser: ${kmh2(meta.totalAvgKmh)} km/h · Rullsnitt: ${kmh2(meta.refSpeedKmh)} km/h`,
   );
 
-  const rows = displaySegments.map(seg => {
+  const diffs = styrkortDiffsMin(displaySegments, meta.refSpeedKmh);
+  const rows = displaySegments.map((seg, i) => {
     const km = escHtml(String(seg.to_km));
     const kmh = seg.avg_speed_kmh > 0 ? String(Math.round(seg.avg_speed_kmh)) : '';
     const etaClock = secondsToClock(seg.eta_s, cfg.start_time);
-    const diff = diffToStraightMin(seg.to_km, seg.eta_s, meta.refSpeedKmh);
+    const diff = diffs[i];
     const departClock = seg.depart_s !== undefined
       ? secondsToClock(seg.depart_s, cfg.start_time)
       : undefined;

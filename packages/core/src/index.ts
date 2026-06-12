@@ -66,6 +66,7 @@ export { renderMarkdown, renderHtml, buildStyrkortHtml } from './output/tempokor
 export {
   styrkortMeta,
   diffToStraightMin,
+  styrkortDiffsMin,
   formatDiff,
   formatAnkomst,
   type StyrkortMeta,

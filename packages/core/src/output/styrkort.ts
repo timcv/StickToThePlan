@@ -12,7 +12,7 @@
  * so the numbers can never diverge between screen and paper.
  */
 
-import type { PlanResult } from '../types.js';
+import type { DisplaySegment, PlanResult } from '../types.js';
 
 export interface StyrkortMeta {
   /** Rakt rullsnitt: distance / rolling time (km/h), excludes depot stops. */
@@ -47,6 +47,26 @@ export function diffToStraightMin(toKm: number, etaS: number, refSpeedKmh: numbe
   if (refSpeedKmh <= 0) return 0;
   const refSeconds = (toKm / refSpeedKmh) * 3600;
   return Math.round((refSeconds - etaS) / 60);
+}
+
+/**
+ * Per-row diff (minutes) against the rolling reference line for an ordered list
+ * of styrkort rows, with depot stop time removed from the rider's elapsed clock
+ * so stops never bias the value. Each arrival has all PRIOR depot minutes
+ * subtracted; the row's own depot stop is not (the arrival precedes the stop).
+ *
+ * Because the reference speed is the plan's rolling average (distance / rolling
+ * time), removing the stop time makes the final row land on ±0: the rider's
+ * moving time at the finish equals the rolling reference time there.
+ */
+export function styrkortDiffsMin(segments: DisplaySegment[], refSpeedKmh: number): number[] {
+  let priorStopS = 0;
+  const out: number[] = [];
+  for (const seg of segments) {
+    out.push(diffToStraightMin(seg.to_km, seg.eta_s - priorStopS, refSpeedKmh));
+    if (seg.stop_minutes && seg.stop_minutes > 0) priorStopS += seg.stop_minutes * 60;
+  }
+  return out;
 }
 
 /** Signed minute label: "+8", "-12", or "±0" for zero (consistent symbol). */
