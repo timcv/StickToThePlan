@@ -1,4 +1,5 @@
 import type { Config, Stop } from './types.js';
+import { STANDARD_RHO } from './physics.js';
 import { STYRKORT_DEFAULT_MAX_ROWS } from './segmentation.js';
 
 /**
@@ -12,7 +13,7 @@ const DEFAULTS = {
   crr: 0.0045,
   eta: 0.97,
   g: 9.81,
-  rho_fallback: 1.2,
+  rho_fallback: STANDARD_RHO,
   pull_seconds: 45,
   pull_cap_mult: 1.3,
   max_plan_speed_kmh: 50,

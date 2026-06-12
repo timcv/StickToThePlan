@@ -11,7 +11,7 @@ import type { MicroSegment, Config, WeatherFn, WindSample } from '../src/types.j
 import { applyDefaults } from '../src/config.js';
 import { runInnerSolve, solveForTargetTime, calmWeather } from '../src/planner.js';
 import { buildEnsemble, makeWeatherFn } from '../src/weather/ensemble.js';
-import { utcStartClockSeconds } from '../src/util/time.js';
+import { raceStartEpochMs } from '../src/util/time.js';
 
 function makeConfig(overrides: Record<string, unknown> = {}): Config {
   return applyDefaults({
@@ -129,8 +129,8 @@ describe('makeWeatherFn UTC hour anchoring', () => {
   it('a 06:00 CEST start queries the 04:00 UTC cell at race start', () => {
     // Windy at 04 UTC (= race start, 06:00 local), calm at 12 UTC.
     const field = buildEnsemble([sample(4, 9), sample(12, 0.5)]);
-    const utcStart = utcStartClockSeconds('2026-06-13', '06:00', 'Europe/Stockholm');
-    const fn = makeWeatherFn(field, 'expected', utcStart);
+    const startEpochMs = raceStartEpochMs('2026-06-13', '06:00', 'Europe/Stockholm');
+    const fn = makeWeatherFn(field, 'expected', startEpochMs);
     expect(fn(58.0, 14.5, 0).windspeed_ms).toBeCloseTo(9, 6);
     // Eight hours into the race the 12 UTC cell wins.
     expect(fn(58.0, 14.5, 8 * 3600).windspeed_ms).toBeCloseTo(0.5, 6);
@@ -138,7 +138,8 @@ describe('makeWeatherFn UTC hour anchoring', () => {
 
   it('passes cell rel_humidity through to the WindCond', () => {
     const field = buildEnsemble([{ ...sample(4, 5), rel_humidity: 0.8 }]);
-    const fn = makeWeatherFn(field, 'expected', 4 * 3600);
+    const startEpochMs = raceStartEpochMs('2026-06-13', '06:00', 'Europe/Stockholm');
+    const fn = makeWeatherFn(field, 'expected', startEpochMs);
     expect(fn(58.0, 14.5, 0).rel_humidity).toBeCloseTo(0.8, 6);
   });
 });

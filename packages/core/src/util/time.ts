@@ -64,21 +64,32 @@ function tzOffsetMinutes(utcMs: number, timeZone: string): number {
 }
 
 /**
+ * Absolute UTC epoch (ms) of a local wall-clock instant ("HH:MM" in the given
+ * IANA zone on the given date). Two-pass offset correction handles the rare
+ * start inside a DST transition.
+ * Example: raceStartEpochMs("2026-06-13", "06:00", "Europe/Stockholm")
+ *   -> Date.UTC(2026, 5, 13, 4, 0, 0) (04:00 UTC).
+ */
+export function raceStartEpochMs(dateIso: string, hhmm: string, timeZone: string): number {
+  const wallAsUtcMs = Date.parse(`${dateIso}T${hhmm.padStart(5, '0')}:00Z`);
+  if (Number.isNaN(wallAsUtcMs)) {
+    throw new Error(`raceStartEpochMs: invalid date/time "${dateIso}" / "${hhmm}"`);
+  }
+  // Offset evaluated at the wall instant interpreted as UTC; a second pass with
+  // the corrected instant handles the rare start inside a DST transition.
+  let utcMs = wallAsUtcMs - tzOffsetMinutes(wallAsUtcMs, timeZone) * 60_000;
+  utcMs = wallAsUtcMs - tzOffsetMinutes(utcMs, timeZone) * 60_000;
+  return utcMs;
+}
+
+/**
  * Convert a local wall-clock start ("HH:MM" in the given IANA zone on the given
  * date) to UTC seconds since midnight. Weather cells are binned on UTC hours,
  * so the weather clock must run in UTC while ETAs stay in local time.
  * Example: utcStartClockSeconds("2026-06-13", "06:00", "Europe/Stockholm") -> 14400 (04:00 UTC).
  */
 export function utcStartClockSeconds(dateIso: string, hhmm: string, timeZone: string): number {
-  const wallAsUtcMs = Date.parse(`${dateIso}T${hhmm.padStart(5, '0')}:00Z`);
-  if (Number.isNaN(wallAsUtcMs)) {
-    throw new Error(`utcStartClockSeconds: invalid date/time "${dateIso}" / "${hhmm}"`);
-  }
-  // Offset evaluated at the wall instant interpreted as UTC; a second pass with
-  // the corrected instant handles the rare start inside a DST transition.
-  let utcMs = wallAsUtcMs - tzOffsetMinutes(wallAsUtcMs, timeZone) * 60_000;
-  utcMs = wallAsUtcMs - tzOffsetMinutes(utcMs, timeZone) * 60_000;
-  const d = new Date(utcMs);
+  const d = new Date(raceStartEpochMs(dateIso, hhmm, timeZone));
   return d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds();
 }
 

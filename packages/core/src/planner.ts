@@ -19,8 +19,8 @@ import type {
   Scenario,
 } from './types.js';
 import type { EnsembleField } from './weather/ensemble.js';
-import { makeWeatherFn } from './weather/ensemble.js';
-import { airDensity, decomposeWind } from './physics.js';
+import { makeWeatherFn, nearestCell } from './weather/ensemble.js';
+import { airDensity, decomposeWind, STANDARD_ATMOSPHERE } from './physics.js';
 import { adjustWindForHeight, terrainToZ0 } from './weather/effective.js';
 import { exposureCoveragePct } from './weather/exposure.js';
 import {
@@ -32,7 +32,7 @@ import {
   solveSpeedForRiderNp,
   solveSpeedForPullPower,
 } from './chaingang.js';
-import { hmToSeconds, utcStartClockSeconds } from './util/time.js';
+import { hmToSeconds, raceStartEpochMs } from './util/time.js';
 
 /**
  * Calm-weather provider: no wind, 15 C, sea-level standard pressure.
@@ -41,8 +41,8 @@ import { hmToSeconds, utcStartClockSeconds } from './util/time.js';
 export const calmWeather: WeatherFn = () => ({
   windspeed_ms: 0,
   winddir_from_deg: 0,
-  temp_c: 15,
-  pressure_pa: 101325,
+  temp_c: STANDARD_ATMOSPHERE.temp_c,
+  pressure_pa: STANDARD_ATMOSPHERE.pressure_pa,
 });
 
 /** Roughness length for a segment: per-segment exposure if present, else an
@@ -420,32 +420,41 @@ export interface ThreeScenarios {
  * @param cfg            Config.
  */
 /**
- * Decide whether the route is net downwind for the field's mean wind. Projects
- * each effort segment's travel onto the dominant (speed-weighted vector-mean)
- * wind direction and sums the signed headwind exposure
- * (cos(dir_from - bearing) * distance): positive = into the wind, negative =
- * downwind. Net negative beyond a 5%-of-distance deadband means the route gains
- * more from tailwind than it loses to headwind, so MORE wind is FASTER and the
- * optimistic/pessimistic percentile mapping must invert (see makeWeatherFn). The
- * deadband keeps a balanced loop (exposure ~ 0, e.g. Vatternrundan) on the convex
- * default where more wind is slightly slower, so pessimistic = windier.
+ * Decide whether the route is net downwind, weighted by the hours and places
+ * actually ridden. For each effort segment, query the field at that segment's
+ * location and its approximate ride time and use that LOCAL wind direction. Sum
+ * the signed headwind exposure (cos(dir_from - bearing) * distance): positive =
+ * into the wind, negative = downwind. Net negative beyond a 5%-of-distance
+ * deadband means the route gains more from tailwind than it loses to headwind, so
+ * MORE wind is FASTER and the optimistic/pessimistic percentile mapping must
+ * invert (see makeWeatherFn).
+ *
+ * Using each segment's local ride-time wind (instead of one field-wide vector
+ * mean over all cells, hours, and places) keeps a wind that veers during the day
+ * from flipping the verdict. The deadband keeps a balanced loop (exposure ~ 0,
+ * e.g. Vatternrundan) on the convex default where more wind is slightly slower.
+ * Distance-proportional time is hour-resolution, which is all the hourly cell
+ * bins need.
  */
-function routeIsNetDownwind(microsegments: MicroSegment[], field: EnsembleField): boolean {
+export function routeIsNetDownwind(
+  microsegments: MicroSegment[],
+  field: EnsembleField,
+  startEpochMs: number,
+  totalTimeS: number,
+): boolean {
   if (field.cells.length === 0) return false;
-  let u = 0;
-  let v = 0;
-  for (const c of field.cells) {
-    const rad = (c.winddir_from_deg * Math.PI) / 180;
-    u += -c.windspeed_mean_ms * Math.sin(rad);
-    v += -c.windspeed_mean_ms * Math.cos(rad);
-  }
-  if (u === 0 && v === 0) return false;
-  const dirFrom = (Math.atan2(-u, -v) * 180) / Math.PI;
+  const fullDist = microsegments.reduce((s, m) => s + m.distance_m, 0);
+  if (fullDist <= 0) return false;
   let exposure = 0;
   let total = 0;
   for (const m of microsegments) {
     if (m.neutral) continue;
-    const delta = ((dirFrom - m.bearing_deg) * Math.PI) / 180;
+    // Approximate ride time at this segment (distance-proportional over the whole
+    // route incl. neutral + stops); hour-resolution is enough to pick the bin.
+    const approxElapsedS = (m.cum_distance_m / fullDist) * totalTimeS;
+    const cell = nearestCell(field.cells, m.lat, m.lon, startEpochMs + approxElapsedS * 1000);
+    if (!cell) continue;
+    const delta = ((cell.winddir_from_deg - m.bearing_deg) * Math.PI) / 180;
     exposure += Math.cos(delta) * m.distance_m; // + into wind, - downwind
     total += m.distance_m;
   }
@@ -457,13 +466,19 @@ export function solveThreeScenarios(
   field: EnsembleField,
   cfg: Config,
 ): ThreeScenarios {
-  // Weather cells are binned on UTC hours; convert the local start clock to
-  // UTC once here so makeWeatherFn matches the right hour (ETAs stay local).
-  const utcStartS = utcStartClockSeconds(cfg.race_date, cfg.start_time, cfg.time_zone);
-  const favorableWind = routeIsNetDownwind(microsegments, field);
+  // Weather cells carry absolute UTC timestamps; anchor the elapsed march to the
+  // absolute UTC instant of race start so makeWeatherFn matches the right cell on
+  // the right day (ETAs stay local).
+  const startEpochMs = raceStartEpochMs(cfg.race_date, cfg.start_time, cfg.time_zone);
+  const favorableWind = routeIsNetDownwind(
+    microsegments,
+    field,
+    startEpochMs,
+    hmToSeconds(cfg.target_total_hm),
+  );
 
   const solveScenario = (scenario: Scenario): PlanResult => {
-    const weather = makeWeatherFn(field, scenario, utcStartS, favorableWind);
+    const weather = makeWeatherFn(field, scenario, startEpochMs, favorableWind);
     return solveForTargetTime(microsegments, weather, cfg);
   };
 
@@ -479,13 +494,13 @@ export function solveThreeScenarios(
   const lowTime = runInnerSolve(
     microsegments,
     np,
-    makeWeatherFn(field, 'optimistic', utcStartS, favorableWind),
+    makeWeatherFn(field, 'optimistic', startEpochMs, favorableWind),
     cfg,
   ).total_time_s;
   const highTime = runInnerSolve(
     microsegments,
     np,
-    makeWeatherFn(field, 'pessimistic', utcStartS, favorableWind),
+    makeWeatherFn(field, 'pessimistic', startEpochMs, favorableWind),
     cfg,
   ).total_time_s;
   const expTime = expected.total_time_s;

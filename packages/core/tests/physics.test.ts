@@ -6,11 +6,21 @@ import {
   airDensity,
   normalizedPower,
   yawCdaFactor,
+  STANDARD_ATMOSPHERE,
+  STANDARD_RHO,
 } from '../src/physics.js';
 import type { PhysicsParams } from '../src/types.js';
 
 // Standard params from spec section 5 sanity table
 const p: PhysicsParams = { m: 96, g: 9.81, crr: 0.0045, eta: 0.97, cda: 0.32, rho: 1.2 };
+
+describe('STANDARD_ATMOSPHERE / STANDARD_RHO', () => {
+  it('is the ISA standard-atmosphere default (15 C, 101325 Pa, rho ~1.2250)', () => {
+    expect(STANDARD_ATMOSPHERE).toEqual({ temp_c: 15, pressure_pa: 101_325 });
+    expect(STANDARD_RHO).toBeCloseTo(1.225, 3);
+    expect(STANDARD_RHO).toBe(airDensity(15, 101_325));
+  });
+});
 
 describe('pedalPower', () => {
   it('flat calm at 8.0 m/s (28.8 km/h) is within 8% of 135 W', () => {

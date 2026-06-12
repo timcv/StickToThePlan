@@ -32,6 +32,12 @@ function buildQuery(params: Record<string, string>): string {
     .join('&');
 }
 
+/** UTC calendar date (YYYY-MM-DD) one day after the given date. */
+export function nextDay(dateIso: string): string {
+  const ms = Date.parse(`${dateIso}T00:00:00Z`);
+  return new Date(ms + 86_400_000).toISOString().slice(0, 10);
+}
+
 export function buildForecastUrl(point: GeoPoint, date: string): string {
   const q = buildQuery({
     latitude: String(point.lat),
@@ -39,7 +45,7 @@ export function buildForecastUrl(point: GeoPoint, date: string): string {
     hourly: HOURLY_PARAMS,
     windspeed_unit: 'ms',
     start_date: date,
-    end_date: date,
+    end_date: nextDay(date),
     timezone: 'UTC',
   });
   return `https://api.open-meteo.com/v1/forecast?${q}`;
@@ -53,7 +59,7 @@ export function buildEnsembleUrl(point: GeoPoint, date: string): string {
     windspeed_unit: 'ms',
     models: 'icon_seamless',
     start_date: date,
-    end_date: date,
+    end_date: nextDay(date),
     timezone: 'UTC',
   });
   return `https://ensemble-api.open-meteo.com/v1/ensemble?${q}`;
@@ -169,7 +175,7 @@ export function buildForecastUrlMulti(points: GeoPoint[], date: string): string 
     hourly: HOURLY_PARAMS,
     windspeed_unit: 'ms',
     start_date: date,
-    end_date: date,
+    end_date: nextDay(date),
     timezone: 'UTC',
   });
   return `https://api.open-meteo.com/v1/forecast?${q}`;

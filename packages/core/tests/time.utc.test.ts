@@ -1,5 +1,25 @@
 import { describe, it, expect } from 'vitest';
-import { utcStartClockSeconds } from '../src/util/time.js';
+import { utcStartClockSeconds, raceStartEpochMs } from '../src/util/time.js';
+
+describe('raceStartEpochMs', () => {
+  it('returns the absolute UTC instant of a CEST summer start', () => {
+    // 06:00 Europe/Stockholm in June = 04:00 UTC same day.
+    expect(raceStartEpochMs('2026-06-13', '06:00', 'Europe/Stockholm')).toBe(
+      Date.UTC(2026, 5, 13, 4, 0, 0),
+    );
+  });
+
+  it('crosses to the previous UTC day for an after-midnight local start', () => {
+    // 00:30 Stockholm = 22:30 UTC the previous day.
+    expect(raceStartEpochMs('2026-06-13', '00:30', 'Europe/Stockholm')).toBe(
+      Date.UTC(2026, 5, 12, 22, 30, 0),
+    );
+  });
+
+  it('throws on malformed input', () => {
+    expect(() => raceStartEpochMs('not-a-date', '06:00', 'Europe/Stockholm')).toThrow();
+  });
+});
 
 describe('utcStartClockSeconds', () => {
   it('converts a CEST summer start to UTC (06:00 Stockholm -> 04:00 UTC)', () => {
