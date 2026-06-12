@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import type { MicroSegment, SegmentPlan, PlanResult, Config } from '../src/types.js';
 import { applyDefaults } from '../src/config.js';
-import { segment, VATTERN_CONTROLS, type ControlPoint } from '../src/segmentation.js';
+import {
+  segment,
+  VATTERN_CONTROLS,
+  STYRKORT_DEFAULT_MAX_ROWS,
+  type ControlPoint,
+} from '../src/segmentation.js';
 import { runInnerSolve, calmWeather } from '../src/planner.js';
 
 // ---------------------------------------------------------------------------
@@ -629,6 +634,154 @@ describe('merged band survives a zero-pull half (M6)', () => {
     expect(merged.pull_w_low).toBeGreaterThan(0);
     expect(merged.pull_w_high).toBeGreaterThan(merged.pull_w_low);
     expect(merged.pull_w_high).toBe(Math.round(merged.pull_w_mean * (1 + cfgM.band_pct)));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SUITE: styrkort default row count.
+// The "Max rader" default must be the number of control legs in the code,
+// not a misleading larger constant.
+// ---------------------------------------------------------------------------
+describe('styrkort default max rows', () => {
+  it('STYRKORT_DEFAULT_MAX_ROWS equals the Vattern control-leg count', () => {
+    expect(STYRKORT_DEFAULT_MAX_ROWS).toBe(VATTERN_CONTROLS.length - 1);
+  });
+
+  it('applyDefaults sets styrkort_max_rows to the control-leg count', () => {
+    const cfg = applyDefaults({
+      race_date: '2026-06-13',
+      start_time: '04:22',
+      gpx_path: 'x',
+      ftp: 272,
+      n_riders: 12,
+      target_total_hm: '11:45',
+      stops: [],
+    });
+    expect(cfg.styrkort_max_rows).toBe(VATTERN_CONTROLS.length - 1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SUITE: compact-mode split-up to a target row count.
+// Flat 60 km route, depot (10 min) at km 30, controls Start/Mid/End.
+// Compact mode yields one row per control leg; raising maxSegments splits the
+// longest legs into finer checkpoint rows.
+// ---------------------------------------------------------------------------
+describe('segment() compact split-up to target rows', () => {
+  const micros = buildMicros(60);
+  const plans = micros.map((m) => makeSeg(m));
+  const planResult = buildPlanResult(plans, 10);
+  const legCount = CONTROLS.length - 1; // Mid + End (Start km 0 skipped) = 2
+
+  it('compact mode yields one row per control leg at the leg-count target', () => {
+    const rows = segment(planResult, BASE_CFG, CONTROLS, {
+      compactMode: true,
+      maxSegments: legCount,
+    });
+    expect(rows).toHaveLength(legCount);
+  });
+
+  it('raising maxSegments above the leg count splits to exactly the target', () => {
+    const target = legCount * 2; // 4
+    const rows = segment(planResult, BASE_CFG, CONTROLS, {
+      compactMode: true,
+      maxSegments: target,
+    });
+    expect(rows).toHaveLength(target);
+  });
+
+  it('keeps exactly one depot row, undivided, after splitting', () => {
+    const rows = segment(planResult, BASE_CFG, CONTROLS, {
+      compactMode: true,
+      maxSegments: 6,
+    });
+    const depots = rows.filter((s) => s.stop_minutes !== undefined && s.stop_minutes > 0);
+    expect(depots).toHaveLength(1);
+    expect(depots[0].stop_minutes).toBe(10);
+    // depot still ends on the control km (30), not split past it
+    expect(depots[0].to_km).toBeCloseTo(30, 0);
+  });
+
+  it('intermediate split rows carry no town', () => {
+    const rows = segment(planResult, BASE_CFG, CONTROLS, {
+      compactMode: true,
+      maxSegments: 6,
+    });
+    expect(rows.some((s) => s.town === undefined)).toBe(true);
+  });
+
+  it('conservation: micro_indices still cover every segment exactly once', () => {
+    const rows = segment(planResult, BASE_CFG, CONTROLS, {
+      compactMode: true,
+      maxSegments: 6,
+    });
+    const all = rows.flatMap((s) => s.micro_indices).sort((a, b) => a - b);
+    expect(all).toHaveLength(planResult.segments.length);
+    all.forEach((v, i) => expect(v).toBe(i));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SUITE: core invariant -- split-up must not change the time/speed between
+// depots. Split only re-aggregates micro-segments, so every control/depot
+// eta_s and depart_s is bit-for-bit unchanged.
+// ---------------------------------------------------------------------------
+describe('segment() split-up preserves depot timing (core invariant)', () => {
+  const micros = buildMicros(60);
+  const plans = micros.map((m) => makeSeg(m));
+  const planResult = buildPlanResult(plans, 10);
+  const legCount = CONTROLS.length - 1;
+
+  const noSplit = segment(planResult, BASE_CFG, CONTROLS, {
+    compactMode: true,
+    maxSegments: legCount,
+  });
+  const split = segment(planResult, BASE_CFG, CONTROLS, {
+    compactMode: true,
+    maxSegments: 6,
+  });
+
+  it('depot eta_s and depart_s are unchanged by splitting', () => {
+    const dNo = noSplit.find((s) => s.stop_minutes);
+    const dSp = split.find((s) => s.stop_minutes);
+    expect(dSp!.eta_s).toBe(dNo!.eta_s);
+    expect(dSp!.depart_s).toBe(dNo!.depart_s);
+  });
+
+  it('final arrival eta_s is unchanged by splitting', () => {
+    expect(split[split.length - 1].eta_s).toBe(noSplit[noSplit.length - 1].eta_s);
+  });
+
+  it('control/depot rows keep their eta_s sequence', () => {
+    const seqNo = noSplit.filter((s) => s.town !== undefined).map((s) => s.eta_s);
+    const seqSp = split.filter((s) => s.town !== undefined).map((s) => s.eta_s);
+    expect(seqSp).toEqual(seqNo);
+  });
+
+  it('total distance is conserved across the split', () => {
+    const sum = (rows: typeof split) => rows.reduce((a, s) => a + s.distance_m, 0);
+    expect(Math.abs(sum(split) - sum(noSplit))).toBeLessThan(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SUITE: the non-compact (full) view is never padded up to maxSegments.
+// Split-up is gated to compact mode, so the full tempokort keeps its natural
+// row count even though the default cap is 50.
+// ---------------------------------------------------------------------------
+describe('segment() non-compact view is never padded up to maxSegments', () => {
+  const micros = buildMicros(10);
+  const plans = micros.map((m) => makeSeg(m));
+  const planResult = buildPlanResult(plans, 0);
+  const controls: ControlPoint[] = [
+    { name: 'Start', km: 0 },
+    { name: 'Mid', km: 5 },
+    { name: 'End', km: 10 },
+  ];
+
+  it('stays at the natural row count, not 50', () => {
+    const rows = segment(planResult, BASE_CFG, controls);
+    expect(rows.length).toBeLessThan(10);
   });
 });
 

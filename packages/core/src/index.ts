@@ -31,6 +31,7 @@ export * from './planner.js';
 export {
   segment,
   VATTERN_CONTROLS,
+  STYRKORT_DEFAULT_MAX_ROWS,
   type ControlPoint,
   type SegmentOptions,
 } from './segmentation.js';
