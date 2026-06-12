@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react';
 import type { PipelineForm } from '../worker/solve.worker';
 import type { SolverStatus } from '../useSolver';
 import { defaultRouteGpx, DEFAULT_ROUTE_NAME } from '../lib/defaultRoute';
-import { VATTERN_CONTROLS } from '@stp/core';
+import { VATTERN_CONTROLS, STYRKORT_DEFAULT_MAX_ROWS } from '@stp/core';
 import type { ExposureTerrain } from '@stp/core';
 import { InfoTip } from './InfoTip';
 import { FIELD_HELP } from '../lib/strings';
@@ -74,7 +74,7 @@ const FORM_DEFAULTS: PersistedForm = {
   raceDate: '2026-06-13',
   startTime: '04:22',
   stops: DEFAULT_STOPS,
-  styrkortMaxRows: 20,
+  styrkortMaxRows: STYRKORT_DEFAULT_MAX_ROWS,
   exposureTerrain: 'mixed',
   showInterval: true,
 };
