@@ -88,9 +88,10 @@ export function runInnerSolve(
   let capTimeMovedS = 0;
 
   // Stops, applied inline when the march crosses their km marker. A stop
-  // attaches to the first segment whose END reaches the marker; it delays that
-  // segment's recorded ETA (= departure time) and shifts the clock for
-  // everything after, including weather queries.
+  // attaches to the first segment whose END reaches the marker. The boundary
+  // segment's eta_s stays the ARRIVAL time at that boundary; the stop then
+  // shifts the march clock (and therefore every later segment's eta_s and
+  // weather query) by the stop duration. Departure lives in StopPlan.depart_s.
   const stopsSorted = [...cfg.stops].sort((a, b) => a.km - b.km);
   let stopIdx = 0;
   const stops: StopPlan[] = [];
@@ -103,7 +104,6 @@ export function runInnerSolve(
       const arrive_s = elapsed;
       elapsed += addS;
       stopTimeS += addS;
-      segments[segments.length - 1].eta_s = elapsed;
       stops.push({
         control: stop.control,
         km: stop.km,
@@ -162,19 +162,18 @@ export function runInnerSolve(
     // Pull power on the front at the uncapped speed.
     const pPull = pullPower(v, micro.grade, headwind, crosswind, rho, cfg);
 
+    // Pull caps. On a climb (grade > climb_threshold, climb_discount on) the
+    // soft cap is the climb discount and takes PRECEDENCE: the binding cap is
+    // min(soft, hard). Off-climb only the hard cap applies. Checking hard
+    // first would let the steepest ramps pull at the (higher) hard cap while
+    // moderate climbs sit at the soft cap, inverting the intended severity.
+    const onClimb = micro.grade > cfg.climb_threshold && cfg.climb_discount;
+    const capW = onClimb ? Math.min(cfg.pull_cap_soft, cfg.pull_cap_hard) : cfg.pull_cap_hard;
+
     let cap_binding: SegmentPlan['cap_binding'] = 'none';
-    if (pPull > cfg.pull_cap_hard) {
-      v = solveSpeedForPullPower(cfg.pull_cap_hard, micro.grade, headwind, crosswind, rho, cfg);
-      cap_binding = 'hard';
-      hardCount++;
-    } else if (
-      micro.grade > cfg.climb_threshold &&
-      cfg.climb_discount &&
-      pPull > cfg.pull_cap_soft
-    ) {
-      v = solveSpeedForPullPower(cfg.pull_cap_soft, micro.grade, headwind, crosswind, rho, cfg);
-      cap_binding = 'soft';
-      softCount++;
+    if (pPull > capW) {
+      v = solveSpeedForPullPower(capW, micro.grade, headwind, crosswind, rho, cfg);
+      cap_binding = onClimb && capW < cfg.pull_cap_hard ? 'soft' : 'hard';
     }
 
     // Spin-out / planning-speed ceiling. A rotating group will not (and for
@@ -189,8 +188,12 @@ export function runInnerSolve(
     if (v > vMax) {
       v = vMax;
       cap_binding = 'spinout';
-      spinoutCount++;
     }
+
+    // Count the FINAL binding so the notes line matches what the plan shows.
+    if (cap_binding === 'hard') hardCount++;
+    else if (cap_binding === 'soft') softCount++;
+    else if (cap_binding === 'spinout') spinoutCount++;
 
     let p_pull_w: number;
     let rider_np_w: number;
@@ -239,6 +242,12 @@ export function runInnerSolve(
     applyStopsAtBoundary(micro.cum_distance_m);
   }
 
+  // Stops the march never reached (km beyond the route end) must be surfaced:
+  // silently dropping them would make the plan look faster than the rider's day.
+  const lastCumM =
+    microsegments.length > 0 ? microsegments[microsegments.length - 1].cum_distance_m : 0;
+  const missedStops = stopsSorted.slice(stopIdx);
+
   // ---- Totals ----
   const total_time_s = elapsed; // includes neutral + stops
   const rolling_time_s = total_time_s - stopTimeS;
@@ -256,6 +265,12 @@ export function runInnerSolve(
   const intensity_factor = cfg.ftp > 0 ? rider_np_ride_w / cfg.ftp : 0;
 
   const notes: string[] = [];
+  for (const missed of missedStops) {
+    notes.push(
+      `Stop "${missed.control}" at km ${missed.km} lies beyond the route end ` +
+        `(${(lastCumM / 1000).toFixed(1)} km) and was NOT applied.`,
+    );
+  }
   if (hardCount > 0 || softCount > 0 || spinoutCount > 0) {
     notes.push(
       `Caps bound on ${hardCount} hard, ${softCount} soft and ${spinoutCount} spin-out segment(s); ` +

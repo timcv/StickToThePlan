@@ -99,9 +99,9 @@ describe('runInnerSolve weather clock', () => {
     expect(plan.stops).toHaveLength(1);
     expect(plan.stop_time_s).toBe(600);
     expect(plan.stops[0].depart_s - plan.stops[0].arrive_s).toBe(600);
-    // The segment hosting the stop carries the departure ETA.
+    // The boundary segment's eta_s is the ARRIVAL at that marker (not departure).
     const hostIdx = plan.segments.findIndex((s) => s.micro.cum_distance_m >= 3000);
-    expect(plan.segments[hostIdx].eta_s).toBeCloseTo(plan.stops[0].depart_s, 6);
+    expect(plan.segments[hostIdx].eta_s).toBeCloseTo(plan.stops[0].arrive_s, 6);
     // Total = rolling + stop.
     expect(plan.total_time_s).toBeCloseTo(plan.rolling_time_s + 600, 6);
     // ETA monotone increasing.

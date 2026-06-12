@@ -78,6 +78,7 @@ export function App() {
   const [overrides, setOverrides] = useState<Map<number, HourlyWind>>(new Map());
   const [centroid, setCentroid] = useState({ lat: 0, lon: 0 });
   const [fetchStatus, setFetchStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [fetchError, setFetchError] = useState<string | undefined>(undefined);
   const [sources, setSources] = useState<string[]>([]);
   const [reduced, setReduced] = useState(false);
 
@@ -102,6 +103,7 @@ export function App() {
   const doFetch = async (form: FormSubmit) => {
     if (!form.gpxText.trim()) return;
     setFetchStatus('loading');
+    setFetchError(undefined);
     try {
       const cfg = applyDefaults({
         gpx_path: 'web.gpx',
@@ -129,8 +131,9 @@ export function App() {
       setBaseRows(utcRows.map((r) => ({ ...r, hour: toLocalHour(r.hour, off) })));
       setOverrides(new Map());
       setFetchStatus('done');
-    } catch {
+    } catch (err) {
       setFetchStatus('error');
+      setFetchError(err instanceof Error ? err.message : undefined);
     }
   };
 
@@ -272,6 +275,7 @@ export function App() {
             rows={mode === 'calm' ? [] : displayedRows}
             edited={editedHours}
             fetchStatus={fetchStatus}
+            fetchError={fetchError}
             sources={sources}
             reduced={reduced}
             windRef={windRef}
