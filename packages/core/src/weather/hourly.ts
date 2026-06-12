@@ -8,6 +8,7 @@
  */
 import type { EnsembleField, EnsembleCell } from './ensemble.js';
 import type { GeoPoint } from './openMeteo.js';
+import { STANDARD_ATMOSPHERE } from '../physics.js';
 
 export interface HourlyWind {
   hour: number; // hour of day 0..23
@@ -35,8 +36,56 @@ function vectorMean(cells: EnsembleCell[]): { dir: number; speed: number } {
   return { dir, speed };
 }
 
-/** One summary row per requested hour; empty hours fall back to the nearest. */
-export function summarizeHourly(field: EnsembleField, hours: number[]): HourlyWind[] {
+/** Absolute UTC hour index (epoch ms / 3.6e6) of a cell's timestamp. */
+function cellHourIndex(c: EnsembleCell): number {
+  return Math.floor(Date.parse(c.time_iso) / 3_600_000);
+}
+
+/** Cells in the absolute hour nearest to targetHourIndex (fallback when the exact hour is absent). */
+function nearestHourCells(field: EnsembleField, targetHourIndex: number): EnsembleCell[] {
+  if (field.cells.length === 0) return [];
+  let bestIdx = cellHourIndex(field.cells[0]);
+  let bestDiff = Infinity;
+  for (const c of field.cells) {
+    const diff = Math.abs(cellHourIndex(c) - targetHourIndex);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      bestIdx = cellHourIndex(c);
+    }
+  }
+  return field.cells.filter((c) => cellHourIndex(c) === bestIdx);
+}
+
+/**
+ * One summary row per requested hour-of-day. Empty hours fall back to the nearest.
+ *
+ * With a multi-day field (race_date + next day), the same hour-of-day appears on
+ * two dates. Pass startEpochMs (the absolute UTC instant of race start) so each
+ * requested hour resolves to its RIDE-WINDOW occurrence (the first matching UTC
+ * hour at-or-after the start) instead of vector-meaning both days together. When
+ * startEpochMs is omitted the legacy hour-of-day behavior is used (single-day
+ * field).
+ */
+export function summarizeHourly(
+  field: EnsembleField,
+  hours: number[],
+  startEpochMs?: number,
+): HourlyWind[] {
+  if (startEpochMs !== undefined) {
+    const startHourIndex = Math.floor(startEpochMs / 3_600_000);
+    return hours.map((hour) => {
+      const wantHour = ((hour % 24) + 24) % 24;
+      // First absolute hour at-or-after the start whose UTC hour === wantHour.
+      let idx = startHourIndex;
+      while (((new Date(idx * 3_600_000).getUTCHours() % 24) + 24) % 24 !== wantHour) idx++;
+      const matching = field.cells.filter((c) => cellHourIndex(c) === idx);
+      const cells = matching.length > 0 ? matching : nearestHourCells(field, idx);
+      if (cells.length === 0) return { hour, dir_from_deg: 0, speed_ms: 0 };
+      const { dir, speed } = vectorMean(cells);
+      return { hour, dir_from_deg: dir, speed_ms: speed };
+    });
+  }
+
   const byHour = new Map<number, EnsembleCell[]>();
   for (const c of field.cells) {
     const h = hourOf(c.time_iso);
@@ -90,8 +139,8 @@ export function buildManualField(
       winddir_from_deg: e.dir_from_deg,
       windspeed_p10_ms: e.speed_ms,
       windspeed_p90_ms: e.speed_ms,
-      temp_c: 10,
-      pressure_pa: 101_325,
+      temp_c: STANDARD_ATMOSPHERE.temp_c,
+      pressure_pa: STANDARD_ATMOSPHERE.pressure_pa,
       n_sources: 1,
     };
   });

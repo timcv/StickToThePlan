@@ -8,6 +8,7 @@
 
 import type { WindSample, WindCond, Scenario, WeatherFn } from '../types.js';
 import { haversine } from '../util/geo.js';
+import { STANDARD_ATMOSPHERE } from '../physics.js';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -74,15 +75,6 @@ function roundCoord(x: number): number {
 function truncateToHour(timeIso: string): string {
   // e.g. "2026-06-13T06:00:00Z" -> "2026-06-13T06"
   return timeIso.slice(0, 13);
-}
-
-/**
- * Extract the hour of day (0-23) from an ISO-8601 string.
- * Works for both "2026-06-13T06:00:00Z" and "2026-06-13T06:00" forms.
- */
-function hourOfDay(timeIso: string): number {
-  const t = timeIso.slice(11, 13);
-  return parseInt(t, 10);
 }
 
 // ---------------------------------------------------------------------------
@@ -223,6 +215,41 @@ export function buildEnsemble(rawSamples: WindSample[]): EnsembleField {
 }
 
 // ---------------------------------------------------------------------------
+// nearestCell
+// ---------------------------------------------------------------------------
+
+/**
+ * Pick the cell best matching a query point and absolute instant. The spatial
+ * score uses haversine; the temporal score is ABSOLUTE milliseconds (not
+ * hour-of-day), so cells are disambiguated across days: a ride past UTC midnight
+ * matches the correct day rather than the same hour on the wrong day. Space is
+ * normalized by 100 km and time by 12 h (spatial proximity weighted slightly
+ * more). Returns undefined for an empty field.
+ */
+export function nearestCell(
+  cells: EnsembleCell[],
+  lat: number,
+  lon: number,
+  queryEpochMs: number,
+): EnsembleCell | undefined {
+  if (cells.length === 0) return undefined;
+  const SPACE_REF_M = 100_000;
+  const TIME_REF_H = 12;
+  let best = cells[0];
+  let bestScore = Infinity;
+  for (const cell of cells) {
+    const distM = haversine({ lat, lon }, { lat: cell.lat, lon: cell.lon });
+    const dtH = Math.abs(Date.parse(cell.time_iso) - queryEpochMs) / 3_600_000;
+    const score = distM / SPACE_REF_M + dtH / TIME_REF_H;
+    if (score < bestScore) {
+      bestScore = score;
+      best = cell;
+    }
+  }
+  return best;
+}
+
+// ---------------------------------------------------------------------------
 // makeWeatherFn
 // ---------------------------------------------------------------------------
 
@@ -230,19 +257,18 @@ export function buildEnsemble(rawSamples: WindSample[]): EnsembleField {
  * Return a WeatherFn for the given EnsembleField and Scenario.
  *
  * For each query (lat, lon, timeS):
- *   1. Convert timeS (seconds from race start) to hour-of-day using startClockS.
- *      startClockS MUST be the UTC start clock (utcStartClockSeconds): cells are
- *      binned on UTC hours, while the planner's elapsed march is timezone-free.
- *   2. Find the best matching cell using a two-stage approach:
- *      a. Find cells nearest in space (haversine).
- *      b. Among those, pick the one nearest in time (absolute hour difference).
- *      (Implemented as a single pass with a normalized combined score.)
+ *   1. Convert timeS (seconds from race start) to an absolute UTC instant using
+ *      startEpochMs, the absolute UTC epoch (ms) of race start (raceStartEpochMs).
+ *      Matching on the absolute instant (not hour-of-day) disambiguates days, so
+ *      a ride past UTC midnight reads the correct day's cells.
+ *   2. Pick the best matching cell via nearestCell (combined space + absolute-time
+ *      score).
  *   3. Return WindCond with windspeed selected by scenario.
  *
- * Cell selection is memoized per (lat, lon, hour): the planner re-queries the
- * same microsegment coordinates on every bisection iteration, and the O(cells)
- * haversine scan dominated solver runtime. The cache is exact, not an
- * approximation, because the score depends only on (lat, lon, queryHour).
+ * Cell selection is memoized per (lat, lon, absolute-hour): the planner re-queries
+ * the same microsegment coordinates on every bisection iteration, and the
+ * O(cells) haversine scan dominated solver runtime. The cache is exact, not an
+ * approximation, because the score depends only on (lat, lon, absolute hour).
  *
  * Scenario -> percentile mapping. Optimistic = best (fastest) case, pessimistic
  * = worst (slowest). On a route that is NET INTO the wind, more wind is slower,
@@ -261,55 +287,34 @@ export function buildEnsemble(rawSamples: WindSample[]): EnsembleField {
 export function makeWeatherFn(
   field: EnsembleField,
   scenario: Scenario,
-  startClockS: number,
+  startEpochMs: number,
   favorableWind = false,
 ): WeatherFn {
   const { cells } = field;
 
   if (cells.length === 0) {
-    // Fallback: return calm wind
+    // Fallback: calm wind at the standard atmosphere
     return (_lat, _lon, _timeS) => ({
       windspeed_ms: 0,
       winddir_from_deg: 0,
-      temp_c: 10,
-      pressure_pa: 101_325,
+      temp_c: STANDARD_ATMOSPHERE.temp_c,
+      pressure_pa: STANDARD_ATMOSPHERE.pressure_pa,
     });
   }
 
   const cellCache = new Map<string, EnsembleCell>();
 
   return (lat: number, lon: number, timeS: number): WindCond => {
-    // Convert timeS (seconds from race start) to UTC hour-of-day
-    const queryHour = Math.floor(((startClockS + timeS) % 86400) / 3600);
+    // Absolute UTC instant of this query; cells are matched on absolute time so a
+    // multi-day field disambiguates days. Memoized per lat|lon|absolute-hour.
+    const queryEpochMs = startEpochMs + timeS * 1000;
+    const hourIndex = Math.floor(queryEpochMs / 3_600_000);
 
-    const cacheKey = `${lat}|${lon}|${queryHour}`;
+    const cacheKey = `${lat}|${lon}|${hourIndex}`;
     let bestCell = cellCache.get(cacheKey);
 
     if (bestCell === undefined) {
-      // Find best cell: minimize combined score of spatial distance and time distance.
-      // We normalize space by a reference distance (100 km = 100_000 m) and time
-      // by a reference (12 hours). This ensures nearby cells in both dimensions are
-      // preferred, with spatial proximity weighted slightly more.
-      const SPACE_REF_M = 100_000;
-      const TIME_REF_H = 12;
-
-      bestCell = cells[0];
-      let bestScore = Infinity;
-
-      for (const cell of cells) {
-        const distM = haversine({ lat, lon }, { lat: cell.lat, lon: cell.lon });
-        const cellHour = hourOfDay(cell.time_iso);
-        const hourDiff = Math.abs(cellHour - queryHour);
-        // Wrap hour difference for crossing midnight (e.g. hour 23 vs 1 -> diff 2)
-        const wrappedHourDiff = Math.min(hourDiff, 24 - hourDiff);
-
-        const score = distM / SPACE_REF_M + wrappedHourDiff / TIME_REF_H;
-
-        if (score < bestScore) {
-          bestScore = score;
-          bestCell = cell;
-        }
-      }
+      bestCell = nearestCell(cells, lat, lon, queryEpochMs)!;
       cellCache.set(cacheKey, bestCell);
     }
 

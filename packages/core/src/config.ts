@@ -1,4 +1,5 @@
 import type { Config, Stop } from './types.js';
+import { STANDARD_RHO } from './physics.js';
 
 /**
  * Default values for all numeric/boolean parameters (spec section 5.4).
@@ -11,7 +12,7 @@ const DEFAULTS = {
   crr: 0.0045,
   eta: 0.97,
   g: 9.81,
-  rho_fallback: 1.2,
+  rho_fallback: STANDARD_RHO,
   pull_seconds: 45,
   pull_cap_mult: 1.3,
   max_plan_speed_kmh: 50,

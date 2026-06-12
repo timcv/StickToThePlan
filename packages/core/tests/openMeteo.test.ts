@@ -3,9 +3,27 @@ import {
   parseOpenMeteo,
   buildForecastUrl,
   buildEnsembleUrl,
+  buildForecastUrlMulti,
   fetchOpenMeteo,
+  nextDay,
   type GeoPoint,
 } from '../src/weather/openMeteo.js';
+
+describe('nextDay', () => {
+  it('advances one UTC calendar day, across a month boundary', () => {
+    expect(nextDay('2026-06-13')).toBe('2026-06-14');
+    expect(nextDay('2026-06-30')).toBe('2026-07-01');
+    expect(nextDay('2026-12-31')).toBe('2027-01-01');
+  });
+});
+
+describe('buildForecastUrlMulti date range', () => {
+  it('fetches the supplied date through the next day', () => {
+    const url = buildForecastUrlMulti([{ lat: 58.5, lon: 14.6 }], '2026-06-13');
+    expect(url).toContain('start_date=2026-06-13');
+    expect(url).toContain('end_date=2026-06-14');
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Fixture: two hours of Open-Meteo hourly data
@@ -177,9 +195,9 @@ describe('buildForecastUrl', () => {
     );
   });
 
-  it('includes start_date and end_date equal to the supplied date', () => {
+  it('fetches the supplied date through the next day (covers post-midnight rides)', () => {
     expect(url).toContain('start_date=2026-06-13');
-    expect(url).toContain('end_date=2026-06-13');
+    expect(url).toContain('end_date=2026-06-14');
   });
 
   it('uses UTC timezone', () => {
@@ -216,9 +234,9 @@ describe('buildEnsembleUrl', () => {
     expect(url).toContain('models=icon_seamless');
   });
 
-  it('includes start_date and end_date equal to the supplied date', () => {
+  it('fetches the supplied date through the next day (covers post-midnight rides)', () => {
     expect(url).toContain('start_date=2026-06-13');
-    expect(url).toContain('end_date=2026-06-13');
+    expect(url).toContain('end_date=2026-06-14');
   });
 
   it('uses UTC timezone', () => {

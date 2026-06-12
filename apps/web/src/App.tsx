@@ -16,6 +16,7 @@ import {
   applyHourlyOverrides,
   buildManualField,
   localUtcOffsetHours,
+  raceStartEpochMs,
   type EnsembleField,
   type HourlyWind,
 } from '@stp/core';
@@ -127,6 +128,7 @@ export function App() {
       const utcRows = summarizeHourly(
         f,
         hoursFor(form).map((h) => toUtcHour(h, off)),
+        raceStartEpochMs(form.form.race_date, form.form.start_time, cfg.time_zone),
       );
       setBaseRows(utcRows.map((r) => ({ ...r, hour: toLocalHour(r.hour, off) })));
       setOverrides(new Map());

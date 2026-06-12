@@ -1,6 +1,59 @@
 import { describe, it, expect } from 'vitest';
 import type { WindSample } from '../src/types.js';
-import { buildEnsemble, makeWeatherFn } from '../src/weather/ensemble.js';
+import { buildEnsemble, makeWeatherFn, nearestCell } from '../src/weather/ensemble.js';
+import type { EnsembleCell } from '../src/weather/ensemble.js';
+
+// ---------------------------------------------------------------------------
+// nearestCell: absolute-time matching
+// ---------------------------------------------------------------------------
+
+function makeCell(time_iso: string, overrides: Partial<EnsembleCell> = {}): EnsembleCell {
+  return {
+    time_iso,
+    lat: 58.5,
+    lon: 14.5,
+    windspeed_mean_ms: 5,
+    winddir_from_deg: 270,
+    windspeed_p10_ms: 4,
+    windspeed_p90_ms: 6,
+    temp_c: 15,
+    pressure_pa: 101_325,
+    n_sources: 1,
+    ...overrides,
+  };
+}
+
+describe('nearestCell', () => {
+  it('disambiguates across days by absolute time', () => {
+    const day1 = makeCell('2026-06-13T06:00:00Z');
+    const day2 = makeCell('2026-06-14T06:00:00Z');
+    const q = Date.parse('2026-06-14T05:30:00Z');
+    // Same hour-of-day on both days; only absolute time tells them apart.
+    expect(nearestCell([day1, day2], 58.5, 14.5, q)).toBe(day2);
+  });
+
+  it('returns undefined for an empty field', () => {
+    expect(nearestCell([], 58.5, 14.5, 0)).toBeUndefined();
+  });
+});
+
+describe('makeWeatherFn absolute-time matching', () => {
+  it('matches the next-day cell after crossing UTC midnight', () => {
+    const field = {
+      cells: [
+        makeCell('2026-06-13T22:00:00Z', { winddir_from_deg: 90, windspeed_mean_ms: 5 }),
+        makeCell('2026-06-14T02:00:00Z', { winddir_from_deg: 270, windspeed_mean_ms: 5 }),
+      ],
+      sources: ['x'],
+      reduced: true,
+    };
+    // Start 22:00 UTC on race day; +4 h elapsed = 02:00 next day -> the 270 cell.
+    const startEpochMs = Date.UTC(2026, 5, 13, 22, 0, 0);
+    const fn = makeWeatherFn(field, 'expected', startEpochMs);
+    expect(fn(58.5, 14.5, 0).winddir_from_deg).toBe(90);
+    expect(fn(58.5, 14.5, 4 * 3600).winddir_from_deg).toBe(270);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Helpers

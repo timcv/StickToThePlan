@@ -43,6 +43,21 @@ describe('summarizeHourly', () => {
     expect(rows).toHaveLength(1);
     expect(Math.round(rows[0].speed_ms)).toBe(6); // hour 7 is nearest
   });
+
+  it('resolves the ride-window day for a multi-day field when given startEpochMs', () => {
+    // Same hour-of-day (06) on two dates with different wind; only the absolute
+    // start instant tells the solver which day the ride actually covers.
+    const multiDay: EnsembleField = {
+      cells: [cell(6, 90, 4), { ...cell(6, 270, 9), time_iso: '2026-06-14T06:00:00Z' }],
+      sources: ['a', 'b', 'c'],
+      reduced: false,
+    };
+    // Ride starts 2026-06-13 20:00 UTC -> hour 06 occurs on 2026-06-14 (the 270/9 cell).
+    const startEpochMs = Date.UTC(2026, 5, 13, 20, 0, 0);
+    const [row] = summarizeHourly(multiDay, [6], startEpochMs);
+    expect(Math.round(row.dir_from_deg)).toBe(270);
+    expect(Math.round(row.speed_ms)).toBe(9);
+  });
 });
 
 describe('applyHourlyOverrides', () => {

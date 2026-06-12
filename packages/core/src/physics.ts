@@ -113,6 +113,16 @@ export function airDensity(tempC: number, pressurePa: number, relHumidity = 0): 
 }
 
 /**
+ * International Standard Atmosphere reference: the single default used wherever
+ * no weather data is available (calm fallbacks, manual field, neutral-segment
+ * rho). One value everywhere keeps fallback air density consistent.
+ */
+export const STANDARD_ATMOSPHERE = { temp_c: 15, pressure_pa: 101_325 } as const;
+
+/** Air density of the standard atmosphere (~1.2250 kg/m^3). */
+export const STANDARD_RHO = airDensity(STANDARD_ATMOSPHERE.temp_c, STANDARD_ATMOSPHERE.pressure_pa);
+
+/**
  * Yaw-angle CdA factor. Increases effective CdA with yaw angle.
  *
  * Spec section 6.3:
