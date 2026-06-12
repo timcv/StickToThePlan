@@ -87,3 +87,7 @@ Recorded here so the cuts are not lost:
 - **CLI relative-time course export:** `buildCourseFit` now takes `{ relativeTime }` (the
   web exposes it as a checkbox), but the CLI (`packages/cli/src/fileIo.ts`) always writes
   absolute wall-clock course points. Add a CLI flag/config to emit the relative variant.
+- **Course-point stop matching uses exact km:** `output/course.ts` matches a stop to a
+  control by exact `stop.km === cp.km`, while `output/splits.ts` now uses a 2 km tolerance.
+  A stop configured slightly off a control km shows its "(N min)" annotation in the split
+  table but not on the GPX/FIT course point. Unify on the km-tolerance match.
