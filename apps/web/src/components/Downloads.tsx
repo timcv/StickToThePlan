@@ -32,7 +32,17 @@ interface Props {
 }
 
 export function Downloads({ result, sources, reduced }: Props) {
-  const { cfg, micro, scenarios, displaySegments, styrkortSegments, anchor, controls } = result;
+  const {
+    cfg,
+    micro,
+    scenarios,
+    displaySegments,
+    styrkortSegments,
+    anchor,
+    courseCheckpoints,
+    refSpeedKmh,
+    totalAvgKmh,
+  } = result;
 
   // Relative-time course points compare against the rider's own elapsed time
   // instead of a fixed wall clock, so a test ride can start whenever.
@@ -44,7 +54,7 @@ export function Downloads({ result, sources, reduced }: Props) {
   };
 
   const onCourse = () => {
-    const gpx = buildCourseGpx(micro, scenarios.expected, cfg, controls);
+    const gpx = buildCourseGpx(micro, scenarios.expected, cfg, courseCheckpoints);
     downloadBlob('course.gpx', gpx, 'application/gpx+xml');
   };
 
@@ -59,12 +69,14 @@ export function Downloads({ result, sources, reduced }: Props) {
   };
 
   const onCourseFit = () => {
-    const bytes = buildCourseFit(micro, scenarios.expected, cfg, controls, { relativeTime });
+    const bytes = buildCourseFit(micro, scenarios.expected, cfg, courseCheckpoints, {
+      relativeTime,
+    });
     downloadBlob('course.fit', bytes, 'application/octet-stream');
   };
 
   const onStyrkort = () => {
-    const html = buildStyrkortHtml(styrkortSegments, cfg);
+    const html = buildStyrkortHtml(styrkortSegments, cfg, { refSpeedKmh, totalAvgKmh });
     downloadBlob('styrkortet.html', html, 'text/html');
   };
 

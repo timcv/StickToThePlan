@@ -318,6 +318,8 @@ export function App() {
                 segments={result.displaySegments}
                 compactSegments={result.styrkortSegments}
                 startTime={startTime}
+                refSpeedKmh={result.refSpeedKmh}
+                totalAvgKmh={result.totalAvgKmh}
                 segmentPlans={result.scenarios.expected.segments}
               />
               {result.scenarios.optimistic !== result.scenarios.expected ||

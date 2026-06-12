@@ -8,6 +8,7 @@
 import type { DisplaySegment, Config } from '../types.js';
 import type { ThreeScenarios } from '../planner.js';
 import { secondsToClock } from '../util/time.js';
+import { diffToStraightMin, formatAnkomst, type StyrkortMeta } from './styrkort.js';
 
 // ---------------------------------------------------------------------------
 // Local helpers
@@ -294,27 +295,40 @@ const STYRKORT_STYLE = `
   }
 `.trim();
 
+/** Format a km/h value with a Swedish decimal comma and two decimals. */
+function kmh2(v: number): string {
+  return v.toFixed(2).replace('.', ',');
+}
+
 /**
  * Render a compact A6-sized handlebar card as a standalone HTML document.
- * Columns: Sträcka, Ort, km/h, Ankomst, Avgång, W.
+ * Three columns: Km (slut-km), km/h (rullhastighet exkl. stopp), Ankomst
+ * (klockslag + diff mot rakt rullsnitt, och avgångstid vid depåstopp).
  */
 export function buildStyrkortHtml(
   displaySegments: DisplaySegment[],
   cfg: Config,
+  meta: StyrkortMeta,
 ): string {
-  const title = escHtml(`Vätternrundan ${cfg.race_date} – Start ${cfg.start_time} – Mål ${cfg.target_total_hm}`);
+  const title = escHtml(`Vätternrundan ${cfg.race_date} – Mål ${cfg.target_total_hm}`);
+  const explain1 = escHtml(
+    `Start ${cfg.start_time} · Diff mot rakt rullsnitt ${kmh2(meta.refSpeedKmh)} km/h · + = före, - = efter`,
+  );
+  const explain2 = escHtml(
+    `Totalsnitt inkl. pauser: ${kmh2(meta.totalAvgKmh)} km/h · Rullsnitt: ${kmh2(meta.refSpeedKmh)} km/h`,
+  );
 
   const rows = displaySegments.map(seg => {
-    const stracka = escHtml(`${seg.from_km}-${seg.to_km}`);
-    const ort = escHtml(seg.town ?? '');
+    const km = escHtml(String(seg.to_km));
     const kmh = seg.avg_speed_kmh > 0 ? String(Math.round(seg.avg_speed_kmh)) : '';
-    const ankomst = escHtml(secondsToClock(seg.eta_s, cfg.start_time));
-    const avgang = seg.depart_s !== undefined
-      ? escHtml(secondsToClock(seg.depart_s, cfg.start_time))
-      : '';
-    const w = seg.avg_w > 0 ? String(seg.avg_w) : '';
+    const etaClock = secondsToClock(seg.eta_s, cfg.start_time);
+    const diff = diffToStraightMin(seg.to_km, seg.eta_s, meta.refSpeedKmh);
+    const departClock = seg.depart_s !== undefined
+      ? secondsToClock(seg.depart_s, cfg.start_time)
+      : undefined;
+    const ankomst = escHtml(formatAnkomst(etaClock, diff, departClock));
     const rowClass = seg.stop_minutes !== undefined && seg.stop_minutes > 0 ? ' class="stop-row"' : '';
-    return `    <tr${rowClass}>\n      <td>${stracka}</td><td>${ort}</td><td class="num">${kmh}</td><td class="num">${ankomst}</td><td class="num">${avgang}</td><td class="num">${w}</td>\n    </tr>`;
+    return `    <tr${rowClass}>\n      <td class="num">${km}</td><td class="num">${kmh}</td><td>${ankomst}</td>\n    </tr>`;
   }).join('\n');
 
   return `<!DOCTYPE html>
@@ -329,15 +343,14 @@ export function buildStyrkortHtml(
 <body>
   <h1>Styrkortet</h1>
   <p>${title}</p>
+  <p class="explain">${explain1}</p>
+  <p class="explain">${explain2}</p>
   <table>
     <thead>
       <tr>
         <th>Km</th>
-        <th>Ort</th>
         <th>km/h</th>
         <th>Ankomst</th>
-        <th>Avg&aring;ng</th>
-        <th>W</th>
       </tr>
     </thead>
     <tbody>

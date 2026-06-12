@@ -11,6 +11,8 @@
 import { useState } from 'react';
 import {
   secondsToClock,
+  diffToStraightMin,
+  formatAnkomst,
   type DisplaySegment,
   type SegmentPlan,
   type ExposureClass,
@@ -24,12 +26,21 @@ interface Props {
   segments: DisplaySegment[];
   compactSegments?: DisplaySegment[];
   startTime: string;
+  /** Rakt rullsnitt (km/h) the compact view diffs each arrival against. */
+  refSpeedKmh: number;
+  /** Totalsnitt inkl. pauser (km/h), shown in the compact caption. */
+  totalAvgKmh: number;
   /**
    * The expected plan's per-microsegment SegmentPlans, indexed to match
    * DisplaySegment.micro_indices. When present the full view shows the
    * prognos -> effektiv wind and the dominant exposure class per row.
    */
   segmentPlans?: SegmentPlan[];
+}
+
+/** Format a km/h value with a Swedish decimal comma and two decimals. */
+function kmh2(v: number): string {
+  return v.toFixed(2).replace('.', ',');
 }
 
 /**
@@ -68,7 +79,14 @@ function rowWindDetail(
   return { raw: rawW / dist, eff: effW / dist, exposure };
 }
 
-export function TempokortTable({ segments, compactSegments, startTime, segmentPlans }: Props) {
+export function TempokortTable({
+  segments,
+  compactSegments,
+  startTime,
+  refSpeedKmh,
+  totalAvgKmh,
+  segmentPlans,
+}: Props) {
   // Default to the compact styrkortsläge: it is the handlebar-friendly view most
   // riders want. The toggle reveals the full terrain + wind detail.
   const [compact, setCompact] = useState(true);
@@ -96,17 +114,21 @@ export function TempokortTable({ segments, compactSegments, startTime, segmentPl
           </>
         )}
       </div>
+      {compact && (
+        <p className="styrkort-caption">
+          Start {startTime} · Diff mot rakt rullsnitt {kmh2(refSpeedKmh)} km/h · + = före, - = efter
+          <br />
+          Totalsnitt inkl. pauser: {kmh2(totalAvgKmh)} km/h · Rullsnitt: {kmh2(refSpeedKmh)} km/h
+        </p>
+      )}
       <div className="table-scroll">
         {compact ? (
           <table className="data-table">
             <thead>
               <tr>
-                <th>Km</th>
-                <th>Ort</th>
+                <th className="num">Km</th>
                 <th className="num">km/h</th>
-                <th className="num">Ankomst</th>
-                <th className="num">Avgång</th>
-                <th className="num">W</th>
+                <th>Ankomst</th>
               </tr>
             </thead>
             <tbody>
@@ -115,21 +137,19 @@ export function TempokortTable({ segments, compactSegments, startTime, segmentPl
                   key={`${seg.from_km}-${seg.to_km}-${i}`}
                   className={seg.stop_minutes ? 'stop-row' : undefined}
                 >
-                  <td>
-                    {seg.from_km}-{seg.to_km}
-                  </td>
-                  <td>
-                    {seg.stop_minutes ? '☕ ' : ''}
-                    {seg.town ?? ''}
-                  </td>
+                  <td className="num">{seg.to_km}</td>
                   <td className="num">
                     {seg.avg_speed_kmh > 0 ? Math.round(seg.avg_speed_kmh) : ''}
                   </td>
-                  <td className="num">{secondsToClock(seg.eta_s, startTime)}</td>
-                  <td className="num">
-                    {seg.depart_s !== undefined ? secondsToClock(seg.depart_s, startTime) : ''}
+                  <td>
+                    {formatAnkomst(
+                      secondsToClock(seg.eta_s, startTime),
+                      diffToStraightMin(seg.to_km, seg.eta_s, refSpeedKmh),
+                      seg.depart_s !== undefined
+                        ? secondsToClock(seg.depart_s, startTime)
+                        : undefined,
+                    )}
                   </td>
-                  <td className="num">{seg.avg_w > 0 ? seg.avg_w : ''}</td>
                 </tr>
               ))}
             </tbody>

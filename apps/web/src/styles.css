@@ -585,6 +585,13 @@ fieldset.form-section legend {
   font-weight: 600;
 }
 
+.styrkort-caption {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: #555;
+}
+
 /* ---- Downloads ---- */
 
 .download-group {

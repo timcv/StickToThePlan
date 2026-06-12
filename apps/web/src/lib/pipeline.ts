@@ -16,6 +16,8 @@ import {
   segment,
   buildSplitTable,
   applyExposure,
+  styrkortMeta,
+  checkpointsFromStyrkort,
   type Config,
   type ControlPoint,
   type RawConfig,
@@ -76,6 +78,12 @@ export interface PipelineResult {
   scenarios: ThreeScenarios;
   displaySegments: DisplaySegment[];
   styrkortSegments: DisplaySegment[];
+  /** Rakt rullsnitt (km/h): styrkort diff reference, distance / rolling time. */
+  refSpeedKmh: number;
+  /** Totalsnitt inkl. pauser (km/h): distance / total time. */
+  totalAvgKmh: number;
+  /** GPS checkpoints derived from the styrkort rows (Start + one per row). */
+  courseCheckpoints: ControlPoint[];
   splits: SplitRow[];
   anchor: FitPassMetrics;
   npTargetUsed: number;
@@ -207,10 +215,21 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
   });
   const splits = buildSplitTable(scenarios.expected, cfg, controls);
 
+  // Styrkort diff reference + GPS checkpoints both follow the compact styrkort
+  // rows, so the printed card, the on-screen card and the GPX/FIT checkpoints
+  // all agree. Total distance is the final styrkort row's to_km.
+  const totalDistanceM =
+    styrkortSegments.length > 0 ? styrkortSegments[styrkortSegments.length - 1].to_km * 1000 : 0;
+  const meta = styrkortMeta(scenarios.expected, totalDistanceM);
+  const courseCheckpoints = checkpointsFromStyrkort(styrkortSegments, controls);
+
   return {
     scenarios,
     displaySegments,
     styrkortSegments,
+    refSpeedKmh: meta.refSpeedKmh,
+    totalAvgKmh: meta.totalAvgKmh,
+    courseCheckpoints,
     splits,
     anchor,
     npTargetUsed,
