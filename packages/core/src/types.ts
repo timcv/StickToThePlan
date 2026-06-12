@@ -119,7 +119,7 @@ export interface SegmentPlan {
   p_mean_w: number;
   rider_np_w: number;
   time_s: number;
-  eta_s: number; // eta_s = seconds from start_time at segment END
+  eta_s: number; // arrival, seconds from start_time at segment END (stops at the boundary are NOT included; see StopPlan.depart_s)
   headwind_ms: number;
   crosswind_ms: number;
   rho: number;

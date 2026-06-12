@@ -4,7 +4,7 @@ import type { MicroSegment, Config } from '../src/types.js';
 import { applyDefaults } from '../src/config.js';
 import { ingestGpxString } from '../src/ingest/gpx.js';
 import { hmToSeconds, secondsToClock } from '../src/util/time.js';
-import { calmWeather, solveForTargetTime } from '../src/planner.js';
+import { calmWeather, runInnerSolve, solveForTargetTime } from '../src/planner.js';
 
 // ---------------------------------------------------------------------------
 // Helper: build a synthetic flat route.
@@ -208,3 +208,71 @@ function clockSeconds(hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number);
   return h * 3600 + m * 60;
 }
+
+// ---------------------------------------------------------------------------
+// Stop boundary semantics: eta_s must be arrival, not departure.
+// ---------------------------------------------------------------------------
+
+function flatMicros(count: number, lenM: number): MicroSegment[] {
+  const out: MicroSegment[] = [];
+  let cum = 0;
+  for (let i = 0; i < count; i++) {
+    cum += lenM;
+    out.push({
+      index: i,
+      distance_m: lenM,
+      cum_distance_m: cum,
+      grade: 0,
+      bearing_deg: 0,
+      lat: 58.5,
+      lon: 15,
+      ele_start_m: 100,
+      ele_end_m: 100,
+      neutral: false,
+    });
+  }
+  return out;
+}
+
+describe('stop boundary eta_s semantics', () => {
+  it('keeps eta_s = arrival on the stop boundary segment; stop shifts later segments', () => {
+    const cfg = applyDefaults({
+      gpx_path: 'x.gpx',
+      race_date: '2026-06-13',
+      start_time: '04:22',
+      ftp: 272,
+      n_riders: 12,
+      target_total_hm: '11:45',
+      stops: [{ control: 'Mitt', km: 2, minutes: 10 }],
+      neutral_distance_km: 0,
+    });
+    const micros = flatMicros(4, 1000); // boundaries at 1,2,3,4 km
+    const plan = runInnerSolve(micros, 200, calmWeather, cfg);
+
+    const stop = plan.stops[0];
+    expect(stop.depart_s - stop.arrive_s).toBe(600);
+
+    const boundary = plan.segments.find((s) => s.micro.cum_distance_m === 2000)!;
+    expect(boundary.eta_s).toBeCloseTo(stop.arrive_s, 6);
+
+    const next = plan.segments.find((s) => s.micro.cum_distance_m === 3000)!;
+    expect(next.eta_s).toBeCloseTo(stop.depart_s + next.time_s, 6);
+  });
+
+  it('notes a stop whose km is beyond the route end instead of dropping it silently', () => {
+    const cfg = applyDefaults({
+      gpx_path: 'x.gpx',
+      race_date: '2026-06-13',
+      start_time: '04:22',
+      ftp: 272,
+      n_riders: 12,
+      target_total_hm: '11:45',
+      stops: [{ control: 'Spöke', km: 99, minutes: 10 }],
+      neutral_distance_km: 0,
+    });
+    const plan = runInnerSolve(flatMicros(4, 1000), 200, calmWeather, cfg); // 4 km route
+    expect(plan.stops).toHaveLength(0);
+    expect(plan.stop_time_s).toBe(0);
+    expect(plan.notes.some((n) => n.includes('Spöke') && n.includes('99'))).toBe(true);
+  });
+});

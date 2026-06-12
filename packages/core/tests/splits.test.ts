@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { MicroSegment, Config } from '../src/types.js';
 import { applyDefaults } from '../src/config.js';
-import { calmWeather, solveForTargetTime } from '../src/planner.js';
+import { calmWeather, runInnerSolve, solveForTargetTime } from '../src/planner.js';
 import type { ControlPoint } from '../src/segmentation.js';
 import { buildSplitTable } from '../src/output/splits.js';
 
@@ -95,5 +95,47 @@ describe('buildSplitTable – synthetic 60 km route', () => {
     const alphaRow = rows.find((r) => r.toControl === 'Alpha');
     expect(alphaRow).toBeDefined();
     expect(alphaRow!.stop_minutes).toBe(5);
+  });
+
+  it('matches a stop to its control by km even when the control name differs', () => {
+    // Stop named differently from the control; km 20 still equals Alpha's km.
+    const cfgRenamed: Config = {
+      ...cfg,
+      stops: [{ control: 'Helt Annat Namn', km: 20, minutes: 5 }],
+    };
+    const npTarget = plan.np_target_used;
+    const renamedPlan = runInnerSolve(micro, npTarget, calmWeather, cfgRenamed);
+    const rows = buildSplitTable(renamedPlan, cfgRenamed, CONTROLS);
+    const alphaRow = rows.find((r) => r.toControl === 'Alpha')!;
+    expect(alphaRow.stop_minutes).toBe(5);
+    expect(alphaRow.depart_s).toBe(alphaRow.arrive_s + 300);
+  });
+
+  it('stop at exactly km 22 (control km 20 + tolerance) is matched to Alpha', () => {
+    // Boundary: |22 - 20| === 2 === STOP_CONTROL_TOL_KM, so it is within tolerance.
+    const cfgBoundary: Config = {
+      ...cfg,
+      stops: [{ control: 'Alpha', km: 22, minutes: 5 }],
+    };
+    const npTarget = plan.np_target_used;
+    const boundaryPlan = runInnerSolve(micro, npTarget, calmWeather, cfgBoundary);
+    const rows = buildSplitTable(boundaryPlan, cfgBoundary, CONTROLS);
+    const alphaRow = rows.find((r) => r.toControl === 'Alpha')!;
+    expect(alphaRow.stop_minutes).toBe(5);
+  });
+
+  it('stop at km 22.5 (outside tolerance) is an orphan and shows stop_minutes === 0 on Alpha', () => {
+    // Boundary: |22.5 - 20| === 2.5 > STOP_CONTROL_TOL_KM; no control matches.
+    // The stop is still counted in elapsed time (stopsBefore) but not shown in
+    // any row's stop_minutes column.
+    const cfgOrphan: Config = {
+      ...cfg,
+      stops: [{ control: 'Alpha', km: 22.5, minutes: 5 }],
+    };
+    const npTarget = plan.np_target_used;
+    const orphanPlan = runInnerSolve(micro, npTarget, calmWeather, cfgOrphan);
+    const rows = buildSplitTable(orphanPlan, cfgOrphan, CONTROLS);
+    const alphaRow = rows.find((r) => r.toControl === 'Alpha')!;
+    expect(alphaRow.stop_minutes).toBe(0);
   });
 });

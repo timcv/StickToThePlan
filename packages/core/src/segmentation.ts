@@ -22,6 +22,7 @@ export const VATTERN_CONTROLS: ControlPoint[] = [
   { name: 'Fagerhult', km: 134 },
   { name: 'Hjo', km: 173 },
   { name: 'Karlsborg', km: 204 },
+  { name: 'Forsviks bro', km: 206 },
   { name: 'Boviken', km: 226 },
   { name: 'Askersund', km: 256 },
   { name: 'Godegård', km: 284 },

@@ -10,6 +10,8 @@ import type { MicroSegment, PlanResult, Config, SegmentPlan } from '../src/types
 import type { ControlPoint } from '../src/segmentation.js';
 import { applyDefaults } from '../src/config.js';
 import { buildCourseGpx } from '../src/output/course.js';
+import { runInnerSolve, calmWeather } from '../src/planner.js';
+import { secondsToClock } from '../src/util/time.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -183,6 +185,63 @@ describe('buildCourseGpx (synthetic)', () => {
     const wptArray = gpxDoc['wpt'] as unknown[];
     expect(Array.isArray(wptArray)).toBe(true);
     expect(wptArray).toHaveLength(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Regression: depot waypoint shows ARRIVAL time, not departure
+// ---------------------------------------------------------------------------
+
+describe('buildCourseGpx via real planner – depot shows arrival clock', () => {
+  function flatMicros(count: number, lenM: number): MicroSegment[] {
+    const out: MicroSegment[] = [];
+    let cum = 0;
+    for (let i = 0; i < count; i++) {
+      cum += lenM;
+      out.push({
+        index: i,
+        distance_m: lenM,
+        cum_distance_m: cum,
+        grade: 0,
+        bearing_deg: 0,
+        lat: 58.5,
+        lon: 15,
+        ele_start_m: 100,
+        ele_end_m: 100,
+        neutral: false,
+      });
+    }
+    return out;
+  }
+
+  const micros = flatMicros(40, 500); // 20 km total
+  const plannerCfg: Config = applyDefaults({
+    gpx_path: 'x.gpx',
+    race_date: '2026-06-13',
+    start_time: '04:22',
+    ftp: 272,
+    n_riders: 12,
+    target_total_hm: '11:45',
+    stops: [{ control: 'Mitt', km: 10, minutes: 10 }],
+    neutral_distance_km: 0,
+  });
+  const plan = runInnerSolve(micros, 180, calmWeather, plannerCfg);
+  const gpx = buildCourseGpx(micros, plan, plannerCfg, [
+    { name: 'Start', km: 0 },
+    { name: 'Mitt', km: 10 },
+    { name: 'Mål', km: 20 },
+  ]);
+
+  it('depot waypoint shows arrival clock and stop duration, not departure clock', () => {
+    const stop = plan.stops[0];
+    const arrivalClock = secondsToClock(stop.arrive_s, plannerCfg.start_time);
+    const departClock = secondsToClock(stop.depart_s, plannerCfg.start_time);
+    // Guard: the 10-min stop must make arrival and departure differ
+    expect(arrivalClock).not.toBe(departClock);
+    // The waypoint name must contain arrival + annotation
+    expect(gpx).toContain(`Mitt ${arrivalClock} (10 min)`);
+    // The waypoint name must NOT use departure clock
+    expect(gpx).not.toContain(`Mitt ${departClock}`);
   });
 });
 

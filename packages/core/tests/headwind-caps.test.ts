@@ -129,3 +129,79 @@ describe('hard-capped pulls sit exactly at the cap (yaw-consistent solve)', () =
     }
   });
 });
+
+describe('cap precedence on climbs', () => {
+  it('soft cap binds on a climb even when uncapped pull exceeds the hard cap', () => {
+    const cfg = applyDefaults({
+      gpx_path: 'x.gpx',
+      race_date: '2026-06-13',
+      start_time: '04:22',
+      ftp: 272,
+      n_riders: 12,
+      target_total_hm: '11:45',
+      stops: [],
+      neutral_distance_km: 0,
+      pull_cap_soft: 200,
+      pull_cap_hard: 250,
+    });
+    const headwind: WeatherFn = () => ({
+      windspeed_ms: 12,
+      winddir_from_deg: 0,
+      temp_c: 15,
+      pressure_pa: 101325,
+    });
+    const micro: MicroSegment = {
+      index: 0,
+      distance_m: 2000,
+      cum_distance_m: 2000,
+      grade: 0.06,
+      bearing_deg: 0,
+      lat: 58.5,
+      lon: 15,
+      ele_start_m: 0,
+      ele_end_m: 120,
+      neutral: false,
+    };
+    const plan = runInnerSolve([micro], 272, headwind, cfg);
+    const s = plan.segments[0];
+    expect(s.cap_binding).toBe('soft');
+    expect(Math.abs(s.p_pull_w - cfg.pull_cap_soft)).toBeLessThan(0.1);
+  });
+
+  it('cap counters in the notes line reflect the final binding only', () => {
+    const cfg = applyDefaults({
+      gpx_path: 'x.gpx',
+      race_date: '2026-06-13',
+      start_time: '04:22',
+      ftp: 272,
+      n_riders: 12,
+      target_total_hm: '11:45',
+      stops: [],
+      neutral_distance_km: 0,
+      max_plan_speed_kmh: 30,
+    });
+    const tailwind: WeatherFn = () => ({
+      windspeed_ms: 15,
+      winddir_from_deg: 180,
+      temp_c: 15,
+      pressure_pa: 101325,
+    });
+    const micro: MicroSegment = {
+      index: 0,
+      distance_m: 2000,
+      cum_distance_m: 2000,
+      grade: 0,
+      bearing_deg: 0,
+      lat: 58.5,
+      lon: 15,
+      ele_start_m: 0,
+      ele_end_m: 0,
+      neutral: false,
+    };
+    const plan = runInnerSolve([micro], 272, tailwind, cfg);
+    expect(plan.segments[0].cap_binding).toBe('spinout');
+    const capNote = plan.notes.find((n) => n.includes('spin-out'));
+    expect(capNote).toBeDefined();
+    expect(capNote).toContain('0 hard, 0 soft and 1 spin-out');
+  });
+});
