@@ -22,11 +22,19 @@ export const VATTERN_CONTROLS: ControlPoint[] = [
   { name: 'Fagerhult', km: 134 },
   { name: 'Hjo', km: 173 },
   { name: 'Karlsborg', km: 204 },
+  { name: 'Forsviks bro', km: 206 },
   { name: 'Boviken', km: 226 },
   { name: 'Askersund', km: 256 },
   { name: 'Godegård', km: 284 },
   { name: 'Motala (mål)', km: 315 },
 ];
+
+/**
+ * Default row target for the styrkort: one row per control leg (every control
+ * boundary except the implicit km-0 start). This is the natural compact-mode
+ * granularity, so the default neither splits nor merges.
+ */
+export const STYRKORT_DEFAULT_MAX_ROWS = VATTERN_CONTROLS.length - 1;
 
 // ---------------------------------------------------------------------------
 // Internal types
@@ -520,6 +528,72 @@ export function segment(
 
     const merged = mergeDisplaySegs(displaySegs[bestIdx], displaySegs[bestIdx + 1], cfg.band_pct);
     displaySegs = [...displaySegs.slice(0, bestIdx), merged, ...displaySegs.slice(bestIdx + 2)];
+  }
+
+  // Split UP toward an explicit target (compact mode only). The compact card is
+  // locked to control legs, so without this the "Max rader" knob can only ever
+  // reduce below the control count. When the user asks for more rows than there
+  // are legs, repeatedly halve the longest splittable row at its distance
+  // midpoint until the target is reached. Re-aggregation reuses the same micro
+  // segments, so depot/control eta_s and depart_s are unchanged, and the time
+  // (hence speed) between depots is preserved. Depots are never divided: a depot
+  // sits on the right half's end boundary and stays a single row.
+  //
+  // Gated to compactMode AND an explicit maxSegments. The full (non-compact)
+  // view uses the default cap and must never be padded up toward it.
+  if (compactMode && opts.maxSegments !== undefined) {
+    const target = opts.maxSegments;
+    while (displaySegs.length < target) {
+      // Pick the longest row that still has at least two micro-segments.
+      let bestIdx = -1;
+      let bestDist = -Infinity;
+      for (let i = 0; i < displaySegs.length; i++) {
+        if (displaySegs[i].micro_indices.length < 2) continue;
+        if (displaySegs[i].distance_m > bestDist) {
+          bestDist = displaySegs[i].distance_m;
+          bestIdx = i;
+        }
+      }
+      if (bestIdx === -1) break; // nothing left to split
+
+      const seg = displaySegs[bestIdx];
+      const idx = seg.micro_indices;
+
+      // Split at the micro boundary nearest the distance midpoint. The bound
+      // i < idx.length - 1 guarantees both halves keep at least one micro.
+      const half = seg.distance_m / 2;
+      let acc = 0;
+      let k = 0;
+      for (let i = 0; i < idx.length - 1; i++) {
+        acc += segments[idx[i]].micro.distance_m;
+        k = i;
+        if (acc >= half) break;
+      }
+
+      const leftIdx = idx.slice(0, k + 1);
+      const rightIdx = idx.slice(k + 1);
+      const leftGroup: Group = { indices: leftIdx, segs: leftIdx.map((i) => segments[i]) };
+      const rightGroup: Group = { indices: rightIdx, segs: rightIdx.map((i) => segments[i]) };
+
+      // The right half keeps the original end boundary, so its control/stop
+      // lookup is unchanged. The left half is a pure intermediate point.
+      const rightCum = segments[rightIdx[rightIdx.length - 1]].micro.cum_distance_m;
+      const left = aggregateGroup(leftGroup, cfg, segments, undefined, undefined);
+      const right = aggregateGroup(
+        rightGroup,
+        cfg,
+        segments,
+        controlAtCum.get(rightCum),
+        stopAtCum.get(rightCum),
+      );
+
+      displaySegs = [
+        ...displaySegs.slice(0, bestIdx),
+        left,
+        right,
+        ...displaySegs.slice(bestIdx + 1),
+      ];
+    }
   }
 
   return displaySegs;

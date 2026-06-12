@@ -39,8 +39,8 @@ export const FIELD_HELP: Record<string, FieldHelp> = {
     tip: 'Används för att hämta relevant väderprognos när vindjustering är aktiverad.',
   },
   maxRows: {
-    tip: 'Begränsar antalet rader i det utskrivbara styrkortet så att det blir lättare att läsa på cykeln.',
-    help: 'Lägre värde ger ett kortare, mer lättläst kort.',
+    tip: 'Styr antalet rader i det utskrivbara styrkortet. Standard är en rad per kontroll/depå. Höj värdet för fler, finare mellanrader (jämnt fördelade avstämningar). Depåerna är alltid med på egen rad.',
+    help: 'Standard = antal kontroller. Höj för fler mellanrader, sänk för ett kortare kort.',
   },
   gpx: {
     tip: 'Ruttfilen används för distans, höjdprofil och delsträckor. Standardrutten är redan inläst.',

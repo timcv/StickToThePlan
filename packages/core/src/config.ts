@@ -1,5 +1,6 @@
 import type { Config, Stop } from './types.js';
 import { STANDARD_RHO } from './physics.js';
+import { STYRKORT_DEFAULT_MAX_ROWS } from './segmentation.js';
 
 /**
  * Default values for all numeric/boolean parameters (spec section 5.4).
@@ -28,7 +29,7 @@ const DEFAULTS = {
   max_grade: 0.18,
   min_segment_km: 2,
   grade_merge_pct: 0.003,
-  styrkort_max_rows: 20,
+  styrkort_max_rows: STYRKORT_DEFAULT_MAX_ROWS,
   rider_wind_height_m: 1.2,
   forecast_wind_height_m: 10,
   exposure_terrain: 'mixed' as const,
