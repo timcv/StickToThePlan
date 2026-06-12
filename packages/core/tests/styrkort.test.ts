@@ -1,11 +1,32 @@
 import { describe, it, expect } from 'vitest';
-import type { PlanResult } from '../src/types.js';
+import type { PlanResult, DisplaySegment } from '../src/types.js';
 import {
   styrkortMeta,
   diffToStraightMin,
+  styrkortDiffsMin,
   formatDiff,
   formatAnkomst,
 } from '../src/output/styrkort.js';
+
+function row(to_km: number, eta_s: number, stop_minutes?: number): DisplaySegment {
+  return {
+    from_km: 0,
+    to_km,
+    distance_m: to_km * 1000,
+    net_height_m: 0,
+    avg_grade: 0,
+    avg_speed_kmh: 28,
+    eta_s,
+    wind_label: 'Lugnt',
+    pull_w_mean: 150,
+    pull_w_low: 145,
+    pull_w_high: 155,
+    avg_w: 130,
+    note: 'JÄMN FART',
+    micro_indices: [],
+    ...(stop_minutes !== undefined ? { stop_minutes, depart_s: eta_s + stop_minutes * 60 } : {}),
+  };
+}
 
 function makePlan(total_time_s: number, rolling_time_s: number): PlanResult {
   return {
@@ -61,6 +82,31 @@ describe('diffToStraightMin', () => {
 
   it('guards against a non-positive reference speed', () => {
     expect(diffToStraightMin(30, 3600, 0)).toBe(0);
+  });
+});
+
+describe('styrkortDiffsMin', () => {
+  const ref = 28.85;
+
+  it('does not let a prior depot stop drag a later row (depot time excluded)', () => {
+    // Depot at 77 km (10 min), then a normal row at 105 km whose arrival eta
+    // already includes the 10-min stop.
+    const segs = [row(77, 10320, 10), row(105, 14414)];
+    const diffs = styrkortDiffsMin(segs, ref);
+    expect(diffs[0]).toBe(-12); // the row's own stop is not counted
+    expect(diffs[1]).toBe(-12); // prior 10 min removed; raw wall-clock would be -22
+  });
+
+  it('lands the finish row on ±0 (rolling reference, all stops excluded)', () => {
+    const dist = 314.9;
+    const rollingFinishS = (dist / ref) * 3600;
+    const stopsS = 50 * 60;
+    const segs = [
+      row(150, 18000, 50), // one depot carrying all 50 min of stops
+      row(dist, rollingFinishS + stopsS), // finish eta includes those 50 min
+    ];
+    const diffs = styrkortDiffsMin(segs, ref);
+    expect(diffs[1]).toBe(0);
   });
 });
 

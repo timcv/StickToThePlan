@@ -40,16 +40,19 @@ totalAvgKmh  = totalDistanceKm / (expected.total_time_s   / 3600)
 där `totalDistanceKm` = sista styrkort-radens `to_km`. För standardplanen ger
 det ca 28,85 km/h (rullsnitt) och ca 26,81 km/h (totalsnitt inkl. pauser).
 
-Per rad:
+Per rad (depåtid utesluten ur ryttarens klocka så att stopp aldrig påverkar +/-):
 
 ```
+movingEta  = eta_s - (summan av depåminuter för ALLA tidigare rader) * 60
 refSeconds = to_km / refSpeedKmh * 3600
-diffMin    = round((refSeconds - eta_s) / 60)   // + = före, - = efter
+diffMin    = round((refSeconds - movingEta) / 60)   // + = före, - = efter
 ```
 
-Diff baseras **alltid** på ankomst (`eta_s`), aldrig avgång (`depart_s`).
-Avgång visas endast som extra info i parentesen. Konsekvens: diffen på målraden
-blir lika med summan av alla depåminuter (självkonsekvent).
+Diff baseras **alltid** på ankomst (`eta_s`), aldrig avgång (`depart_s`); radens
+eget depåstopp räknas inte (ankomst sker före stoppet). Avgång visas endast som
+extra info i parentesen. Eftersom referensen är rullsnittet (distans / rulltid)
+och all depåtid dras bort, landar målradens diff på **±0** (ryttarens rulltid vid
+mål = referensens rulltid där). Detta implementeras av `styrkortDiffsMin`.
 
 Format:
 

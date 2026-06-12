@@ -11,7 +11,7 @@
 import { useState } from 'react';
 import {
   secondsToClock,
-  diffToStraightMin,
+  styrkortDiffsMin,
   formatAnkomst,
   type DisplaySegment,
   type SegmentPlan,
@@ -93,6 +93,10 @@ export function TempokortTable({
 
   const activeSegs = compact && compactSegments ? compactSegments : segments;
 
+  // Stop-excluded diff against the rolling reference, computed once over the
+  // ordered rows so prior depot minutes are subtracted (finish lands on ±0).
+  const compactDiffs = styrkortDiffsMin(activeSegs, refSpeedKmh);
+
   // The "Not" column only earns its place on routes that actually produce
   // terrain/effort cues. On flat, calm plans every note is "JÄMN FART" (and
   // depots already show in the Stopp column), so hide the column entirely.
@@ -144,7 +148,7 @@ export function TempokortTable({
                   <td>
                     {formatAnkomst(
                       secondsToClock(seg.eta_s, startTime),
-                      diffToStraightMin(seg.to_km, seg.eta_s, refSpeedKmh),
+                      compactDiffs[i],
                       seg.depart_s !== undefined
                         ? secondsToClock(seg.depart_s, startTime)
                         : undefined,
